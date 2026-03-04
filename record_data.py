@@ -1,65 +1,79 @@
-# export HF_HUB_OFFLINE=1
-
-# lerobot-replay \
-#   --robot.type=so101_follower \
-#   --robot.port=/dev/tty.usbmodem5AB90659861 \
-#   --robot.id=my_awesome_follower_arm \
-#   --dataset.repo_id=seeedstudio123/second_datacollection \
-#   --dataset.root=/Users/zhg603/.cache/huggingface/lerobot/seeedstudio123/second_datacollection \
-#   --dataset.episode=1
-
 #!/usr/bin/env python3
 import subprocess
-import argparse
 import os
-from ids import ROBOT_PORT, ROBOT_ID
+from ids import ROBOT_PORT, ROBOT_ID, TELEOP_PORT, TELEOP_ID
 
+
+DATASET_REPO = "seeedstudio123/fourth_datacollect"
+
+
+# def build_camera_config():
+#     return (
+#         '{ front: {'
+#         'type: opencv, '
+#         'index_or_path: 0, '
+#         'width: 640, '
+#         'height: 480, '
+#         'fps: 30, '
+#         'fourcc: "MJPG"'
+#         '}}'
+    # )
+
+def build_camera_config():
+    return (
+        '{ '
+        'front: {'
+        'type: opencv, '
+        'index_or_path: 0, '
+        'width: 640, '
+        'height: 480, '
+        'fps: 30, '
+        'fourcc: "MJPG"'
+        '}, '
+        'side: {'
+        'type: opencv, '
+        'index_or_path: 1, '
+        'width: 640, '
+        'height: 480, '
+        'fps: 30, '
+        'fourcc: "MJPG"'
+        '}'
+        '}'
+    )
 
 def main():
-    parser = argparse.ArgumentParser(description="Wrapper for lerobot-replay")
-
-    parser.add_argument(
-        "--episode",
-        type=int,
-        default=1,
-        help="Episode number to replay",
-    )
-
-    parser.add_argument(
-        "--dataset-root",
-        default=os.path.expanduser(
-            "~/.cache/huggingface/lerobot/seeedstudio123/second_datacollection"
-        ),
-        help="Full path to dataset folder",
-    )
-
-    args = parser.parse_args()
-
+    # Safety checks
     if not os.path.exists(ROBOT_PORT):
         raise RuntimeError(f"Robot port not found: {ROBOT_PORT}")
 
-    if not os.path.exists(args.dataset_root):
-        raise RuntimeError(f"Dataset folder not found: {args.dataset_root}")
+    if not os.path.exists(TELEOP_PORT):
+        raise RuntimeError(f"Teleop port not found: {TELEOP_PORT}")
 
-    # Force offline mode
-    env = os.environ.copy()
-    env["HF_HUB_OFFLINE"] = "1"
+    camera_config = build_camera_config()
 
     cmd = [
-        "lerobot-replay",
+        "lerobot-record",
         "--robot.type=so101_follower",
         f"--robot.port={ROBOT_PORT}",
         f"--robot.id={ROBOT_ID}",
-        "--dataset.repo_id=seeedstudio123/second_datacollection",
-        f"--dataset.root={args.dataset_root}",
-        f"--dataset.episode={args.episode}",
+        f"--robot.cameras={camera_config}",
+        "--teleop.type=so101_leader",
+        f"--teleop.port={TELEOP_PORT}",
+        f"--teleop.id={TELEOP_ID}",
+        "--display_data=true",
+        f"--dataset.repo_id={DATASET_REPO}",
+        "--dataset.num_episodes=5",
+        '--dataset.single_task=Grab the black cube',
+        "--dataset.push_to_hub=false",
+        "--dataset.episode_time_s=30",
+        "--dataset.reset_time_s=30",
     ]
 
     print("\nRunning:")
-    print("HF_HUB_OFFLINE=1 " + " ".join(cmd))
+    print(" ".join(cmd))
     print()
 
-    subprocess.run(cmd, check=True, env=env)
+    subprocess.run(cmd, check=True)
 
 
 if __name__ == "__main__":

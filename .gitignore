@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Conda
+.env
+.envs/
+*.conda
+
+# macOS
+.DS_Store
+
+# HuggingFace cache
+.cache/
+~/.cache/
+
+# LeRobot datasets
+*.arrow
+*.mp4
+*.jsonl
+
+# Calibration files (optional)
+*.yaml

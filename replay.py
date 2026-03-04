@@ -1,3 +1,13 @@
+# export HF_HUB_OFFLINE=1
+
+# lerobot-replay \
+#   --robot.type=so101_follower \
+#   --robot.port=/dev/tty.usbmodem5AB90659861 \
+#   --robot.id=my_awesome_follower_arm \
+#   --dataset.repo_id=seeedstudio123/second_datacollection \
+#   --dataset.root=/Users/zhg603/.cache/huggingface/lerobot/seeedstudio123/second_datacollection \
+#   --dataset.episode=1
+
 #!/usr/bin/env python3
 import subprocess
 import argparse
@@ -9,61 +19,47 @@ def main():
     parser = argparse.ArgumentParser(description="Wrapper for lerobot-replay")
 
     parser.add_argument(
-        "--repo-id",
-        # default="seeedstudio123/second_datacollection",
-        default="second_datacollection",
-        
-        help="Dataset repo_id (e.g. user/dataset_name)",
-    )
-
-    parser.add_argument(
-        "--dataset-root",
-        default="/Users/zhg603/.cache/huggingface/lerobot/seeedstudio123/",
-        help="Root directory where lerobot datasets are stored",
-    )
-
-    parser.add_argument(
         "--episode",
         type=int,
-        default=0,
+        default=1,
         help="Episode number to replay",
     )
 
     parser.add_argument(
-        "--display-only",
-        action="store_true",
-        help="Replay without moving robot",
+        "--dataset-root",
+        default=os.path.expanduser(
+            "~/.cache/huggingface/lerobot/seeedstudio123/second_datacollection"
+        ),
+        help="Full path to dataset folder",
     )
 
     args = parser.parse_args()
 
-    cmd = ["lerobot-replay"]
+    if not os.path.exists(ROBOT_PORT):
+        raise RuntimeError(f"Robot port not found: {ROBOT_PORT}")
 
-    # Robot section
-    if not args.display_only:
-        if not os.path.exists(ROBOT_PORT):
-            raise RuntimeError(f"Robot port not found: {ROBOT_PORT}")
+    if not os.path.exists(args.dataset_root):
+        raise RuntimeError(f"Dataset folder not found: {args.dataset_root}")
 
-        cmd += [
-            "--robot.type=so101_follower",
-            f"--robot.port={ROBOT_PORT}",
-            f"--robot.id={ROBOT_ID}",
-        ]
-    else:
-        cmd += ["--robot.type=openarm_follower"]  # dummy safe type if needed
+    # Force offline mode
+    env = os.environ.copy()
+    env["HF_HUB_OFFLINE"] = "1"
 
-    # Dataset section (correct flags for your version)
-    cmd += [
-        f"--dataset.repo_id={args.repo_id}",
+    cmd = [
+        "lerobot-replay",
+        "--robot.type=so101_follower",
+        f"--robot.port={ROBOT_PORT}",
+        f"--robot.id={ROBOT_ID}",
+        "--dataset.repo_id=seeedstudio123/third_datacollection",
         f"--dataset.root={args.dataset_root}",
         f"--dataset.episode={args.episode}",
     ]
 
     print("\nRunning:")
-    print(" ".join(cmd))
+    print("HF_HUB_OFFLINE=1 " + " ".join(cmd))
     print()
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=env)
 
 
 if __name__ == "__main__":
