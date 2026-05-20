@@ -29,97 +29,93 @@ kinematics = RobotKinematics(
 
 
 
+def move_smooth(target, steps=10, delay=0.05):
+    obs = follower.get_observation()
+    current = {k: obs[k] for k in target}
+
+    for i in range(steps):
+        alpha = (i + 1) / steps
+        action = obs.copy()
+
+        for k in target:
+            action[k] = current[k] + alpha * (target[k] - current[k])
+
+        follower.send_action(action)
+        time.sleep(delay)
 
 
-# print(kinematics.robot.frame_names())
-# print(list(kinematics.robot.frame_names()))
+def vectodic(vec):
+    action = {
+    f"{name}.pos": angle
+    for name, angle in zip(JOINT_NAMES, vec)
+    }
+    return(action)
 
 
-# import sys
-# sys.exit()
+
+
+import sys
+import time
+import math
+from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+config = SO101FollowerConfig(
+    port="/dev/tty.usbmodem5AB90659861",
+    # port="/dev/cu.usbmodem5B141140961",
+    id="my_awesome_follower_arm"
+)
+follower = SO101Follower(config)
+follower.connect()
+# follower.setup_motors()
+
+obs = follower.get_observation()
+print("Observation:", obs)
+# current_joints = obs
+
+def obstovec(obs):
+    vec = np.array([
+        obs["shoulder_pan.pos"],
+        obs["shoulder_lift.pos"],
+        obs["elbow_flex.pos"],
+        obs["wrist_flex.pos"],
+        obs["wrist_roll.pos"],
+        obs["gripper.pos"],
+    ])
+    return(vec)
+
+
+def targetcoords(target_pose):
+    obs = follower.get_observation()
+    current_joints = obstovec(obs)
+    # print("Current joints:", current_joints)
+
+
+    #initialise at current positions
+    joint_solution = current_joints
+
+    for _ in range(4):
+        joint_solution = kinematics.inverse_kinematics(
+            joint_solution,
+            target_pose,
+            position_weight=100.0,
+            orientation_weight=0.0,
+        )
+
+
+    return(joint_solution)
 
 
 
-# print("\nURDF joint order:")
-# print(kinematics.joint_names)
-
-# print("\nYour joint order:")
-# print(JOINT_NAMES)
-
-# import sys
-# sys.exit()
-
-# print(inspect.signature(kinematics.inverse_kinematics))
-
-# import sys
-# sys.exit()
-
-
-# Example current joint state
-current_joints = np.array([
-    0.0,   # shoulder_pan
-    0.0,   # shoulder_lift
-    0.0,   # elbow_flex
-    0.0,   # wrist_flex
-    0.0,   # wrist_roll
-    0.0,   # gripper
-])
-
-
-####
+### Example of reasonable target positions
+obs = follower.get_observation()
+current_joints = obstovec(obs)
 current_fk = kinematics.forward_kinematics(current_joints)
-
-####
-
-# Target end effector transform
-# target_pose = np.eye(4)
-
-# target_pose[0, 3] = 0.15
-# target_pose[1, 3] = 0.40
-# target_pose[2, 3] = 0.10
-
 target_pose = current_fk.copy()
-
-target_pose[0,3] += 0.04
-target_pose[2,3] += 0.04
-
-print("Target EE pose:")
-print(target_pose)
+target_pose[1,3] += 0.02
 
 
-print("Target EE pose:")
-print(target_pose)
-
-# Solve IK
-# joint_solution = kinematics.inverse_kinematics(
-#     target_pose,
-#     initial_joint_positions=current_joints,
-# )
-
-# print("\nJoint solution:")
-# for name, angle in zip(JOINT_NAMES, joint_solution):
-#     print(f"{name}: {angle:.3f}")
-
-
-
-# Solve IK
-# joint_solution = kinematics.inverse_kinematics(
-#     current_joints,
-#     target_pose,
-# )
-
-
-joint_solution = current_joints
-
-for _ in range(4):
-    joint_solution = kinematics.inverse_kinematics(
-        joint_solution,
-        target_pose,
-        position_weight=100.0,
-        orientation_weight=0.0,
-    )
-
-
+###Solve for joints to take us there
+joint_solution = targetcoords(target_pose)
 
 print("\nJoint solution:")
 for name, angle in zip(JOINT_NAMES, joint_solution):
@@ -148,5 +144,73 @@ position_error = np.linalg.norm(
 )
 
 print(f"\nPosition error: {position_error:.6f} m")
+
+
+# action = {
+#     f"{name}.pos": angle
+#     for name, angle in zip(JOINT_NAMES, joint_solution)
+# }
+
+action = vectodic(joint_solution)
+
+# print(action)
+# sys.exit()
+
+
+
+# move_smooth(action)
+
+
+
+
+#### 4 corners
+corner1 = [97.32,0.40,28.40,66.55,177.80,4.95]
+corner2 = [38.59,60.88,-58.55,100.48,178.15,4.95]
+corner3 = [-52.48,57.98,-56.26,96.26,172.70,4.95]
+corner4 = [-108.75, 26.33, 0.79, 81.85, 172.88, 1.4]
+
+
+
+
+corner1ac = vectodic(corner1)
+corner2ac = vectodic(corner2)
+corner3ac = vectodic(corner3)
+corner4ac = vectodic(corner4)
+
+def cornercoords(corner):
+    fk_corner = kinematics.forward_kinematics(np.array(corner))
+    coords = fk_corner[:3,3]
+    return(coords)
+
+coords1 = cornercoords(corner1)
+coords2 = cornercoords(corner2)
+coords3 = cornercoords(corner3)
+coords4 = cornercoords(corner4)
+
+
+print("Coords 1:")
+print(coords1)
+print("Coords 2:")
+print(coords2)
+print("Coords 3:")
+print(coords3)
+print("Coords 4:")
+print(coords4)
+
+
+
+
+testcorners = True
+
+if testcorners:
+
+    move_smooth(corner1ac)
+    time.sleep(5)
+    move_smooth(corner2ac)
+    time.sleep(5)
+    move_smooth(corner3ac)
+    time.sleep(5)
+    move_smooth(corner4ac)
+
 
 

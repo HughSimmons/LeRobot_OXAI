@@ -17,14 +17,14 @@ def build_camera_config():
 
 
 def main():
-    camera_config = build_camera_config()
+    # camera_config = build_camera_config()
 
     cmd = [
         "lerobot-teleoperate",
         "--robot.type=so101_follower",
         f"--robot.port={ROBOT_PORT}",
         f"--robot.id={ROBOT_ID}",
-        f"--robot.cameras={camera_config}",
+        # f"--robot.cameras={camera_config}",
         "--teleop.type=so101_leader",
         f"--teleop.port={TELEOP_PORT}",
         f"--teleop.id={TELEOP_ID}",
