@@ -4,9 +4,12 @@ import os
 from ids import ROBOT_PORT, ROBOT_ID, TELEOP_PORT, TELEOP_ID
 
 
-DATASET_REPO = "seeedstudio123/fourth_datacollect"
+DATASET_REPO = "seeedstudio123/A1"
 
-
+#d3
+#c1
+#c3
+#c4
 # def build_camera_config():
 #     return (
 #         '{ front: {'
@@ -63,10 +66,10 @@ def main():
         "--display_data=true",
         f"--dataset.repo_id={DATASET_REPO}",
         "--dataset.num_episodes=5",
-        '--dataset.single_task=Grab the black cube',
+        '--dataset.single_task=move the cube A1',
         "--dataset.push_to_hub=false",
-        "--dataset.episode_time_s=30",
-        "--dataset.reset_time_s=30",
+        "--dataset.episode_time_s=20",
+        "--dataset.reset_time_s=7",
     ]
 
     print("\nRunning:")

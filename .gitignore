@@ -24,3 +24,5 @@ __pycache__/
 
 # Calibration files (optional)
 *.yaml
+*.log
+*.json

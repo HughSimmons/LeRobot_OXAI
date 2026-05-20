@@ -21,14 +21,15 @@ def main():
     parser.add_argument(
         "--episode",
         type=int,
-        default=1,
+        default=4,
         help="Episode number to replay",
     )
 
     parser.add_argument(
         "--dataset-root",
         default=os.path.expanduser(
-            "~/.cache/huggingface/lerobot/seeedstudio123/second_datacollection"
+            # "~/.cache/huggingface/lerobot/seeedstudio123/second_datacollection"
+            "~/.cache/huggingface/lerobot/seeedstudio123/D2"
         ),
         help="Full path to dataset folder",
     )
@@ -50,7 +51,7 @@ def main():
         "--robot.type=so101_follower",
         f"--robot.port={ROBOT_PORT}",
         f"--robot.id={ROBOT_ID}",
-        "--dataset.repo_id=seeedstudio123/third_datacollection",
+        "--dataset.repo_id=seeedstudio123/fourth_datacollect",
         f"--dataset.root={args.dataset_root}",
         f"--dataset.episode={args.episode}",
     ]
