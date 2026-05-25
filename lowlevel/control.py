@@ -54,4 +54,5 @@ while True:
     time.sleep(0.02)   # ~50 Hz control loop
 
     if t>total_time:
+        follower.disconnect()
         sys.exit()
