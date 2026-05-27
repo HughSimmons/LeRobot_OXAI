@@ -205,7 +205,7 @@ def chess_to_xy_old(square):
         0
     ])
 
-def chess_to_xy(square, board_origin=(0.3, 0, 0), square_size=0.04):
+def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     file = FILES.index(square[0].lower())
     rank = int(square[1]) - 1
     board_x, board_y, board_z = board_origin
@@ -394,7 +394,7 @@ home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65
 from testkinematics import kinematics
 homexyz = kinematics.forward_kinematics(home)[:3,3]
 
-def pickupmove_traj(from_square, to_square):
+def pickupmove_traj(from_square, to_square, board_origin):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
@@ -410,7 +410,7 @@ def pickupmove_traj(from_square, to_square):
     current = home.copy()
 
     # 2. Move to from_square (above)
-    from_xyz = chess_to_xy(from_square)
+    from_xyz = chess_to_xy(from_square, board_origin=board_origin)
     above_from = xyz_homeref(from_xyz + np.array([0, 0, 0.10]), current)
     above_from[5] = gripper_angle_open  # keep gripper open
     # smoothmove(current, above_from)
@@ -443,7 +443,7 @@ def pickupmove_traj(from_square, to_square):
 
     current = lifted.copy()
     # 3. Move to to_square (above)
-    to_xyz = chess_to_xy(to_square)
+    to_xyz = chess_to_xy(to_square, board_origin=board_origin)
     above_to = xyz_homeref(to_xyz + np.array([0, 0, 0.10]), current)
     above_to[5] = gripper_angle_closed  # keep gripper closed
     # smoothmove(current, above_to)

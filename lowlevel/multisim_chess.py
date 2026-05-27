@@ -7,15 +7,45 @@ from pathlib import Path
 from chess_traj import pickupmove_traj
 from chess_traj import chess_to_xy
 from testkinematics import kinematics
-
-
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
-
 movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin)  # Example move from e2 to e4
 renderfreq = 10
 WIDTH, HEIGHT = 640, 360
-runid = "grasp_calib"
+runid = "multisim_test"
 
+
+init_posit = ["a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"]
+
+for pos in init_posit:
+
+    coords = chess_to_xy(pos, board_origin=board_origin)
+
+    print(f"{coords}")
+
+piece_positions = [
+    (-0.14, -0.14), (-0.10, -0.14), (-0.06, -0.14), (-0.02, -0.14),
+    (0.02, -0.14), (0.06, -0.14), (0.10, -0.14), (0.14, -0.14),
+]
+
+
+
+##fn to generate pices 
+def create_piece(sq="a1"):
+    world_x, world_y, world_z = chess_to_xy(sq, board_origin=board_origin)
+
+    # Larger pieces: radius 0.024 (2x), height 0.04 (2x)
+    piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
+    piece_visual = p.createVisualShape(p.GEOM_CYLINDER, radius=0.012, length=0.04, 
+                                    rgbaColor=[1, 0, 0, 1])
+    piece_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=piece_shape,
+                                baseVisualShapeIndex=piece_visual,
+                                basePosition=[world_x, world_y, world_z])
+    p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
+    return(piece_id)
+
+
+
+# sys.exit()
 
 # ----------------------------------------
 # Joint mapping
@@ -64,36 +94,6 @@ def interpolate_joints(start, end, alpha):
 def interpolate_joints(start, end, alpha):
     return (1 - alpha) * start + alpha * end
 
-
-# def interpolate_joints(start, end, alpha):
-
-#     q = (1 - alpha) * start + alpha * end
-
-#     # ----------------------------------------
-#     # Delay gripper interpolation
-#     # ----------------------------------------
-
-#     grip_start_alpha = 0.85
-
-#     if alpha < grip_start_alpha:
-
-#         # Hold initial gripper value
-#         q[5] = start[5]
-
-#     else:
-
-#         # Remap alpha from [0.85,1] -> [0,1]
-#         grip_alpha = (
-#             (alpha - grip_start_alpha)
-#             / (1.0 - grip_start_alpha)
-#         )
-
-#         q[5] = (
-#             (1 - grip_alpha) * start[5]
-#             + grip_alpha * end[5]
-#         )
-
-#     return q
 
 
 create_sim = True
@@ -163,26 +163,9 @@ if create_sim:    # Initialize PyBullet in HEADLESS mode
 
     print(f"✓ Chessboard created")
 
-    # Create LARGER chess pieces (2x scale: 0.024 radius)
-    piece_positions = [
-        (-0.14, -0.14), (-0.10, -0.14), (-0.06, -0.14), (-0.02, -0.14),
-        (0.02, -0.14), (0.06, -0.14), (0.10, -0.14), (0.14, -0.14),
-    ]
-
     piece_ids = []
-    for i, (px, py) in enumerate(piece_positions):
-        world_x = board_x + px
-        world_y = board_y + py
-        world_z = board_z + 0.035
-        
-        # Larger pieces: radius 0.024 (2x), height 0.04 (2x)
-        piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
-        piece_visual = p.createVisualShape(p.GEOM_CYLINDER, radius=0.012, length=0.04, 
-                                        rgbaColor=[1, 0, 0, 1])
-        piece_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=piece_shape,
-                                    baseVisualShapeIndex=piece_visual,
-                                    basePosition=[world_x, world_y, world_z])
-        p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
+    for sq in init_posit:
+        piece_id = create_piece(sq)
         piece_ids.append(piece_id)
 
     print(f"✓ Created {len(piece_ids)} large chess pieces")
@@ -193,8 +176,6 @@ if create_sim:    # Initialize PyBullet in HEADLESS mode
 
 
 
-# import sys
-# sys.exit()
 
 # Robot joint waypoints (from simfk.py)
 
@@ -203,32 +184,10 @@ corner1 = np.array([97.32, 0.40, 28.40, 66.55, 177.80, 4.95])
 corner2 = np.array([38.59, 60.88, -58.55, 100.48, 178.15, 4.95])
 
 
-
-# for i in range(p.getNumJoints(robot_id)):
-#     info = p.getJointInfo(robot_id, i)
-#     print(i, info[1].decode())
-
-# sys.exit()
-
-# corner1xyz = kinematics.forward_kinematics(corner1)[:3,3]
-# print("Corner 1 XYZ:", corner1xyz)
-
-# import sys 
-# sys.exit()
-
-
 # Convert to radians
 home_rad = np.deg2rad(home)
 corner1_rad = np.deg2rad(corner1)
 corner2_rad = np.deg2rad(corner2)
-
-# Define movement sequence
-# moves = [
-#     (home_rad, 100, "Move to HOME"),
-#     (corner1_rad, 150, "Move to CORNER1"),
-#     (corner2_rad, 150, "Move to CORNER2"),
-#     (home_rad, 150, "Return to HOME"),
-# ]
 
 moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
 
@@ -269,8 +228,6 @@ move_local_step = 0
 
 current_start_pos = moves[0][0].copy()
 current_target_pos, move_steps, move_name = moves[0]
-
-SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
 
 SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
 
