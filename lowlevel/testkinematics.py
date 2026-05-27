@@ -26,7 +26,7 @@ JOINT_NAMES = [
 # Create kinematics solver
 kinematics = RobotKinematics(
     urdf_path=URDF_PATH,
-    target_frame_name="gripper_frame_link",
+    target_frame_name="gripper_frame_link", #works
     # target_frame_name="jaw",
     # target_frame_name="gripper_link",
     # target_frame_name="moving_jaw_so101_v1_link",
@@ -235,12 +235,24 @@ if robotconnected:
 def relativexyz(initjnts, changexyz): 
     fk_init = kinematics.forward_kinematics(initjnts) 
     newpose = fk_init.copy() 
+
+    downorient = True
+
+    if downorient:
+        down_orientation = np.array([
+            [1, 0,  0],
+            [0, 1,  0],
+            [0, 0, -1]
+        ])
+        newpose[2, 2] = -1
+
+
     newpose[:3,3] += changexyz 
     # newpose[1,3] += 0.03 
     newjoints = targetcoords(initjnts, newpose) 
     newac = vectodic(newjoints) 
 
-    print(newac)
+    # print(newac)
     # fk_pose = kinematics.forward_kinematics(newjoints) 
     # # print("new pose") # print(newpose) # print("calculated pose") # print(fk_pose)
     # target_position = newpose[:3, 3]
@@ -259,7 +271,8 @@ def relativexyz(initjnts, changexyz):
         target_position - fk_position
     )
 
-    print("Position Error:", position_error)
+    if position_error > 0.01:
+        print("Position Error:", position_error)
 
 
 

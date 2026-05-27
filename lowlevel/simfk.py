@@ -64,9 +64,9 @@ def smoothmove(pos1, pos2):
         time.sleep(0.01)
 
 
-smoothmove(corner1, corner2)
+# smoothmove(corner1, corner2)
 
-time.sleep(3)
+# time.sleep(3)
 
 start = simxyz(corner1, [0,0,0.025])
 start = simxyz(start, [0.05,0,0])
@@ -264,12 +264,25 @@ def move_to_square_v2(current_joints, from_square, to_square):
 
 # move_to_square_v2(corner2, "e1", "c5")
 
-smoothmove(corner2, home)
+# smoothmove(corner2, corner2+np.array([0,0,0,0,0,30]))
 
-time.sleep(5)
+# time.sleep(5)
 
-move_to_square_v2(home, "e1", "c5")
+# move_to_square_v2(home, "e1", "c5")
 
+
+
+from chess_traj import pickupmove_traj
+
+
+movelist = pickupmove_traj("e1", "c5")
+
+start = home.copy()
+for move in movelist:
+    
+    smoothmove(start, move)
+    start = move.copy()
+    time.sleep(1)
 
 import sys
 sys.exit()
