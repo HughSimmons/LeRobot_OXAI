@@ -32,18 +32,9 @@ def simxyz(currentjnt, direcxyz):
         return(cartcorner1)
 
 
-def xyz_homeref(xyzcoords, refjnts):
+def xyz_homeref_old(xyzcoords, refjnts):
     refxyz = kinematics.forward_kinematics(refjnts)[:3,3]
     refrot = kinematics.forward_kinematics(refjnts)[:3,:3]
-
-
-    downorient = np.array([
-        [1, 0,  0],
-        [0, 1,  0],
-        [0, 0, -1]
-    ])
-
-    rotdiff = downorient - refrot
 
     rot_error = abs(-1 -refrot[2, 2])
 
@@ -63,6 +54,140 @@ def xyz_homeref(xyzcoords, refjnts):
         cartcorner1 = relativexyz(np.array(refjnts), np.array(direcxyz))
         return(cartcorner1)
 
+# Offset from gripper frame origin to desired grasp point
+# Tune this experimentally
+from testkinematics import GRASP_OFFSET
+
+
+def xyz_homeref(xyzcoords, refjnts):
+
+    # ----------------------------------------
+    # Current FK pose
+    # ----------------------------------------
+
+    refpose = kinematics.forward_kinematics(refjnts)
+
+    refxyz = refpose[:3,3]
+    refrot = refpose[:3,:3]
+
+    # ----------------------------------------
+    # Current grasp point in world coordinates
+    # ----------------------------------------
+
+    current_grasp_xyz = (
+        refxyz
+        + refrot @ GRASP_OFFSET
+    )
+
+    # ----------------------------------------
+    # Cartesian error relative to grasp point
+    # ----------------------------------------
+
+    direcxyz = xyzcoords - current_grasp_xyz
+
+    # ----------------------------------------
+    # Keep gripper approximately downward
+    # ----------------------------------------
+
+    rot_error = abs(-1 - refrot[2,2])
+
+    mag = (
+        np.linalg.norm(direcxyz)
+        + rot_error
+    )
+
+    min_step = 0.02
+
+    # ----------------------------------------
+    # Multi-step interpolation
+    # ----------------------------------------
+
+    if mag > min_step:
+
+        nsteps = int(mag / min_step) + 1
+
+        step = direcxyz / nsteps
+
+        current = refjnts.copy()
+
+        for _ in range(nsteps):
+
+            current = relativexyz(
+                current,
+                step
+            )
+
+        return current
+
+    # ----------------------------------------
+    # Single-step move
+    # ----------------------------------------
+
+    else:
+
+        return relativexyz(
+            np.array(refjnts),
+            np.array(direcxyz)
+        )
+
+# def xyz_homeref(xyzcoords, refjnts):
+
+#     current = refjnts.copy()
+
+#     min_step = 0.02
+#     max_iters = 50
+
+#     for _ in range(max_iters):
+
+#         # ----------------------------------------
+#         # Current FK pose
+#         # ----------------------------------------
+
+#         pose = kinematics.forward_kinematics(current)
+
+#         current_xyz = pose[:3,3]
+#         current_rot = pose[:3,:3]
+
+#         # ----------------------------------------
+#         # Current TCP / grasp point
+#         # ----------------------------------------
+
+#         current_grasp_xyz = (
+#             current_xyz
+#             + current_rot @ GRASP_OFFSET
+#         )
+
+#         # ----------------------------------------
+#         # TCP error
+#         # ----------------------------------------
+
+#         direcxyz = xyzcoords - current_grasp_xyz
+
+#         error = np.linalg.norm(direcxyz)
+
+#         # ----------------------------------------
+#         # Converged
+#         # ----------------------------------------
+
+#         if error < 1e-3:
+#             break
+
+#         # ----------------------------------------
+#         # Step toward target
+#         # ----------------------------------------
+
+#         step_mag = min(error, min_step)
+
+#         step = (
+#             direcxyz / error
+#         ) * step_mag
+
+#         current = relativexyz(
+#             current,
+#             step
+#         )
+
+#     return current
 
 def chess_to_xy_old(square):
     """
@@ -86,9 +211,9 @@ def chess_to_xy(square, board_origin=(0.3, 0, 0), square_size=0.04):
     board_x, board_y, board_z = board_origin
     board_size = 8 * square_size
     # x = board_x - board_size/2 + (file + 0.5) * square_size
-    # y = board_y - board_size/2 + (rank + 0.5) * square_size
+    y = board_y - board_size/2 + (rank + 0.5) * square_size
     x = board_x - board_size/2 + (file + 0.5) * square_size
-    y = board_y - board_size/2 + (rank + 0.85) * square_size
+    # y = board_y - board_size/2 + (rank + 0.85) * square_size
     z = board_z + 0.04  # slightly above the board
     return np.array([x, y, z])
 
@@ -327,6 +452,7 @@ def pickupmove_traj(from_square, to_square):
     current = above_to.copy()
     # Lower to to_square
     at_to = xyz_homeref(to_xyz, current)
+    # at_to = xyz_homeref(to_xyz + np.array([0, 0, -0.02]), current)
     at_to[5] = gripper_angle_closed  # keep gripper closed
     # smoothmove(current, at_to)
     jntslist.append(at_to)

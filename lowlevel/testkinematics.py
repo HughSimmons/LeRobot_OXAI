@@ -6,6 +6,26 @@ import sys
 
 robotconnected = False
 
+# GRASP_OFFSET = np.array([
+#     0.0,     # lateral
+#     0.01,   # forward between jaws
+#     -0.01    # slightly downward
+# ])
+
+GRASP_OFFSET = np.array([
+    # 0.0,
+    -0.025,
+    -0.0,
+    -0.005
+])
+
+# GRASP_OFFSET = np.array([
+#     -0.01876807,
+#     -0.00805934,
+#      -0.01
+# ])
+
+# [-0.01193487 -0.02224436  0.02015081]
 
 # Path to your downloaded URDF
 # URDF_PATH = "./SO101/so101_new_calib.urdf"
@@ -267,9 +287,20 @@ def relativexyz(initjnts, changexyz):
     fk_pose = kinematics.forward_kinematics(newjoints)
     fk_position = fk_pose[:3, 3]
 
-    position_error = np.linalg.norm(
-        target_position - fk_position
+    # Gripper/TCP position in world coordinates
+    fk_grasp_position = (
+        fk_pose[:3,3]
+        + fk_pose[:3,:3] @ GRASP_OFFSET
     )
+
+    position_error = np.linalg.norm(
+        target_position - fk_grasp_position
+    )    
+
+    #when optimising for gripper position directly
+    # position_error = np.linalg.norm(
+    #     target_position - fk_position
+    # )
 
     if position_error > 0.01:
         print("Position Error:", position_error)

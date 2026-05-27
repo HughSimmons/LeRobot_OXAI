@@ -8,6 +8,11 @@ from chess_traj import pickupmove_traj
 from chess_traj import chess_to_xy
 from testkinematics import kinematics
 
+movelist = pickupmove_traj('c1', 'c5')  # Example move from e2 to e4
+renderfreq = 10
+WIDTH, HEIGHT = 640, 360
+runid = "grasp_calib"
+
 
 # ----------------------------------------
 # Joint mapping
@@ -88,7 +93,6 @@ def interpolate_joints(start, end, alpha):
 #     return q
 
 
-runid = "a1_to_a5_downorientz"
 create_sim = True
 
 if create_sim:    # Initialize PyBullet in HEADLESS mode
@@ -106,10 +110,23 @@ if create_sim:    # Initialize PyBullet in HEADLESS mode
     try:
         urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
         robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
+
+
+        p.changeDynamics(
+            robot_id,
+            6,
+            lateralFriction=5.0,
+            spinningFriction=1.0,
+            contactStiffness=10000,
+            contactDamping=100
+        )
         print(f"✓ Loaded SO101 from URDF")
         print(f"✓ Number of joints: {p.getNumJoints(robot_id)}")
     except Exception as e:
         print(f"⚠ Error loading robot: {e}")
+
+
+
 
     # Create chessboard at position (0.3, 0, 0)
     board_x, board_y, board_z = 0.3, 0, 0
@@ -159,14 +176,14 @@ if create_sim:    # Initialize PyBullet in HEADLESS mode
         piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
         piece_visual = p.createVisualShape(p.GEOM_CYLINDER, radius=0.012, length=0.04, 
                                         rgbaColor=[1, 0, 0, 1])
-        piece_id = p.createMultiBody(baseMass=0.1, baseCollisionShapeIndex=piece_shape,
+        piece_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=piece_shape,
                                     baseVisualShapeIndex=piece_visual,
                                     basePosition=[world_x, world_y, world_z])
-        p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=0.5)
+        p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
         piece_ids.append(piece_id)
 
     print(f"✓ Created {len(piece_ids)} large chess pieces")
-
+    print("Piece IDs:", piece_ids)
     print("✓ All objects loaded and ready!")
 
 
@@ -210,13 +227,12 @@ corner2_rad = np.deg2rad(corner2)
 #     (home_rad, 150, "Return to HOME"),
 # ]
 
-movelist = pickupmove_traj('a1', 'a5')  # Example move from e2 to e4
 moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
 
 # Setup video recording with THREE cameras
 camera_params = {
-    'eye': [0.5, 0.5, 0.5],
-    'target': [0.3, 0, 0],
+    'eye': [0.0, -0.6, 0.25],
+    'target': [0.3, 0.0, 0.05],
     'up': [0, 0, 1],
 }
 
@@ -232,7 +248,6 @@ output_dir.mkdir(parents=True, exist_ok=True)
 
 video_path = output_dir / "so101_robot_moves.mp4"
 video_topdown_path = output_dir / "so101_robot_moves_topdown.mp4"
-WIDTH, HEIGHT = 1280, 720
 writer = imageio.get_writer(str(video_path), fps=30, codec='libx264', quality=8)
 writer_topdown = imageio.get_writer(str(video_topdown_path), fps=30, codec='libx264', quality=8)
 
@@ -260,6 +275,7 @@ try:
 
     for global_step in range(total_steps + 100):
 
+
         # ----------------------------------------
         # Advance move
         # ----------------------------------------
@@ -286,6 +302,9 @@ try:
             alpha
         )
 
+        # print("Target joints:", target_joints)
+        # sys.exit()
+
         # ----------------------------------------
         # Apply controls
         # ----------------------------------------
@@ -297,7 +316,7 @@ try:
                 force = 50
 
                 if traj_idx == 5:
-                    force = 100
+                    force = 500
 
                 p.setJointMotorControl2(
                     robot_id,
@@ -307,64 +326,88 @@ try:
                     force=force
                 )
 
+                
+
         # ----------------------------------------
         # Physics step
         # ----------------------------------------
 
         p.stepSimulation()
 
-        # ----------------------------------------
-        # Camera rendering
-        # ----------------------------------------
 
-        proj_matrix = p.computeProjectionMatrixFOV(
-            fov=60,
-            aspect=WIDTH / HEIGHT,
-            nearVal=0.01,
-            farVal=100
-        )
+        piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
 
-        # ---------------- Perspective camera ----------------
+        if piece_pos[2]>0.5:
 
-        view_matrix = p.computeViewMatrix(
-            cameraEyePosition=camera_params['eye'],
-            cameraTargetPosition=camera_params['target'],
-            cameraUpVector=camera_params['up']
-        )
+            fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
 
-        w, h, rgba, _, _ = p.getCameraImage(
-            WIDTH,
-            HEIGHT,
-            viewMatrix=view_matrix,
-            projectionMatrix=proj_matrix
-        )
+            gripper_origin = fk_pose[:3,3]
+            gripper_rot = fk_pose[:3,:3]
 
-        img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
+            # Recover grasp offset in LOCAL gripper coordinates
+            grasp_offset = (
+                gripper_rot.T
+                @ (np.array(piece_pos) - gripper_origin)
+            )
 
-        rgb_array = img[:, :, :3]
+            print("Recovered GRASP_OFFSET:")
+            print(grasp_offset)
+            sys.exit()
 
-        writer.append_data(rgb_array)
 
-        # ---------------- Top-down camera ----------------
+        if global_step % renderfreq == 0:
+            # ----------------------------------------
+            # Camera rendering
+            # ----------------------------------------
 
-        view_matrix_topdown = p.computeViewMatrix(
-            cameraEyePosition=top_down_camera_params['eye'],
-            cameraTargetPosition=top_down_camera_params['target'],
-            cameraUpVector=top_down_camera_params['up']
-        )
+            proj_matrix = p.computeProjectionMatrixFOV(
+                fov=60,
+                aspect=WIDTH / HEIGHT,
+                nearVal=0.01,
+                farVal=100
+            )
 
-        w2, h2, rgba2, _, _ = p.getCameraImage(
-            WIDTH,
-            HEIGHT,
-            viewMatrix=view_matrix_topdown,
-            projectionMatrix=proj_matrix
-        )
+            # ---------------- Perspective camera ----------------
 
-        img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
+            view_matrix = p.computeViewMatrix(
+                cameraEyePosition=camera_params['eye'],
+                cameraTargetPosition=camera_params['target'],
+                cameraUpVector=camera_params['up']
+            )
 
-        rgb_array_topdown = img2[:, :, :3]
+            w, h, rgba, _, _ = p.getCameraImage(
+                WIDTH,
+                HEIGHT,
+                viewMatrix=view_matrix,
+                projectionMatrix=proj_matrix
+            )
 
-        writer_topdown.append_data(rgb_array_topdown)
+            img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
+
+            rgb_array = img[:, :, :3]
+
+            writer.append_data(rgb_array)
+
+            # ---------------- Top-down camera ----------------
+
+            view_matrix_topdown = p.computeViewMatrix(
+                cameraEyePosition=top_down_camera_params['eye'],
+                cameraTargetPosition=top_down_camera_params['target'],
+                cameraUpVector=top_down_camera_params['up']
+            )
+
+            w2, h2, rgba2, _, _ = p.getCameraImage(
+                WIDTH,
+                HEIGHT,
+                viewMatrix=view_matrix_topdown,
+                projectionMatrix=proj_matrix
+            )
+
+            img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
+
+            rgb_array_topdown = img2[:, :, :3]
+
+            writer_topdown.append_data(rgb_array_topdown)
 
         # ----------------------------------------
         # Debug
