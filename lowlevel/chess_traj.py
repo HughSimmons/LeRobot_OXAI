@@ -56,10 +56,10 @@ def xyz_homeref_old(xyzcoords, refjnts):
 
 # Offset from gripper frame origin to desired grasp point
 # Tune this experimentally
-from testkinematics import GRASP_OFFSET
+# from testkinematics import GRASP_OFFSET
 
 
-def xyz_homeref(xyzcoords, refjnts):
+def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET):
 
     # ----------------------------------------
     # Current FK pose
@@ -114,7 +114,8 @@ def xyz_homeref(xyzcoords, refjnts):
 
             current = relativexyz(
                 current,
-                step
+                step,
+                GRASP_OFFSET
             )
 
         return current
@@ -127,7 +128,8 @@ def xyz_homeref(xyzcoords, refjnts):
 
         return relativexyz(
             np.array(refjnts),
-            np.array(direcxyz)
+            np.array(direcxyz), 
+            GRASP_OFFSET
         )
 
 # def xyz_homeref(xyzcoords, refjnts):
@@ -394,7 +396,7 @@ home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65
 from testkinematics import kinematics
 homexyz = kinematics.forward_kinematics(home)[:3,3]
 
-def pickupmove_traj(from_square, to_square, board_origin):
+def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
@@ -411,7 +413,7 @@ def pickupmove_traj(from_square, to_square, board_origin):
 
     # 2. Move to from_square (above)
     from_xyz = chess_to_xy(from_square, board_origin=board_origin)
-    above_from = xyz_homeref(from_xyz + np.array([0, 0, 0.10]), current)
+    above_from = xyz_homeref(from_xyz + np.array([0, 0, 0.10]), current, GRASP_OFFSET)
     above_from[5] = gripper_angle_open  # keep gripper open
     # smoothmove(current, above_from)
     jntslist.append(above_from)
@@ -419,7 +421,7 @@ def pickupmove_traj(from_square, to_square, board_origin):
 
     current = above_from.copy()
     # Lower to from_square
-    at_from = xyz_homeref(from_xyz, current)
+    at_from = xyz_homeref(from_xyz, current, GRASP_OFFSET)
     at_from[5] = gripper_angle_open  # keep gripper open
     # smoothmove(current, at_from)
     jntslist.append(at_from)
@@ -435,7 +437,7 @@ def pickupmove_traj(from_square, to_square, board_origin):
 
     current = grip_closed.copy()
     # Lift piece
-    lifted = xyz_homeref(from_xyz+np.array([0, 0, 0.10]), current)
+    lifted = xyz_homeref(from_xyz+np.array([0, 0, 0.10]), current, GRASP_OFFSET)
     lifted[5] = gripper_angle_closed  # keep gripper closed
     #   smoothmove(current, lifted)
     jntslist.append(lifted)
@@ -444,14 +446,14 @@ def pickupmove_traj(from_square, to_square, board_origin):
     current = lifted.copy()
     # 3. Move to to_square (above)
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
-    above_to = xyz_homeref(to_xyz + np.array([0, 0, 0.10]), current)
+    above_to = xyz_homeref(to_xyz + np.array([0, 0, 0.10]), current, GRASP_OFFSET)
     above_to[5] = gripper_angle_closed  # keep gripper closed
     # smoothmove(current, above_to)
     jntslist.append(above_to)
 
     current = above_to.copy()
     # Lower to to_square
-    at_to = xyz_homeref(to_xyz, current)
+    at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
     # at_to = xyz_homeref(to_xyz + np.array([0, 0, -0.02]), current)
     at_to[5] = gripper_angle_closed  # keep gripper closed
     # smoothmove(current, at_to)
@@ -466,7 +468,7 @@ def pickupmove_traj(from_square, to_square, board_origin):
 
     current = grip_open.copy()
     # Lift up
-    lifted = xyz_homeref(to_xyz + np.array([0, 0, 0.10]), current)
+    lifted = xyz_homeref(to_xyz + np.array([0, 0, 0.10]), current, GRASP_OFFSET)
     # smoothmove(current, lifted)
     jntslist.append(lifted)
  

@@ -16,7 +16,8 @@ obs = follower.get_observation()
 print("Observation:", obs)
 
 
-
+# follower.disconnect()
+# sys.exit()
 
 # action = obs.copy()
 # action["shoulder_pan.pos"] += 5

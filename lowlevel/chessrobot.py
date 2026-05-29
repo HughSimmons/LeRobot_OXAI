@@ -4,7 +4,7 @@ import numpy as np
 import sys
 
 
-robotconnected = False
+robotconnected = True
 
 # GRASP_OFFSET = np.array([
 #     0.0,     # lateral

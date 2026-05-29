@@ -8,26 +8,47 @@ from chess_traj import pickupmove_traj
 from chess_traj import chess_to_xy
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
-movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin)  # Example move from e2 to e4
-renderfreq = 10
-WIDTH, HEIGHT = 640, 360
-runid = "multisim_test"
 
+FILES = "abcdefgh"
 
-init_posit = ["a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"]
-
-for pos in init_posit:
-
-    coords = chess_to_xy(pos, board_origin=board_origin)
-
-    print(f"{coords}")
-
-piece_positions = [
-    (-0.14, -0.14), (-0.10, -0.14), (-0.06, -0.14), (-0.02, -0.14),
-    (0.02, -0.14), (0.06, -0.14), (0.10, -0.14), (0.14, -0.14),
+squares = [
+    f"{file}{rank}"
+    for rank in range(1, 9)
+    for file in FILES
 ]
 
+# GRASP_OFFSET = np.array([0, 0, 0.02])  # 2cm offset for grasping
+GRASP_OFFSET = np.array([
+    -0.025,
+    -0.0,
+    -0.005
+])
 
+
+renderfreq = 10
+WIDTH, HEIGHT = 640, 360
+runid = "multisim_testdownflag"
+
+# Robot joint waypoints (from simfk.py)
+video_on = True
+home = np.array([96.92, -107.87, 97.36, 65.19, -29.85, 4.63])
+corner1 = np.array([97.32, 0.40, 28.40, 66.55, 177.80, 4.95])
+corner2 = np.array([38.59, 60.88, -58.55, 100.48, 178.15, 4.95])
+
+# Convert to radians
+home_rad = np.deg2rad(home)
+corner1_rad = np.deg2rad(corner1)
+corner2_rad = np.deg2rad(corner2)
+
+# init_posit = ["a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"]
+
+
+# ----------------------------------------
+# Interpolation
+# ----------------------------------------
+
+def interpolate_joints(start, end, alpha):
+    return (1 - alpha) * start + alpha * end
 
 ##fn to generate pices 
 def create_piece(sq="a1"):
@@ -44,9 +65,6 @@ def create_piece(sq="a1"):
     return(piece_id)
 
 
-
-# sys.exit()
-
 # ----------------------------------------
 # Joint mapping
 # ----------------------------------------
@@ -57,346 +75,402 @@ GRIPPER_IDX = 6
 CONTROL_JOINTS = ARM_JOINTS + [GRIPPER_IDX]
 
 
-# ----------------------------------------
-# Interpolation
-# ----------------------------------------
+def simchess(i,j, GRASP_OFFSET):
+    sq1, sq2 = squares[i], squares[j]
+    init_posit = [sq1]
+    runid = f"{sq1}_to_{sq2}"
 
-def interpolate_joints(start, end, alpha):
+    movelist = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
 
-    q = (1 - alpha) * start + alpha * end
+    create_sim = True
 
-    # Delay gripper interpolation until end
-    grip_start_alpha = 0.85
+    if create_sim:    # Initialize PyBullet in HEADLESS mode
+        # physics_client = p.connect(p.DIRECT)
+        # p.setGravity(0, 0, -9.81)
+        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-    if alpha < grip_start_alpha:
+        p.resetSimulation()
 
-        q[GRIPPER_IDX] = start[GRIPPER_IDX]
+        p.setGravity(0, 0, -9.81)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-    else:
+        print("Setting up physics environment...")
 
-        grip_alpha = (
-            (alpha - grip_start_alpha)
-            / (1.0 - grip_start_alpha)
-        )
+        # Load ground plane
+        plane_id = p.loadURDF("plane.urdf", [0, 0, 0])
 
-        q[GRIPPER_IDX] = (
-            (1 - grip_alpha) * start[GRIPPER_IDX]
-            + grip_alpha * end[GRIPPER_IDX]
-        )
-
-    return q
-
-
-
-##########
+        # Load SO101 robot
+        robot_id = None
+        try:
+            urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+            robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
 
 
-def interpolate_joints(start, end, alpha):
-    return (1 - alpha) * start + alpha * end
+            p.changeDynamics(
+                robot_id,
+                6,
+                lateralFriction=5.0,
+                spinningFriction=1.0,
+                contactStiffness=10000,
+                contactDamping=100
+            )
+            print(f"✓ Loaded SO101 from URDF")
+            print(f"✓ Number of joints: {p.getNumJoints(robot_id)}")
+        except Exception as e:
+            print(f"⚠ Error loading robot: {e}")
 
 
 
-create_sim = True
 
-if create_sim:    # Initialize PyBullet in HEADLESS mode
-    physics_client = p.connect(p.DIRECT)
-    p.setGravity(0, 0, -9.81)
-    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # Create chessboard at position (0.22, 0, 0)
+        board_x, board_y, board_z = board_origin
+        square_size = 0.04
+        board_size = 8 * square_size
 
-    print("Setting up physics environment...")
+        # Board base
+        board_base_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005])
+        board_base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005], 
+                                                rgbaColor=[0.3, 0.3, 0.3, 1])
+        board_base_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=board_base_shape,
+                                        baseVisualShapeIndex=board_base_visual, 
+                                        basePosition=[board_x, board_y, board_z])
 
-    # Load ground plane
-    plane_id = p.loadURDF("plane.urdf", [0, 0, 0])
+        # Add checkerboard squares
+        for row in range(8):
+            for col in range(8):
+                x = board_x - board_size/2 + (col + 0.5) * square_size
+                y = board_y - board_size/2 + (row + 0.5) * square_size
+                z = board_z + 0.008
+                
+                if (row + col) % 2 == 0:
+                    color = [1, 1, 1, 0.5]
+                else:
+                    color = [0.1, 0.1, 0.1, 0.5]
+                
+                square_visual = p.createVisualShape(p.GEOM_BOX, 
+                                                halfExtents=[square_size/2 - 0.001, square_size/2 - 0.001, 0.001],
+                                                rgbaColor=color)
+                p.createMultiBody(baseMass=0, baseVisualShapeIndex=square_visual, basePosition=[x, y, z])
 
-    # Load SO101 robot
-    robot_id = None
+        print(f"✓ Chessboard created")
+
+        piece_ids = []
+        for sq in init_posit:
+            piece_id = create_piece(sq)
+            piece_ids.append(piece_id)
+
+        print(f"✓ Created {len(piece_ids)} large chess pieces")
+        print("Piece IDs:", piece_ids)
+        print("✓ All objects loaded and ready!")
+
+
+    moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
+
+    if video_on:
+        # Setup video recording with THREE cameras
+        camera_params = {
+            'eye': [0.0, -0.6, 0.25],
+            'target': [0.3, 0.0, 0.05],
+            'up': [0, 0, 1],
+        }
+
+        top_down_camera_params = {
+            'eye': [0.3, 0, 0.6],
+            'target': [0.3, 0, 0],
+            'up': [0, -1, 0],
+        }
+
+        # Create subdirectory for this run
+        output_dir = Path(f"./recordings/multisim/{runid}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        video_path = output_dir / "so101_robot_moves.mp4"
+        video_topdown_path = output_dir / "so101_robot_moves_topdown.mp4"
+        writer = imageio.get_writer(str(video_path), fps=30, codec='libx264', quality=8)
+        writer_topdown = imageio.get_writer(str(video_topdown_path), fps=30, codec='libx264', quality=8)
+
+    print("Starting robot movement simulation...")
+
+    # Calculate total steps
+    total_steps = sum(steps for _, steps, _ in moves)
+    current_start_pos = home_rad.copy()
+
+    # ----------------------------------------
+    # Main simulation loop
+    # ----------------------------------------
+
+    move_idx = 0
+    move_local_step = 0
+
+    current_start_pos = moves[0][0].copy()
+    current_target_pos, move_steps, move_name = moves[0]
+
+    SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
+    pickup_success = False
+
     try:
-        urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
-        robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
+
+        for global_step in range(total_steps + 100):
 
 
-        p.changeDynamics(
-            robot_id,
-            6,
-            lateralFriction=5.0,
-            spinningFriction=1.0,
-            contactStiffness=10000,
-            contactDamping=100
-        )
-        print(f"✓ Loaded SO101 from URDF")
-        print(f"✓ Number of joints: {p.getNumJoints(robot_id)}")
-    except Exception as e:
-        print(f"⚠ Error loading robot: {e}")
+            # ----------------------------------------
+            # Advance move
+            # ----------------------------------------
+
+            if move_local_step >= move_steps and move_idx < len(moves) - 1:
+
+                move_idx += 1
+
+                current_start_pos = current_target_pos.copy()
+
+                current_target_pos, move_steps, move_name = moves[move_idx]
+
+                move_local_step = 0
+
+            # ----------------------------------------
+            # Interpolate trajectory
+            # ----------------------------------------
+
+            alpha = min(move_local_step / move_steps, 1.0)
+
+            target_joints = interpolate_joints(
+                current_start_pos,
+                current_target_pos,
+                alpha
+            )
+
+            # print("Target joints:", target_joints)
+            # sys.exit()
+
+            # ----------------------------------------
+            # Apply controls
+            # ----------------------------------------
+
+            if robot_id is not None:
+
+                for traj_idx, sim_idx in enumerate(SIM_JOINT_MAP):
+
+                    force = 50
+
+                    if traj_idx == 5:
+                        force = 500
+
+                    p.setJointMotorControl2(
+                        robot_id,
+                        sim_idx,
+                        p.POSITION_CONTROL,
+                        targetPosition=target_joints[traj_idx],
+                        force=force
+                    )
+
+                    
+
+            # ----------------------------------------
+            # Physics step
+            # ----------------------------------------
+
+            p.stepSimulation()
 
 
+            piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
 
+            if piece_pos[2]>0.05:
 
-    # Create chessboard at position (0.22, 0, 0)
-    board_x, board_y, board_z = board_origin
-    square_size = 0.04
-    board_size = 8 * square_size
+                # fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
 
-    # Board base
-    board_base_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005])
-    board_base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005], 
-                                            rgbaColor=[0.3, 0.3, 0.3, 1])
-    board_base_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=board_base_shape,
-                                    baseVisualShapeIndex=board_base_visual, 
-                                    basePosition=[board_x, board_y, board_z])
+                # gripper_origin = fk_pose[:3,3]
+                # gripper_rot = fk_pose[:3,:3]
 
-    # Add checkerboard squares
-    for row in range(8):
-        for col in range(8):
-            x = board_x - board_size/2 + (col + 0.5) * square_size
-            y = board_y - board_size/2 + (row + 0.5) * square_size
-            z = board_z + 0.008
-            
-            if (row + col) % 2 == 0:
-                color = [1, 1, 1, 0.5]
-            else:
-                color = [0.1, 0.1, 0.1, 0.5]
-            
-            square_visual = p.createVisualShape(p.GEOM_BOX, 
-                                            halfExtents=[square_size/2 - 0.001, square_size/2 - 0.001, 0.001],
-                                            rgbaColor=color)
-            p.createMultiBody(baseMass=0, baseVisualShapeIndex=square_visual, basePosition=[x, y, z])
+                # # Recover grasp offset in LOCAL gripper coordinates
+                # grasp_offset = (
+                #     gripper_rot.T
+                #     @ (np.array(piece_pos) - gripper_origin)
+                # )
 
-    print(f"✓ Chessboard created")
+                # print("Recovered GRASP_OFFSET:")
+                # print(grasp_offset)
+                pickup_success = True
+                break
+                # return(pickup_success)
+                # sys.exit()
 
-    piece_ids = []
-    for sq in init_posit:
-        piece_id = create_piece(sq)
-        piece_ids.append(piece_id)
+            if video_on:
+                if global_step % renderfreq == 0:
+                    # ----------------------------------------
+                    # Camera rendering
+                    # ----------------------------------------
 
-    print(f"✓ Created {len(piece_ids)} large chess pieces")
-    print("Piece IDs:", piece_ids)
-    print("✓ All objects loaded and ready!")
+                    proj_matrix = p.computeProjectionMatrixFOV(
+                        fov=60,
+                        aspect=WIDTH / HEIGHT,
+                        nearVal=0.01,
+                        farVal=100
+                    )
 
+                    # ---------------- Perspective camera ----------------
 
+                    view_matrix = p.computeViewMatrix(
+                        cameraEyePosition=camera_params['eye'],
+                        cameraTargetPosition=camera_params['target'],
+                        cameraUpVector=camera_params['up']
+                    )
 
+                    w, h, rgba, _, _ = p.getCameraImage(
+                        WIDTH,
+                        HEIGHT,
+                        viewMatrix=view_matrix,
+                        projectionMatrix=proj_matrix
+                    )
 
+                    img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
 
+                    rgb_array = img[:, :, :3]
 
-# Robot joint waypoints (from simfk.py)
+                    writer.append_data(rgb_array)
 
-home = np.array([96.92, -107.87, 97.36, 65.19, -29.85, 4.63])
-corner1 = np.array([97.32, 0.40, 28.40, 66.55, 177.80, 4.95])
-corner2 = np.array([38.59, 60.88, -58.55, 100.48, 178.15, 4.95])
+                    # ---------------- Top-down camera ----------------
 
+                    view_matrix_topdown = p.computeViewMatrix(
+                        cameraEyePosition=top_down_camera_params['eye'],
+                        cameraTargetPosition=top_down_camera_params['target'],
+                        cameraUpVector=top_down_camera_params['up']
+                    )
 
-# Convert to radians
-home_rad = np.deg2rad(home)
-corner1_rad = np.deg2rad(corner1)
-corner2_rad = np.deg2rad(corner2)
+                    w2, h2, rgba2, _, _ = p.getCameraImage(
+                        WIDTH,
+                        HEIGHT,
+                        viewMatrix=view_matrix_topdown,
+                        projectionMatrix=proj_matrix
+                    )
 
-moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
+                    img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
 
-# Setup video recording with THREE cameras
-camera_params = {
-    'eye': [0.0, -0.6, 0.25],
-    'target': [0.3, 0.0, 0.05],
-    'up': [0, 0, 1],
-}
+                    rgb_array_topdown = img2[:, :, :3]
 
-top_down_camera_params = {
-    'eye': [0.3, 0, 0.6],
-    'target': [0.3, 0, 0],
-    'up': [0, -1, 0],
-}
+                    writer_topdown.append_data(rgb_array_topdown)
 
-# Create subdirectory for this run
-output_dir = Path(f"./recordings/{runid}")
-output_dir.mkdir(parents=True, exist_ok=True)
+            # ----------------------------------------
+            # Debug
+            # ----------------------------------------
 
-video_path = output_dir / "so101_robot_moves.mp4"
-video_topdown_path = output_dir / "so101_robot_moves_topdown.mp4"
-writer = imageio.get_writer(str(video_path), fps=30, codec='libx264', quality=8)
-writer_topdown = imageio.get_writer(str(video_topdown_path), fps=30, codec='libx264', quality=8)
+            if global_step % 50 == 0:
 
-print("Starting robot movement simulation...")
-
-# Calculate total steps
-total_steps = sum(steps for _, steps, _ in moves)
-current_start_pos = home_rad.copy()
-
-# ----------------------------------------
-# Main simulation loop
-# ----------------------------------------
-
-move_idx = 0
-move_local_step = 0
-
-current_start_pos = moves[0][0].copy()
-current_target_pos, move_steps, move_name = moves[0]
-
-SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
-
-try:
-
-    for global_step in range(total_steps + 100):
-
-
-        # ----------------------------------------
-        # Advance move
-        # ----------------------------------------
-
-        if move_local_step >= move_steps and move_idx < len(moves) - 1:
-
-            move_idx += 1
-
-            current_start_pos = current_target_pos.copy()
-
-            current_target_pos, move_steps, move_name = moves[move_idx]
-
-            move_local_step = 0
-
-        # ----------------------------------------
-        # Interpolate trajectory
-        # ----------------------------------------
-
-        alpha = min(move_local_step / move_steps, 1.0)
-
-        target_joints = interpolate_joints(
-            current_start_pos,
-            current_target_pos,
-            alpha
-        )
-
-        # print("Target joints:", target_joints)
-        # sys.exit()
-
-        # ----------------------------------------
-        # Apply controls
-        # ----------------------------------------
-
-        if robot_id is not None:
-
-            for traj_idx, sim_idx in enumerate(SIM_JOINT_MAP):
-
-                force = 50
-
-                if traj_idx == 5:
-                    force = 500
-
-                p.setJointMotorControl2(
+                actual_gripper = p.getJointState(
                     robot_id,
-                    sim_idx,
-                    p.POSITION_CONTROL,
-                    targetPosition=target_joints[traj_idx],
-                    force=force
+                    6
+                )[0]
+
+                print(
+                    f"Frame {global_step} | "
+                    f"{move_name} | "
+                    f"alpha={alpha:.2f} | "
+                    f"target_gripper={target_joints[5]:.2f} | "
+                    f"actual_gripper={actual_gripper:.2f}"
                 )
 
-                
+            move_local_step += 1
 
-        # ----------------------------------------
-        # Physics step
-        # ----------------------------------------
+    finally:
+        if video_on:
+            writer.close()
+            writer_topdown.close()
 
-        p.stepSimulation()
+            print("Videos saved.")
 
+    # p.disconnect()
 
-        piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
-
-        if piece_pos[2]>0.5:
-
-            fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
-
-            gripper_origin = fk_pose[:3,3]
-            gripper_rot = fk_pose[:3,:3]
-
-            # Recover grasp offset in LOCAL gripper coordinates
-            grasp_offset = (
-                gripper_rot.T
-                @ (np.array(piece_pos) - gripper_origin)
-            )
-
-            print("Recovered GRASP_OFFSET:")
-            print(grasp_offset)
-            sys.exit()
+    print("Pick up success:", pickup_success)
+    return pickup_success
 
 
-        if global_step % renderfreq == 0:
-            # ----------------------------------------
-            # Camera rendering
-            # ----------------------------------------
+# test = simchess(0, 16, GRASP_OFFSET)
 
-            proj_matrix = p.computeProjectionMatrixFOV(
-                fov=60,
-                aspect=WIDTH / HEIGHT,
-                nearVal=0.01,
-                farVal=100
-            )
+# print("Test result:", test)
 
-            # ---------------- Perspective camera ----------------
+def grasptest(grasp_offset):
 
-            view_matrix = p.computeViewMatrix(
-                cameraEyePosition=camera_params['eye'],
-                cameraTargetPosition=camera_params['target'],
-                cameraUpVector=camera_params['up']
-            )
+    success_count = 0
 
-            w, h, rgba, _, _ = p.getCameraImage(
-                WIDTH,
-                HEIGHT,
-                viewMatrix=view_matrix,
-                projectionMatrix=proj_matrix
-            )
+    for a in range(64):
+        for b in range(1):
+            # print(f"Testing move from {squares[a]} to {squares[b]}...")
+            result = simchess(a, b, grasp_offset)
 
-            img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
+            if result:
+                success_count += 1
 
-            rgb_array = img[:, :, :3]
+            # print(f"Result: {'Success' if result else 'Failure'}\n")
 
-            writer.append_data(rgb_array)
-
-            # ---------------- Top-down camera ----------------
-
-            view_matrix_topdown = p.computeViewMatrix(
-                cameraEyePosition=top_down_camera_params['eye'],
-                cameraTargetPosition=top_down_camera_params['target'],
-                cameraUpVector=top_down_camera_params['up']
-            )
-
-            w2, h2, rgba2, _, _ = p.getCameraImage(
-                WIDTH,
-                HEIGHT,
-                viewMatrix=view_matrix_topdown,
-                projectionMatrix=proj_matrix
-            )
-
-            img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
-
-            rgb_array_topdown = img2[:, :, :3]
-
-            writer_topdown.append_data(rgb_array_topdown)
-
-        # ----------------------------------------
-        # Debug
-        # ----------------------------------------
-
-        if global_step % 50 == 0:
-
-            actual_gripper = p.getJointState(
-                robot_id,
-                6
-            )[0]
-
-            print(
-                f"Frame {global_step} | "
-                f"{move_name} | "
-                f"alpha={alpha:.2f} | "
-                f"target_gripper={target_joints[5]:.2f} | "
-                f"actual_gripper={actual_gripper:.2f}"
-            )
-
-        move_local_step += 1
-
-finally:
-
-    writer.close()
-    writer_topdown.close()
-
-    print("Videos saved.")
+    print(f"Total successful pickups: {success_count} out of 64 moves")
+    return success_count
 
 
+# base_grasp_offset = np.array([
+#     -0.025,
+#     0.0,
+#     -0.005
+# ])
+
+base_grasp_offset = np.array([
+    -0.015,
+    0.0,
+    -0.005
+])
+
+# base_grasp_offset = np.array([
+#     -0.013,
+#     0,
+#     -0.005
+# ])
+
+
+delta = 0.00025   # 5 mm spacing
+
+grasp_offsets = []
+
+# dellist = [-2,-1,0,1]
+# dellist = [-4,-2,0 ,2,4]
+dellist = [0]
+# dellist = [delta*x for x in dellist]
+
+
+# print(-0.025+4*0.0025)
+
+# sys.exit()
+
+for dx in dellist:
+    # for dy in [-delta, 0, delta]:
+    #     for dz in [-delta, 0, delta]:
+    dy,dz = 0, 0
+
+    offset = base_grasp_offset + np.array([
+        dx,
+        dy,
+        dz
+    ])
+
+    grasp_offsets.append(offset)
+
+
+physics_client = p.connect(p.DIRECT)
+
+p.setGravity(0, 0, -9.81)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+
+
+# print(grasp_offsets)
+cnt = 0
+successlist = []
+for grasp_offset in grasp_offsets:
+    print(f"Testing GRASP_OFFSET: {cnt}")
+    cnt+=1
+    success = grasptest(grasp_offset)
+    successlist.append(success)
+    print("-----------------------------------\n")
+    print("CNT:", cnt)
 
 p.disconnect()
+print(successlist)
+
+#4 delta best so far with 51/64
