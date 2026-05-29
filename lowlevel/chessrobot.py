@@ -1,5 +1,6 @@
 import inspect
 from lerobot.model.kinematics import RobotKinematics
+# from lowlevel.chess_traj import pickupmove_traj
 import numpy as np
 import sys
 
@@ -146,68 +147,12 @@ def targetcoords(initjnts, target_pose):
 homeposition = {'shoulder_pan.pos': 96.92307692307692, 'shoulder_lift.pos': -107.86813186813187, 'elbow_flex.pos': 97.36263736263736, 'wrist_flex.pos': 65.18681318681318, 'wrist_roll.pos': -29.846153846153847, 'gripper.pos': 4.62962962962963}
 
 
-
-
-### Example of reasonable target positions
-
-
 if robotconnected:
     obs = follower.get_observation()
 else:
     obs = homeposition
 
 
-current_joints = obstovec(obs)
-current_fk = kinematics.forward_kinematics(current_joints)
-target_pose = current_fk.copy()
-target_pose[1,3] += 0.02
-
-
-###Solve for joints to take us there
-# joint_solution = targetcoords(homeposition, target_pose)
-
-print("\nJoint solution:")
-# for name, angle in zip(JOINT_NAMES, joint_solution):
-#     print(f"{name}: {angle:.3f}")
-
-
-
-# ---------------------------
-# Forward Kinematics Check
-# ---------------------------
-
-# fk_pose = kinematics.forward_kinematics(joint_solution)
-
-# print("\nFK reconstructed pose:")
-# print(fk_pose)
-
-# # ---------------------------
-# # Position error
-# # ---------------------------
-
-# target_position = target_pose[:3, 3]
-# fk_position = fk_pose[:3, 3]
-
-# position_error = np.linalg.norm(
-#     target_position - fk_position
-# )
-
-# print(f"\nPosition error: {position_error:.6f} m")
-
-
-# action = {
-#     f"{name}.pos": angle
-#     for name, angle in zip(JOINT_NAMES, joint_solution)
-# }
-
-# action = vectodic(joint_solution)
-
-# print(action)
-# sys.exit()
-
-
-
-# move_smooth(action)
 
 
 
@@ -246,9 +191,9 @@ print(coords3)
 print("Coords 4:")
 print(coords4)
 
-if robotconnected:
-    move_smooth(corner2ac)
-    time.sleep(4)
+# if robotconnected:
+#     move_smooth(corner2ac)
+#     time.sleep(4)
 
 # sys.exit()
 
@@ -301,26 +246,24 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET, downflag=False):
     # move_smooth(newac)
     return(newjoints)
 
-# direc = np.array([0,0.01,0])
-
-
-# c12 = coords1 - coords2
-c12 = coords2 - coords1
-
-
-c23 = coords3 - coords2
-
-
-mag = np.linalg.norm(c12)
-# direc = 0.01*c12/mag
-# direc = c12/10
-
-direc = c23/8
-
-# direc = np.array([0,0,0.03])
 
 # direc = c12
 if __name__ == "__main__":
+    board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
+
+    from chess_traj import pickupmove_traj
+    movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
+
+    for move in movelist:
+        move = vectodic(move)
+        move_smooth(move, 10,0.1)
+        time.sleep(3)
+
+
+    move_smooth(homeposition)
+
+
+    follower.disconnect()
     sys.exit()
 
     # relativexyz(corner1, direc)
