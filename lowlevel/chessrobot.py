@@ -103,6 +103,9 @@ if robotconnected:
 
     obs = follower.get_observation()
     print("Observation:", obs)
+
+    # follower.disconnect()
+    # sys.exit()
 # current_joints = obs
 
 def obstovec(obs):
@@ -117,30 +120,6 @@ def obstovec(obs):
     return(vec)
 
 
-def targetcoords(initjnts, target_pose):
-    # if robotconnected:
-    #     obs = follower.get_observation()
-    # else:
-    #     obs = homeposition
-
-    # current_joints = obstovec(initjnts)
-    current_joints = initjnts
-    # print("Current joints:", current_joints)
-
-
-    #initialise at current positions
-    joint_solution = current_joints
-
-    for _ in range(4):
-        joint_solution = kinematics.inverse_kinematics(
-            joint_solution,
-            target_pose,
-            position_weight=10.0,
-            orientation_weight=0.01,
-        )
-
-
-    return(joint_solution)
 
 
 
@@ -197,62 +176,63 @@ print(coords4)
 
 # sys.exit()
 
-def relativexyz(initjnts, changexyz, GRASP_OFFSET, downflag=False): 
-    fk_init = kinematics.forward_kinematics(initjnts) 
-    newpose = fk_init.copy() 
+# def relativexyz(initjnts, changexyz, GRASP_OFFSET, downflag=False): 
+#     fk_init = kinematics.forward_kinematics(initjnts) 
+#     newpose = fk_init.copy() 
 
-    downorient = True
+#     downorient = True
 
-    if downorient:
-        down_orientation = np.array([
-            [1, 0,  0],
-            [0, 1,  0],
-            [0, 0, -1]
-        ])
-        # newpose[2, 2] = -1
-        if downflag:
-            newpose[2, 2] = -1
-
-
-    newpose[:3,3] += changexyz 
-    # newpose[1,3] += 0.03 
-    newjoints = targetcoords(initjnts, newpose) 
-
-    target_position = newpose[:3, 3]
-
-    fk_pose = kinematics.forward_kinematics(newjoints)
-    # fk_position = fk_pose[:3, 3]
-
-    # Gripper/TCP position in world coordinates
-    fk_grasp_position = (
-        fk_pose[:3,3]
-        + fk_pose[:3,:3] @ GRASP_OFFSET
-    )
-
-    position_error = np.linalg.norm(
-        target_position - fk_grasp_position
-    )    
-
-    #when optimising for gripper position directly
-    # position_error = np.linalg.norm(
-    #     target_position - fk_position
-    # )
-
-    if position_error > 0.01:
-        print("Position Error:", position_error)
+#     if downorient:
+#         down_orientation = np.array([
+#             [1, 0,  0],
+#             [0, 1,  0],
+#             [0, 0, -1]
+#         ])
+#         # newpose[2, 2] = -1
+#         if downflag:
+#             newpose[2, 2] = -1
 
 
+#     newpose[:3,3] += changexyz 
+#     # newpose[1,3] += 0.03 
+#     newjoints = targetcoords(initjnts, newpose) 
 
-    # move_smooth(newac)
-    return(newjoints)
+#     target_position = newpose[:3, 3]
 
+#     fk_pose = kinematics.forward_kinematics(newjoints)
+#     # fk_position = fk_pose[:3, 3]
+
+#     # Gripper/TCP position in world coordinates
+#     fk_grasp_position = (
+#         fk_pose[:3,3]
+#         + fk_pose[:3,:3] @ GRASP_OFFSET
+#     )
+
+#     position_error = np.linalg.norm(
+#         target_position - fk_grasp_position
+#     )    
+
+#     #when optimising for gripper position directly
+#     # position_error = np.linalg.norm(
+#     #     target_position - fk_position
+#     # )
+
+#     if position_error > 0.01:
+#         print("Position Error:", position_error)
+
+
+
+#     # move_smooth(newac)
+#     return(newjoints)
+target =  {'shoulder_pan.pos': 37.142857142857146, 'shoulder_lift.pos': 60.83516483516483, 'elbow_flex.pos': -56.21978021978022, 'wrist_flex.pos': 101.23076923076923, 'wrist_roll.pos': -30.10989010989011, 'gripper.pos': 4.695767195767195}
 
 # direc = c12
 if __name__ == "__main__":
     board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 
     from chess_traj import pickupmove_traj
-    movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
+    # movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
+    movelist = pickupmove_traj('a1', 'a5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
 
     for move in movelist:
         move = vectodic(move)

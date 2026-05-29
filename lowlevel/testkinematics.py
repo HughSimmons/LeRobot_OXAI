@@ -135,7 +135,8 @@ def targetcoords(initjnts, target_pose):
             joint_solution,
             target_pose,
             position_weight=10.0,
-            orientation_weight=0.01,
+            # orientation_weight=0.01,
+            orientation_weight=1,
         )
 
 
@@ -252,7 +253,7 @@ if robotconnected:
 
 # sys.exit()
 
-def relativexyz(initjnts, changexyz, GRASP_OFFSET, downflag=False): 
+def relativexyz(initjnts, changexyz, GRASP_OFFSET, downflag=True): 
     fk_init = kinematics.forward_kinematics(initjnts) 
     newpose = fk_init.copy() 
 
