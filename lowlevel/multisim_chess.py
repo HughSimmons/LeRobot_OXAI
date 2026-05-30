@@ -9,15 +9,16 @@ from chess_traj import chess_to_xy
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 video_on = True
-runid = "multisim_test5"
+runid = "multisim_test_allsq"
 
 
 FILES = "abcdefgh"
+# FILES = "fgh"
 
 squares = [
     f"{file}{rank}"
-    # for rank in range(1, 9)
-    for rank in range(1, 2)
+    for rank in range(1, 9)
+    # for rank in range(1, 2)
     for file in FILES
 ]
 
@@ -32,13 +33,20 @@ GRASP_OFFSET = np.array([
 ])
 
 # GRASP_OFFSET = np.array([
+#     -0.025,
+#     -0.0,
+#     -0.2
+# ])
+
+
+# GRASP_OFFSET = np.array([
 #     -0.015,
 #     -0.0,
 #     -0.005
 # ])
 
 
-renderfreq = 10
+renderfreq = 50
 WIDTH, HEIGHT = 640, 360
 
 # Robot joint waypoints (from simfk.py)
@@ -73,7 +81,8 @@ def create_piece(sq="a1"):
     piece_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=piece_shape,
                                 baseVisualShapeIndex=piece_visual,
                                 basePosition=[world_x, world_y, world_z])
-    p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
+    # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
+    p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=3)
     return(piece_id)
 
 
@@ -403,8 +412,10 @@ def simchess(i,j, GRASP_OFFSET):
 def grasptest(grasp_offset):
 
     success_count = 0
+    failsquares = []
 
     for a in range(len(squares)):
+    # for a in range(6,len(squares)):
         for b in range(1):
             # print(f"Testing move from {squares[a]} to {squares[b]}...")
             result = simchess(a, b, grasp_offset)
@@ -412,9 +423,13 @@ def grasptest(grasp_offset):
             if result:
                 success_count += 1
 
+            else:
+                failsquares.append(squares[a])
+
             # print(f"Result: {'Success' if result else 'Failure'}\n")
 
     print(f"Total successful pickups: {success_count} out of {len(squares)} moves")
+    print(f"Failed squares: {failsquares}")
     return success_count
 
 

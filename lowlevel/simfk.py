@@ -3,7 +3,7 @@ from pinocchio.visualize import MeshcatVisualizer
 import numpy as np
 import time
 import numpy as np
-
+import meshcat.geometry as g
 from testkinematics import relativexyz, vectodic
 
 
@@ -283,7 +283,88 @@ rlref2 = np.array([1.8021978021978022, -0.21978021978021978, -80.48351648351648,
 rlref2correct = rlref2 + np.array([0,0,-10,0,0,0])
 start = home.copy()
 
-smoothmove(start, rlref2correct)
+
+reach_pose = np.array([
+    0.0,     # shoulder_pan
+    70,   # shoulder_lift
+    -90,     # elbow_flex
+    40,    # wrist_flex
+    90.0,     # wrist_roll
+    5.0      # gripper
+])
+
+# smoothmove(start, rlref2correct)
+
+
+
+
+
+
+
+smoothmove(start, reach_pose)
+
+###
+from testkinematics import kinematics
+joints = reach_pose.copy()
+
+# GRASP_OFFSET = np.array([
+#     -0.025,
+#     -0.0,
+#     0.005
+# ])
+
+GRASP_OFFSET = np.array([
+    -0.0,
+    -0.0,
+    0.00
+])
+
+fk = kinematics.forward_kinematics(joints)
+
+R = fk[:3,:3]
+t = fk[:3,3]
+
+grasp_xyz = t + R @ GRASP_OFFSET
+
+T = np.eye(4)
+T[:3,3] = grasp_xyz
+
+# viz.viewer["grasp_point"].set_transform(T)
+
+
+
+# Create a large sphere
+viz.viewer["test_sphere"].set_object(
+    g.Sphere(0.01)   # 10 cm radius
+)
+
+# # Place it above the robot
+# T = np.eye(4)
+# T[:3, 3] = [0.2, 0.0, 0.4]
+
+viz.viewer["test_sphere"].set_transform(T)
+
+
+
+
+# viz.viewer["test_sphere"].set_object(
+#     g.Sphere(0.1),
+#     g.MeshLambertMaterial(color=0xff0000)
+# )
+
+# T = np.eye(4)
+# T[:3, 3] = [0.2, 0.0, 0.4]
+
+# viz.viewer["test_sphere"].set_transform(T)
+
+
+
+
+# viz.initViewer(open=True)
+# viz.loadViewerModel()
+
+###
+
 
 for move in movelist:
     

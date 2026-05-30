@@ -130,13 +130,14 @@ def targetcoords(initjnts, target_pose):
     #initialise at current positions
     joint_solution = current_joints
 
-    for _ in range(4):
+    # for _ in range(4):
+    for _ in range(16):
         joint_solution = kinematics.inverse_kinematics(
             joint_solution,
             target_pose,
             position_weight=10.0,
             # orientation_weight=0.01,
-            orientation_weight=1,
+            # orientation_weight=1,
         )
 
 
@@ -257,18 +258,12 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=
     fk_init = kinematics.forward_kinematics(initjnts) 
     newpose = fk_init.copy() 
 
-    downorient = True
 
-    if downorient:
-        down_orientation = np.array([
-            [1, 0,  0],
-            [0, 1,  0],
-            [0, 0, -1]
-        ])
-        # newpose[2, 2] = -1
-        if downflag:
-            newpose[2, 2] = -1
 
+    if downflag==True:
+        newpose[2, 2] = -1
+    # if downflag=="horiz":
+    #     newpose[2,2] = 0
 
     newpose[:3,3] += changexyz 
     # newpose[1,3] += 0.03 
@@ -294,8 +289,9 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=
     #     target_position - fk_position
     # )
 
-    if position_error > 0.01:
+    if position_error > 0.025:
         print("Position Error:", position_error)
+        print("Target Position:", target_position)
 
 
 

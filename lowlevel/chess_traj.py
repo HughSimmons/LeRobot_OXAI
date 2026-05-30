@@ -59,7 +59,7 @@ def xyz_homeref_old(xyzcoords, refjnts):
 # from testkinematics import GRASP_OFFSET
 
 
-def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET):
+def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET, downflag=True):
 
     # ----------------------------------------
     # Current FK pose
@@ -91,10 +91,10 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET):
 
     rot_error = abs(-1 - refrot[2,2])
 
-    mag = (
-        np.linalg.norm(direcxyz)
-        + rot_error
-    )
+    if downflag:
+        mag = np.linalg.norm(direcxyz) + rot_error
+    else:
+        mag = np.linalg.norm(direcxyz)
 
     min_step = 0.02
 
@@ -115,7 +115,8 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET):
             current = relativexyz(
                 current,
                 step,
-                GRASP_OFFSET
+                GRASP_OFFSET,
+                downflag
             )
 
         return current
@@ -129,67 +130,11 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET):
         return relativexyz(
             np.array(refjnts),
             np.array(direcxyz), 
-            GRASP_OFFSET
+            GRASP_OFFSET, 
+            downflag
         )
 
-# def xyz_homeref(xyzcoords, refjnts):
 
-#     current = refjnts.copy()
-
-#     min_step = 0.02
-#     max_iters = 50
-
-#     for _ in range(max_iters):
-
-#         # ----------------------------------------
-#         # Current FK pose
-#         # ----------------------------------------
-
-#         pose = kinematics.forward_kinematics(current)
-
-#         current_xyz = pose[:3,3]
-#         current_rot = pose[:3,:3]
-
-#         # ----------------------------------------
-#         # Current TCP / grasp point
-#         # ----------------------------------------
-
-#         current_grasp_xyz = (
-#             current_xyz
-#             + current_rot @ GRASP_OFFSET
-#         )
-
-#         # ----------------------------------------
-#         # TCP error
-#         # ----------------------------------------
-
-#         direcxyz = xyzcoords - current_grasp_xyz
-
-#         error = np.linalg.norm(direcxyz)
-
-#         # ----------------------------------------
-#         # Converged
-#         # ----------------------------------------
-
-#         if error < 1e-3:
-#             break
-
-#         # ----------------------------------------
-#         # Step toward target
-#         # ----------------------------------------
-
-#         step_mag = min(error, min_step)
-
-#         step = (
-#             direcxyz / error
-#         ) * step_mag
-
-#         current = relativexyz(
-#             current,
-#             step
-#         )
-
-#     return current
 
 def chess_to_xy_old(square):
     """
@@ -501,20 +446,32 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     # height = 0.11  # height to lift above squares
 
     gripper_angle_open = 25
+    # gripper_angle_open = 20
     gripper_angle_closed = 5
 
     jntslist = []
+    far_rows = ["f","g", "h"]
 
     current = home.copy()
+    # if "g" in from_square or "h" in from_square:
+    if from_square[0] in far_rows:
+        downflag = False
 
-    # 2. Move to from_square (above)
-    # from_xyz = chess_to_xy(from_square, board_origin=board_origin)
-    # above_from = xyz_homeref(from_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
-    # above_from[5] = gripper_angle_open  # keep gripper open
-    # jntslist.append(above_from)
+        reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
+        current = reach_pose.copy()
+        jntslist.append(current)
+    else:
+        downflag = True 
 
 
-    ###
+    # if from_square[0] in far_rows:
+    #     reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
+
+    #     current = reach_pose.copy()
+    #     jntslist.append(current)
+    #     # return jntslist
+
+
     # 2. Move to from_square (above)
 
     from_xyz = chess_to_xy(
@@ -523,10 +480,9 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     )
 
     target_xyz = from_xyz + np.array([0, 0, height])
-
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    nsteps = 5
+    nsteps = 10
 
     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
@@ -538,7 +494,8 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         intermediate_joints = xyz_homeref(
             intermediate_xyz,
             current,
-            GRASP_OFFSET
+            GRASP_OFFSET, 
+            downflag
         )
 
         intermediate_joints[5] = gripper_angle_open
@@ -548,30 +505,66 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         current = intermediate_joints.copy()
     ###
 
+    target_xyz = from_xyz + np.array([0, 0, 0])
+    start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+    nsteps = 10
+
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+        intermediate_xyz = (
+            (1 - alpha) * start_xyz
+            + alpha * target_xyz
+        )
+
+        intermediate_joints = xyz_homeref(
+            intermediate_xyz,
+            current,
+            GRASP_OFFSET, 
+            downflag
+        )
+
+        intermediate_joints[5] = gripper_angle_open
+
+        jntslist.append(intermediate_joints)
+
+        current = intermediate_joints.copy()
 
 
-    # current = above_from.copy()
-    # Lower to from_square
-    at_from = xyz_homeref(from_xyz, current, GRASP_OFFSET)
-    at_from[5] = gripper_angle_open  # keep gripper open
-    jntslist.append(at_from)
-
-
-    current = at_from.copy()
-    # Close gripper
+    ### close gripper
     grip_closed = current.copy()
     grip_closed[5] = gripper_angle_closed  # adjust as needed
     jntslist.append(grip_closed)
 
 
-    current = grip_closed.copy()
-    # Lift piece
-    lifted = xyz_homeref(from_xyz+np.array([0, 0, height]), current, GRASP_OFFSET)
-    lifted[5] = gripper_angle_closed  # keep gripper closed
-    jntslist.append(lifted)
+    ###lift 
+    target_xyz = from_xyz + np.array([0, 0, height])
+    start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
+    nsteps = 10
 
-    current = lifted.copy()
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+        intermediate_xyz = (
+            (1 - alpha) * start_xyz
+            + alpha * target_xyz
+        )
+
+        intermediate_joints = xyz_homeref(
+            intermediate_xyz,
+            current,
+            GRASP_OFFSET, 
+            downflag
+        )
+
+        intermediate_joints[5] = gripper_angle_closed
+
+        jntslist.append(intermediate_joints)
+
+        current = intermediate_joints.copy()
+    
+
+    return jntslist
     # 3. Move to to_square (above)
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
     above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
