@@ -217,6 +217,7 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     x = board_x - board_size/2 + (file + 0.5) * square_size
     # y = board_y - board_size/2 + (rank + 0.85) * square_size
     z = board_z + 0.04  # slightly above the board
+    # z = board_z + 0.06  # slightly above the board
     # z = board_z + 0.1  # slightly above the board
     return np.array([x, y, z])
 
@@ -404,7 +405,8 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     global home
     # 1. Move to home
-    height = 0.10  # height to lift above squares
+    height = 0.13  # height to lift above squares
+    # height = 0.11  # height to lift above squares
 
     gripper_angle_open = 25
     gripper_angle_closed = 5
@@ -456,10 +458,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     current = above_to.copy()
     # Lower to to_square
     at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
-    # at_to = xyz_homeref(to_xyz + np.array([0, 0, -0.02]), current)
-    at_to[5] = gripper_angle_closed  # keep gripper closed
-    # smoothmove(current, at_to)
     jntslist.append(at_to)
+
+    #close gripper
+    at_to_grip = at_to.copy()
+    at_to_grip[5] = gripper_angle_closed  # keep gripper closed
+    # smoothmove(current, at_to)
+    jntslist.append(at_to_grip)
 
     current = at_to.copy()
     # Open gripper

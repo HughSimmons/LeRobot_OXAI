@@ -253,7 +253,7 @@ if robotconnected:
 
 # sys.exit()
 
-def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=False): 
+def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=True): 
     fk_init = kinematics.forward_kinematics(initjnts) 
     newpose = fk_init.copy() 
 

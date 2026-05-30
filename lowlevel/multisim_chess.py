@@ -9,7 +9,7 @@ from chess_traj import chess_to_xy
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 video_on = True
-runid = "multisim_testheight"
+runid = "multisim_test5"
 
 
 FILES = "abcdefgh"
@@ -30,6 +30,12 @@ GRASP_OFFSET = np.array([
     -0.0,
     -0.005
 ])
+
+# GRASP_OFFSET = np.array([
+#     -0.015,
+#     -0.0,
+#     -0.005
+# ])
 
 
 renderfreq = 10
@@ -57,8 +63,8 @@ def interpolate_joints(start, end, alpha):
 
 ##fn to generate pices 
 def create_piece(sq="a1"):
-    world_x, world_y, world_z = chess_to_xy(sq, board_origin=board_origin)
-    # world_z = 0.02
+    world_x, world_y, _ = chess_to_xy(sq, board_origin=board_origin)
+    world_z = 0.04
 
     # Larger pieces: radius 0.024 (2x), height 0.04 (2x)
     piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
@@ -280,7 +286,8 @@ def simchess(i,j, GRASP_OFFSET):
 
             piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
 
-            if piece_pos[2]>0.05 and global_step > 100:
+            if piece_pos[2]>0.05 and global_step > 50:  # Check if the piece has been lifted off the board (adjust threshold as needed)
+            # if piece_pos[2]>0.1:
 
                 # fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
 
