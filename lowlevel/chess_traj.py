@@ -398,7 +398,7 @@ home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65
 from testkinematics import kinematics
 homexyz = kinematics.forward_kinematics(home)[:3,3]
 
-def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
+def pickupmove_traj_old(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
@@ -489,6 +489,127 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     return jntslist
 
 
+
+def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
+    """
+    Move from current_joints to home, then from home to from_square, pick up piece,
+    move to to_square, place piece, and return to home. Returns the final joint position (home).
+    """
+    global home
+    # 1. Move to home
+    height = 0.13  # height to lift above squares
+    # height = 0.11  # height to lift above squares
+
+    gripper_angle_open = 25
+    gripper_angle_closed = 5
+
+    jntslist = []
+
+    current = home.copy()
+
+    # 2. Move to from_square (above)
+    # from_xyz = chess_to_xy(from_square, board_origin=board_origin)
+    # above_from = xyz_homeref(from_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+    # above_from[5] = gripper_angle_open  # keep gripper open
+    # jntslist.append(above_from)
+
+
+    ###
+    # 2. Move to from_square (above)
+
+    from_xyz = chess_to_xy(
+        from_square,
+        board_origin=board_origin
+    )
+
+    target_xyz = from_xyz + np.array([0, 0, height])
+
+    start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+    nsteps = 5
+
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+        intermediate_xyz = (
+            (1 - alpha) * start_xyz
+            + alpha * target_xyz
+        )
+
+        intermediate_joints = xyz_homeref(
+            intermediate_xyz,
+            current,
+            GRASP_OFFSET
+        )
+
+        intermediate_joints[5] = gripper_angle_open
+
+        jntslist.append(intermediate_joints)
+
+        current = intermediate_joints.copy()
+    ###
+
+
+
+    # current = above_from.copy()
+    # Lower to from_square
+    at_from = xyz_homeref(from_xyz, current, GRASP_OFFSET)
+    at_from[5] = gripper_angle_open  # keep gripper open
+    jntslist.append(at_from)
+
+
+    current = at_from.copy()
+    # Close gripper
+    grip_closed = current.copy()
+    grip_closed[5] = gripper_angle_closed  # adjust as needed
+    jntslist.append(grip_closed)
+
+
+    current = grip_closed.copy()
+    # Lift piece
+    lifted = xyz_homeref(from_xyz+np.array([0, 0, height]), current, GRASP_OFFSET)
+    lifted[5] = gripper_angle_closed  # keep gripper closed
+    jntslist.append(lifted)
+
+
+    current = lifted.copy()
+    # 3. Move to to_square (above)
+    to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+    above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+    above_to[5] = gripper_angle_closed  # keep gripper closed
+    jntslist.append(above_to)
+
+    current = above_to.copy()
+    # Lower to to_square
+    at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
+    jntslist.append(at_to)
+
+    #close gripper
+    at_to_grip = at_to.copy()
+    at_to_grip[5] = gripper_angle_closed  # keep gripper closed
+    # smoothmove(current, at_to)
+    jntslist.append(at_to_grip)
+
+    current = at_to.copy()
+    # Open gripper
+    grip_open = current.copy()
+    grip_open[5] = gripper_angle_open  # adjust as needed
+    # smoothmove(current, grip_open)
+    jntslist.append(grip_open)
+
+    current = grip_open.copy()
+    # Lift up
+    lifted = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+    # smoothmove(current, lifted)
+    jntslist.append(lifted)
+ 
+    current = lifted.copy()
+
+    # 4. Return to home
+    # smoothmove(current, home)
+    jntslist.append(home)
+    current = home.copy()
+
+    return jntslist
 
 
 if __name__ == "__main__":
