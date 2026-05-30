@@ -232,11 +232,22 @@ if __name__ == "__main__":
 
     from chess_traj import pickupmove_traj
     # movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
-    movelist = pickupmove_traj('a1', 'a5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
+    # movelist = pickupmove_traj('a1', 'a5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
+    # movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
+    movelist = pickupmove_traj("c5", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
 
+
+    movecnt = 0
     for move in movelist:
-        move = vectodic(move)
-        move_smooth(move, 10,0.1)
+        moverl = move - np.array([0,0,-10,0,0,0])
+
+        moverl = vectodic(moverl)
+        print(moverl)
+        move_smooth(moverl, 10,0.1)
+        movecnt += 1
+        # if movecnt == 2:
+        #     time.sleep(10)
+
         time.sleep(3)
 
 

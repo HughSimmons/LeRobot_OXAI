@@ -216,7 +216,8 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     y = board_y - board_size/2 + (rank + 0.5) * square_size
     x = board_x - board_size/2 + (file + 0.5) * square_size
     # y = board_y - board_size/2 + (rank + 0.85) * square_size
-    z = board_z + 0.02  # slightly above the board
+    z = board_z + 0.04  # slightly above the board
+    # z = board_z + 0.1  # slightly above the board
     return np.array([x, y, z])
 
 def move_to_squareold(current_joints, from_square, to_square):
@@ -403,7 +404,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     global home
     # 1. Move to home
-    height = 0.1  # height to lift above squares
+    height = 0.10  # height to lift above squares
 
     gripper_angle_open = 25
     gripper_angle_closed = 5

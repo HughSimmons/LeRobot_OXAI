@@ -8,14 +8,21 @@ from chess_traj import pickupmove_traj
 from chess_traj import chess_to_xy
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
+video_on = True
+runid = "multisim_testheight"
+
 
 FILES = "abcdefgh"
 
 squares = [
     f"{file}{rank}"
-    for rank in range(1, 9)
+    # for rank in range(1, 9)
+    for rank in range(1, 2)
     for file in FILES
 ]
+
+
+
 
 # GRASP_OFFSET = np.array([0, 0, 0.02])  # 2cm offset for grasping
 GRASP_OFFSET = np.array([
@@ -27,10 +34,8 @@ GRASP_OFFSET = np.array([
 
 renderfreq = 10
 WIDTH, HEIGHT = 640, 360
-runid = "multisim_testdownflag"
 
 # Robot joint waypoints (from simfk.py)
-video_on = True
 home = np.array([96.92, -107.87, 97.36, 65.19, -29.85, 4.63])
 corner1 = np.array([97.32, 0.40, 28.40, 66.55, 177.80, 4.95])
 corner2 = np.array([38.59, 60.88, -58.55, 100.48, 178.15, 4.95])
@@ -53,6 +58,7 @@ def interpolate_joints(start, end, alpha):
 ##fn to generate pices 
 def create_piece(sq="a1"):
     world_x, world_y, world_z = chess_to_xy(sq, board_origin=board_origin)
+    # world_z = 0.02
 
     # Larger pieces: radius 0.024 (2x), height 0.04 (2x)
     piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
@@ -78,7 +84,7 @@ CONTROL_JOINTS = ARM_JOINTS + [GRIPPER_IDX]
 def simchess(i,j, GRASP_OFFSET):
     sq1, sq2 = squares[i], squares[j]
     init_posit = [sq1]
-    runid = f"{sq1}_to_{sq2}"
+    simid = f"{sq1}_to_{sq2}"
 
     movelist = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
 
@@ -181,7 +187,7 @@ def simchess(i,j, GRASP_OFFSET):
         }
 
         # Create subdirectory for this run
-        output_dir = Path(f"./recordings/multisim/{runid}")
+        output_dir = Path(f"./recordings/{runid}/{simid}")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         video_path = output_dir / "so101_robot_moves.mp4"
@@ -274,7 +280,7 @@ def simchess(i,j, GRASP_OFFSET):
 
             piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
 
-            if piece_pos[2]>0.05:
+            if piece_pos[2]>0.05 and global_step > 100:
 
                 # fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
 
@@ -391,7 +397,7 @@ def grasptest(grasp_offset):
 
     success_count = 0
 
-    for a in range(64):
+    for a in range(len(squares)):
         for b in range(1):
             # print(f"Testing move from {squares[a]} to {squares[b]}...")
             result = simchess(a, b, grasp_offset)
@@ -401,7 +407,7 @@ def grasptest(grasp_offset):
 
             # print(f"Result: {'Success' if result else 'Failure'}\n")
 
-    print(f"Total successful pickups: {success_count} out of 64 moves")
+    print(f"Total successful pickups: {success_count} out of {len(squares)} moves")
     return success_count
 
 

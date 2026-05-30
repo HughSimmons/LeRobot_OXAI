@@ -275,12 +275,20 @@ def move_to_square_v2(current_joints, from_square, to_square):
 from chess_traj import pickupmove_traj
 
 
-movelist = pickupmove_traj("e1", "c5")
+movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
 
+
+rlref =  np.array([-6.021978021978022, 13.714285714285714, -93.67032967032966, 7.956043956043956, -30.10989010989011, 4.761904761904762])
+rlref2 = np.array([1.8021978021978022, -0.21978021978021978, -80.48351648351648, -3.340659340659341, -0.04395604395604396, 4.587765957446808])
+rlref2correct = rlref2 + np.array([0,0,-10,0,0,0])
 start = home.copy()
+
+smoothmove(start, rlref2correct)
+
 for move in movelist:
     
-    smoothmove(start, move)
+    # smoothmove(start, move)
+    print(move)
     start = move.copy()
     time.sleep(1)
 
