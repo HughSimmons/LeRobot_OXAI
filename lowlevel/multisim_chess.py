@@ -4,12 +4,12 @@ import imageio
 import numpy as np
 import sys
 from pathlib import Path
-from chess_traj import pickupmove_traj
-from chess_traj import chess_to_xy
+from chess_traj import pickupmove_traj, chess_to_xy, gripper_angle_closed, gripper_angle_open
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
+# video_on = False
 video_on = True
-runid = "multisim_test_allsq"
+runid = "multisim_dev_pickplace"
 
 
 FILES = "abcdefgh"
@@ -26,11 +26,11 @@ squares = [
 
 
 # GRASP_OFFSET = np.array([0, 0, 0.02])  # 2cm offset for grasping
-GRASP_OFFSET = np.array([
-    -0.025,
-    -0.0,
-    -0.005
-])
+# GRASP_OFFSET = np.array([
+#     -0.025,
+#     -0.0,
+#     -0.005
+# ])
 
 # GRASP_OFFSET = np.array([
 #     -0.025,
@@ -39,11 +39,11 @@ GRASP_OFFSET = np.array([
 # ])
 
 
-# GRASP_OFFSET = np.array([
-#     -0.015,
-#     -0.0,
-#     -0.005
-# ])
+GRASP_OFFSET = np.array([
+    -0.015,
+    -0.0,
+    -0.005
+])
 
 
 renderfreq = 50
@@ -78,11 +78,21 @@ def create_piece(sq="a1"):
     piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
     piece_visual = p.createVisualShape(p.GEOM_CYLINDER, radius=0.012, length=0.04, 
                                     rgbaColor=[1, 0, 0, 1])
-    piece_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=piece_shape,
+    piece_id = p.createMultiBody(baseMass=0.05, baseCollisionShapeIndex=piece_shape,
                                 baseVisualShapeIndex=piece_visual,
                                 basePosition=[world_x, world_y, world_z])
     # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
-    p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=3)
+    # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=3)
+
+    p.changeDynamics(
+        piece_id,
+        -1,
+        lateralFriction=10.0,
+        rollingFriction=0.2,
+        spinningFriction=0.2,
+        linearDamping=0.5,
+        angularDamping=1.0
+    )
     return(piece_id)
 
 
@@ -101,7 +111,7 @@ def simchess(i,j, GRASP_OFFSET):
     init_posit = [sq1]
     simid = f"{sq1}_to_{sq2}"
 
-    movelist = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
+    movelist, closeidx = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
 
     create_sim = True
 
@@ -130,7 +140,7 @@ def simchess(i,j, GRASP_OFFSET):
             p.changeDynamics(
                 robot_id,
                 6,
-                lateralFriction=5.0,
+                lateralFriction=10.0,
                 spinningFriction=1.0,
                 contactStiffness=10000,
                 contactDamping=100
@@ -276,6 +286,21 @@ def simchess(i,j, GRASP_OFFSET):
                     if traj_idx == 5:
                         force = 500
 
+                        if move_idx == closeidx:
+                            actual_gripper = p.getJointState(robot_id, 6)[0]
+
+
+                        if move_idx > closeidx+1:
+                            # target_joints[5] = p.getJointState(robot_id, 6)[0]
+                            # target_joints[5] = actual_gripper
+                        #     target_joints[5] = actual_gripper - np.deg2rad(0.1)
+                            force = 50
+                            #if gripper closed, dont alter
+
+                        # if move_idx == closeidx+10:
+                        #     for _ in range(1000):
+                        #         p.stepSimulation()
+
                     p.setJointMotorControl2(
                         robot_id,
                         sim_idx,
@@ -312,7 +337,7 @@ def simchess(i,j, GRASP_OFFSET):
                 # print("Recovered GRASP_OFFSET:")
                 # print(grasp_offset)
                 pickup_success = True
-                break
+                # break
                 # return(pickup_success)
                 # sys.exit()
 
