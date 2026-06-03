@@ -1,3 +1,5 @@
+# import sys
+
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 import numpy as np
@@ -146,7 +148,8 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET, downflag=True):
 
 
 
-def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
+# def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
+def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.0425):
     file = FILES.index(square[0].lower())
     rank = int(square[1]) - 1
     board_x, board_y, board_z = board_origin
@@ -155,7 +158,10 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     y = board_y - board_size/2 + (rank + 0.5) * square_size
     x = board_x - board_size/2 + (file + 0.5) * square_size
     # y = board_y - board_size/2 + (rank + 0.85) * square_size
-    z = board_z + 0.04  # best slightly above the board
+    # z = board_z + 0.04  # best slightly above the board
+    z = board_z + 0.08  # best slightly above the board
+    # z = board_z + 0.075  # for rook best slightly above the board
+    # z = board_z + 0.1  # for rook best slightly above the board
     # z = board_z + 0.035  # slightly above the board
     # z = board_z + 0.06  # slightly above the board
     # z = board_z + 0.1  # slightly above the board
@@ -169,16 +175,18 @@ mesh_dir = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101"
 
 FILES = "abcdefgh"
 
-SQUARE_SIZE = 0.04   # 4 cm example
+SQUARE_SIZE = 0.0425   # 4 cm example
 
 corner1 = [97.32,0.40,28.40,66.55,177.80,4.95]
 corner2 = [38.59,60.88,-58.55,100.48,178.15,4.95]
 corner3 = [-52.48,57.98,-56.26,96.26,172.70,4.95]
 corner4 = [-108.75, 26.33, 0.79, 81.85, 172.88, 1.4]
 
-gripper_angle_open = 25
-# gripper_angle_open = 20
-gripper_angle_closed = 5
+# gripper_angle_open = 25
+gripper_angle_open = 20
+# gripper_angle_closed = 5
+gripper_angle_closed = 8
+# gripper_angle_closed = 7
 
 
 home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65.18681318681318,  -29.846153846153847,  4.62962962962963])
@@ -285,6 +293,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     global home
     # 1. Move to home
+    # height = 0.23  # height to lift above squares
     height = 0.13  # height to lift above squares
     # height = 0.11  # height to lift above squares
 
@@ -292,6 +301,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
 
     jntslist = []
     far_rows = ["f","g", "h"]
+    # far_rows = []
 
     # current = home.copy()
     # if "g" in from_square or "h" in from_square:
@@ -303,9 +313,11 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         jntslist.append(current)
     else:
         downflag = True 
+        # downflag = False 
         current = home.copy()
 
 
+    # downflag = True
     ###move above square
     from_xyz = chess_to_xy(
         from_square,
@@ -343,6 +355,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     target_xyz = from_xyz + np.array([0, 0, 0])
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
+    # nsteps = 10
     nsteps = 10
     downjnts = []
     stepcnt = 0
@@ -386,6 +399,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
 
 
 
+
     ###lift back via downjnts
     for j in downjnts[::-1]:
         j[5] = gripper_angle_closed
@@ -393,40 +407,8 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         # jntslist.extend(smoothjnts(current, j))
         current = j.copy()
 
-    # aboveboard_closedjnts = aboveboardjnts.copy()
-    # aboveboard_closedjnts[5] = gripper_angle_closed
 
-    # jntslist.append(aboveboardjnts)
-    # current = aboveboardjnts.copy()
 
-    ###lift 
-    # target_xyz = from_xyz + np.array([0, 0, height])
-    # start_xyz = kinematics.forward_kinematics(current)[:3,3]
-
-    # nsteps = 2
-
-    # for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
-
-    #     intermediate_xyz = (
-    #         (1 - alpha) * start_xyz
-    #         + alpha * target_xyz
-    #     )
-
-    #     intermediate_joints = xyz_homeref(
-    #         intermediate_xyz,
-    #         current,
-    #         GRASP_OFFSET, 
-    #         downflag
-    #     )
-
-    #     intermediate_joints[5] = gripper_angle_closed
-
-    #     jntslist.append(intermediate_joints)
-
-    #     current = intermediate_joints.copy()
-    
-
-    # return jntslist
     # 3. Move to to_square (above)
     # downflag = True
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
@@ -461,21 +443,47 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     ###
  
 
+    ### lower to board
+    to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+    # target_xyz = to_xyz + np.array([0, 0, 0.04]) #wiggle room for drop
+    # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
+    target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
+    start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    return jntslist, closeidx
+    nsteps = 10
+    downjnts = []
+    stepcnt = 0
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
-    current = above_to.copy()
-    # Lower to to_square
-    at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
-    jntslist.append(at_to)
+        intermediate_xyz = (
+            (1 - alpha) * start_xyz
+            + alpha * target_xyz
+        )
 
-    #close gripper
-    at_to_grip = at_to.copy()
-    at_to_grip[5] = gripper_angle_closed  # keep gripper closed
-    # smoothmove(current, at_to)
-    jntslist.append(at_to_grip)
+        intermediate_joints = xyz_homeref(
+            intermediate_xyz,
+            current,
+            GRASP_OFFSET, 
+            downflag
+        )
 
-    current = at_to.copy()
+        intermediate_joints[5] = gripper_angle_closed
+
+        jntslist.append(intermediate_joints)
+
+        current = intermediate_joints.copy()
+
+        if stepcnt == 0:
+            downjnts.append(intermediate_joints.copy())
+
+        # if stepcnt == 5:
+        #     downjnts.append(intermediate_joints.copy())
+
+        stepcnt+=1
+
+
+    # return jntslist, closeidx
+
     # Open gripper
     grip_open = current.copy()
     grip_open[5] = gripper_angle_open  # adjust as needed
@@ -483,23 +491,47 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     jntslist.append(grip_open)
 
     current = grip_open.copy()
-    # Lift up
-    lifted = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
-    # smoothmove(current, lifted)
-    jntslist.append(lifted)
- 
-    current = lifted.copy()
 
-    # 4. Return to home
-    # smoothmove(current, home)
+    for j in downjnts[::-1]:
+        j[5] = gripper_angle_closed
+        jntslist.append(j)
+        # jntslist.extend(smoothjnts(current, j))
+        current = j.copy()
+
+
+    ###
+    home_xyz = kinematics.forward_kinematics(home)[:3,3]
+
+    above_home = xyz_homeref(
+        home_xyz + np.array([0, 0, 0.10]),
+        current,
+        GRASP_OFFSET
+    )
+
+    above_home[5] = current[5]
+
+    jntslist.append(above_home)
+
+    current = above_home.copy()
+
+    jntslist.append(home)
+
+    current = home.copy()
+    ##
     jntslist.append(home)
     current = home.copy()
 
-    return jntslist
+    return jntslist, closeidx
 
 
 if __name__ == "__main__":
 
+    test = pickupmove_traj("h1", "a1", board_origin=(0.25, 0, 0), GRASP_OFFSET = np.array([-0.025, -0.0, -0.005]))
+
+
+
+
+    sys.exit()
     model, collision_model, visual_model = pin.buildModelsFromUrdf(
         urdf_path,
         mesh_dir

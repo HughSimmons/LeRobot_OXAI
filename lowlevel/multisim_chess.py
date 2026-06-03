@@ -3,13 +3,16 @@ import pybullet_data
 import imageio
 import numpy as np
 import sys
+import matplotlib.pyplot as plt
+
 from pathlib import Path
 from chess_traj import pickupmove_traj, chess_to_xy, gripper_angle_closed, gripper_angle_open
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 # video_on = False
 video_on = True
-runid = "multisim_dev_pickplace"
+# runid = "multisim_dev_pickplace"
+runid = "multisim_h1a1_a1h1"
 
 
 FILES = "abcdefgh"
@@ -17,8 +20,8 @@ FILES = "abcdefgh"
 
 squares = [
     f"{file}{rank}"
-    for rank in range(1, 9)
-    # for rank in range(1, 2)
+    # for rank in range(1, 9)
+    for rank in range(1, 2)
     for file in FILES
 ]
 
@@ -26,11 +29,11 @@ squares = [
 
 
 # GRASP_OFFSET = np.array([0, 0, 0.02])  # 2cm offset for grasping
-# GRASP_OFFSET = np.array([
-#     -0.025,
-#     -0.0,
-#     -0.005
-# ])
+GRASP_OFFSET = np.array([
+    -0.025,
+    -0.0,
+    -0.005
+])
 
 # GRASP_OFFSET = np.array([
 #     -0.025,
@@ -39,11 +42,11 @@ squares = [
 # ])
 
 
-GRASP_OFFSET = np.array([
-    -0.015,
-    -0.0,
-    -0.005
-])
+# GRASP_OFFSET = np.array([
+#     -0.015,
+#     -0.0,
+#     -0.005
+# ])
 
 
 renderfreq = 50
@@ -111,7 +114,16 @@ def simchess(i,j, GRASP_OFFSET):
     init_posit = [sq1]
     simid = f"{sq1}_to_{sq2}"
 
+    piece_xyz_log = []
+    ee_xyz_log = []
+    distance_log = []
+    gripper_log = []
+    time_log = []
+
     movelist, closeidx = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
+    movelist2, closeidx2 = pickupmove_traj(sq2, sq1, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
+    movelist.extend(movelist2)
+
 
     create_sim = True
 
@@ -316,6 +328,35 @@ def simchess(i,j, GRASP_OFFSET):
             # ----------------------------------------
 
             p.stepSimulation()
+            ###
+            piece_pos, _ = p.getBasePositionAndOrientation(
+                piece_ids[0]
+            )
+
+            fk_pose = kinematics.forward_kinematics(
+                np.rad2deg(target_joints)
+            )
+
+            ee_xyz = fk_pose[:3,3]
+
+            piece_xyz_log.append(piece_pos)
+
+            ee_xyz_log.append(ee_xyz)
+
+            distance_log.append(
+                np.linalg.norm(
+                    np.array(piece_pos) - ee_xyz
+                )
+            )
+
+            gripper_log.append(
+                p.getJointState(robot_id, 6)[0]
+            )
+
+            time_log.append(global_step / 240.0)
+            ###
+
+
 
 
             piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
@@ -426,6 +467,56 @@ def simchess(i,j, GRASP_OFFSET):
 
     # p.disconnect()
 
+    piece_xyz_log = np.array(piece_xyz_log)
+    ee_xyz_log = np.array(ee_xyz_log)
+    distance_log = np.array(distance_log)
+    gripper_log = np.array(gripper_log)
+    time_log = np.array(time_log)
+
+
+    plt.figure(figsize=(10,6))
+
+    plt.plot(time_log, piece_xyz_log[:,0], label="piece x")
+    plt.plot(time_log, ee_xyz_log[:,0], "--", label="ee x")
+
+    plt.plot(time_log, piece_xyz_log[:,1], label="piece y")
+    plt.plot(time_log, ee_xyz_log[:,1], "--", label="ee y")
+
+    plt.plot(time_log, piece_xyz_log[:,2], label="piece z")
+    plt.plot(time_log, ee_xyz_log[:,2], "--", label="ee z")
+
+    plt.legend()
+    plt.xlabel("Time (s)")
+    plt.ylabel("Position (m)")
+
+    plt.savefig(
+        output_dir / "xyz_vs_time.png",
+        dpi=200,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+
+    plt.figure(figsize=(10,4))
+
+    plt.plot(
+        time_log,
+        distance_log
+    )
+
+    plt.xlabel("Time (s)")
+    plt.ylabel("EE-Piece distance (m)")
+
+    plt.savefig(
+        output_dir / "distance_vs_time.png",
+        dpi=200,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+
     print("Pick up success:", pickup_success)
     return pickup_success
 
@@ -439,8 +530,8 @@ def grasptest(grasp_offset):
     success_count = 0
     failsquares = []
 
-    for a in range(len(squares)):
-    # for a in range(6,len(squares)):
+    # for a in range(len(squares)):
+    for a in range(7,len(squares)):
         for b in range(1):
             # print(f"Testing move from {squares[a]} to {squares[b]}...")
             result = simchess(a, b, grasp_offset)
@@ -526,4 +617,3 @@ for grasp_offset in grasp_offsets:
 p.disconnect()
 print(successlist)
 
-#4 delta best so far with 51/64

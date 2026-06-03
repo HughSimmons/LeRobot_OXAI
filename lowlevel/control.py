@@ -16,8 +16,8 @@ obs = follower.get_observation()
 print("Observation:", obs)
 
 
-# follower.disconnect()
-# sys.exit()
+follower.disconnect()
+sys.exit()
 
 # action = obs.copy()
 # action["shoulder_pan.pos"] += 5
@@ -28,8 +28,10 @@ print("Observation:", obs)
 
 
 # --- parameters ---
-joint = "wrist_flex.pos"
-amplitude = 10.0      # degrees (keep small for safety)
+# joint = "wrist_flex.pos"
+joint = "wrist_roll.pos"
+amplitude = 1.0      # degrees (keep small for safety)
+# amplitude = 10.0      # degrees (keep small for safety)
 frequency = 0.2       # Hz (cycles per second)
 total_time = 10
 
@@ -37,7 +39,7 @@ total_time = 10
 # --- get initial position ---
 obs = follower.get_observation()
 offset = obs[joint]
-
+print(f"Initial {joint}: {offset}")
 start_time = time.time()
 
 

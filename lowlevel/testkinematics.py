@@ -262,8 +262,9 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=
 
     if downflag==True:
         newpose[2, 2] = -1
+        # newpose[2, 2] = -0.7
     # if downflag=="horiz":
-    #     newpose[2,2] = 0
+        # newpose[2,2] = 0
 
     newpose[:3,3] += changexyz 
     # newpose[1,3] += 0.03 
@@ -318,6 +319,11 @@ direc = c23/8
 
 # direc = c12
 if __name__ == "__main__":
+
+    approachjnts = np.array([ 24.29775084,  79.69936515, -96.82986738,  64.07129301,  98.21367337, 5.0]) 
+    approachpose = kinematics.forward_kinematics(approachjnts)
+    print("Approach pose:\n", approachpose)
+
     sys.exit()
 
     # relativexyz(corner1, direc)

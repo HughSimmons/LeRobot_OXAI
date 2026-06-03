@@ -63,10 +63,18 @@ def move_smooth(target, steps=10, delay=0.1):
 
     for i in range(steps):
         alpha = (i + 1) / steps
+
+        # alpha = 0.5 * (
+        #     1 - np.cos(
+        #         np.pi * (i + 1) / steps
+        #     )
+        # )
         action = obs.copy()
 
         for k in target:
             action[k] = current[k] + alpha * (target[k] - current[k])
+            # if k==5 and action[k]>7.5:
+            #     action[k] = 7.5
 
         follower.send_action(action)
         time.sleep(delay)
@@ -228,35 +236,149 @@ target =  {'shoulder_pan.pos': 37.142857142857146, 'shoulder_lift.pos': 60.83516
 
 # direc = c12
 if __name__ == "__main__":
-    board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
+    # board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 
     from chess_traj import pickupmove_traj
     # movelist = pickupmove_traj('c1', 'c5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
     # movelist = pickupmove_traj('a1', 'a5', board_origin=board_origin, GRASP_OFFSET=np.array([0,0,0]))  # Example move from e2 to e4
     # movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
-    movelist = pickupmove_traj("c5", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
+
+    GRASP_OFFSET = np.array([
+        -0.015,
+        -0.0,
+        -0.005
+    ])
+    # movelist, idx = pickupmove_traj("a1", "h8", board_origin=(0.25, 0, 0), GRASP_OFFSET=GRASP_OFFSET)
+    movelist, idx = pickupmove_traj("b1", "b5", board_origin=(0.3, 0, 0), GRASP_OFFSET=GRASP_OFFSET)
+    # movelist, idx = pickupmove_traj("e5", "b1", board_origin=(0.3, 0, 0), GRASP_OFFSET=GRASP_OFFSET)
+    # movelist, idx = pickupmove_traj("e5", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=GRASP_OFFSET)
 
 
-    movecnt = 0
+    from scipy.interpolate import CubicSpline
+    import numpy as np
+
+    # Apply your gripper tweaks first
+    traj = []
+
+    closedcnt = 0
+
     for move in movelist:
+
         moverl = move - np.array([0,0,-10,0,0,0])
 
-        moverl = vectodic(moverl)
-        print(moverl)
-        move_smooth(moverl, 10,0.1)
-        movecnt += 1
+        if moverl[5] == 8:
+            closedcnt += 1
+
+            if closedcnt > 3:
+                moverl[5] = 7.5
+
+        traj.append(moverl)
+
+    traj = np.array(traj)
+
+    # One time value per waypoint
+    t = np.arange(len(traj))
+
+    # Cubic spline for each joint
+    splines = [
+        CubicSpline(t, traj[:,j], bc_type="natural")
+        for j in range(6)
+    ]
+
+    # 100 interpolated points between each waypoint
+    samples_per_segment = 100
+
+    t_dense = np.linspace(
+        0,
+        len(traj)-1,
+        (len(traj)-1)*samples_per_segment
+    )
+
+    traj_dense = np.column_stack([
+        spline(t_dense)
+        for spline in splines
+    ])
+
+    traj_dense[:,5] = np.clip(
+        traj_dense[:,5],
+        6,
+        25
+    )
+
+    diffgrip = np.diff(traj_dense[:,5])
+
+    open_indices = np.where(diffgrip > 5)[0]
+
+
+    # for q in traj_dense:
+
+    #     action = vectodic(q)
+
+    #     follower.send_action(action)
+
+    #     time.sleep(0.01)
+
+    gripper_angle_open = 25
+    open_indices = set(open_indices)
+
+    for i, q in enumerate(traj_dense):
+
+        action = vectodic(q)
+
+        follower.send_action(action)
+
+        # Opening transition detected
+        if i in open_indices:
+
+            print("Opening gripper...")
+
+            while True:
+
+                obs = follower.get_observation()
+
+                actual = obs["gripper.pos"]
+
+                if actual >= gripper_angle_open - 1:
+                    break
+
+                time.sleep(0.02)
+
+            # optional settling time
+            time.sleep(0.2)
+
+        time.sleep(0.01)
+
+    # movecnt = 0
+    # closedcnt = 0
+    # for move in movelist:
+
+    #     moverl = move - np.array([0,0,-10,0,0,0])
+
+    #     if moverl[5] == 8:
+    #         closedcnt += 1
+    #         if closedcnt>3:
+    #             moverl[5] = 7.5
+
+    #     moverl = vectodic(moverl)
+    #     print(moverl)
+    #     move_smooth(moverl, 100,0.01)
+
+
+
+        # movecnt += 1
         # if movecnt == 2:
         #     time.sleep(10)
 
-        time.sleep(3)
+        # time.sleep(0.02)
 
 
-    move_smooth(homeposition)
+    # move_smooth(homeposition)
 
 
     follower.disconnect()
     sys.exit()
 
+# {'shoulder_pan.pos': 5.582417582417582, 'shoulder_lift.pos': 2.4175824175824174, 'elbow_flex.pos': -83.38461538461539, 'wrist_flex.pos': 1.3186813186813187, 'wrist_roll.pos': -86.98901098901099, 'gripper.pos': 5.053191489361701}
     # relativexyz(corner1, direc)
     for _ in range(4):
         if robotconnected:

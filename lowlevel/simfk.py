@@ -275,7 +275,7 @@ def move_to_square_v2(current_joints, from_square, to_square):
 from chess_traj import pickupmove_traj
 
 
-movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
+movelist, idx = pickupmove_traj("c5", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
 
 
 rlref =  np.array([-6.021978021978022, 13.714285714285714, -93.67032967032966, 7.956043956043956, -30.10989010989011, 4.761904761904762])
@@ -368,10 +368,10 @@ viz.viewer["test_sphere"].set_transform(T)
 
 for move in movelist:
     
-    # smoothmove(start, move)
+    smoothmove(start, move)
     print(move)
     start = move.copy()
-    time.sleep(1)
+    time.sleep(0.1)
 
 import sys
 sys.exit()
