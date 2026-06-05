@@ -145,6 +145,92 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET, downflag=True):
         )
 
 
+WRIST_ROLL_IDX = 4
+
+
+def nearest_equivalent_angle_deg(angle, reference):
+    return angle + 360.0 * np.round((reference - angle) / 360.0)
+
+
+def append_joint_interpolation(jntslist, start, end, gripper_angle, nsteps=10):
+    start = np.array(start)
+    end = np.array(end)
+    end[WRIST_ROLL_IDX] = nearest_equivalent_angle_deg(
+        end[WRIST_ROLL_IDX],
+        start[WRIST_ROLL_IDX]
+    )
+
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+        intermediate_joints = (
+            (1 - alpha) * start
+            + alpha * end
+        )
+
+        intermediate_joints[5] = gripper_angle
+        jntslist.append(intermediate_joints)
+
+    final_joints = end.copy()
+    final_joints[5] = gripper_angle
+    return final_joints
+
+
+def solve_seeded_target_xyz(target_xyz, solve_seed, frame_offset, gripper_angle, downflag):
+    seeded_target = xyz_homeref(
+        target_xyz,
+        solve_seed,
+        frame_offset,
+        downflag
+    )
+    seeded_target[5] = gripper_angle
+    return seeded_target
+
+
+def grasp_position_error(joints, target_xyz, frame_offset):
+    fk_pose = kinematics.forward_kinematics(joints)
+    grasp_xyz = fk_pose[:3, 3] + fk_pose[:3, :3] @ frame_offset
+    return np.linalg.norm(target_xyz - grasp_xyz)
+
+
+def downwardness(joints):
+    fk_pose = kinematics.forward_kinematics(joints)
+    return -fk_pose[2, 2]
+
+
+def solve_seeded_target_xyz_prefer_down(
+    target_xyz,
+    solve_seed,
+    frame_offset,
+    gripper_angle,
+    downflag,
+    wrist_flex_offsets=(-30, -15, 0, 15, 30),
+    wrist_roll_offsets=(-30, 0, 30),
+):
+    candidates = []
+
+    for wrist_flex_offset in wrist_flex_offsets:
+        for wrist_roll_offset in wrist_roll_offsets:
+            seed = solve_seed.copy()
+            seed[3] += wrist_flex_offset
+            seed[4] += wrist_roll_offset
+
+            candidate = solve_seeded_target_xyz(
+                target_xyz,
+                seed,
+                frame_offset,
+                gripper_angle,
+                downflag
+            )
+
+            pos_error = grasp_position_error(candidate, target_xyz, frame_offset)
+            down_score = downwardness(candidate)
+            # Position dominates; downwardness breaks ties between similarly reachable poses.
+            score = pos_error - 0.01 * down_score
+            candidates.append((score, pos_error, -down_score, candidate))
+
+    candidates.sort(key=lambda item: item[:3])
+    return candidates[0][3]
+
+
 
 def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     file = FILES.index(square[0].lower())
@@ -156,12 +242,28 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
     x = board_x - board_size/2 + (file + 0.5) * square_size
     # y = board_y - board_size/2 + (rank + 0.85) * square_size
     z = board_z + 0.04  # best slightly above the board
+    # z = board_z + 0.01  # best slightly above the board
     # z = board_z + 0.035  # slightly above the board
     # z = board_z + 0.06  # slightly above the board
     # z = board_z + 0.1  # slightly above the board
     return np.array([x, y, z])
 
 
+def chess_to_xycalib(square, board_origin=(0.25, 0, 0), square_size=0.04):
+    file = FILES.index(square[0].lower())
+    rank = int(square[1]) - 1
+    board_x, board_y, board_z = board_origin
+    board_size = 8 * square_size
+    # x = board_x - board_size/2 + (file + 0.5) * square_size
+    y = board_y - board_size/2 + (rank ) * square_size
+    x = board_x - board_size/2 + (file ) * square_size
+    # y = board_y - board_size/2 + (rank + 0.85) * square_size
+    z = board_z   # best slightly above the board
+    # z = board_z + 0.01  # best slightly above the board
+    # z = board_z + 0.035  # slightly above the board
+    # z = board_z + 0.06  # slightly above the board
+    # z = board_z + 0.1  # slightly above the board
+    return np.array([x, y, z])
 
 
 urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
@@ -278,20 +380,481 @@ def pickupmove_traj_old(from_square, to_square, board_origin, GRASP_OFFSET):
 
 
 
-def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
+# def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
+#     """
+#     Move from current_joints to home, then from home to from_square, pick up piece,
+#     move to to_square, place piece, and return to home. Returns the final joint position (home).
+#     """
+#     global home
+#     # 1. Move to home
+#     height = 0.13  # height to lift above squares
+#     # height = 0.11  # height to lift above squares
+
+
+
+#     jntslist = []
+#     far_rows = ["f","g", "h"]
+
+#     # current = home.copy()
+#     # if "g" in from_square or "h" in from_square:
+#     if from_square[0] in far_rows:
+#         downflag = False
+
+#         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
+#         current = reach_pose.copy()
+#         jntslist.append(current)
+#     else:
+#         downflag = True 
+#         current = home.copy()
+
+
+#     ###move above square
+#     from_xyz = chess_to_xy(
+#         from_square,
+#         board_origin=board_origin
+#     )
+
+#     target_xyz = from_xyz + np.array([0, 0, height])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 10
+
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_open
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+#     ###
+#     # aboveboardjnts = current.copy()
+
+#     ### lower to board
+#     target_xyz = from_xyz + np.array([0, 0, 0])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 10
+#     downjnts = []
+#     stepcnt = 0
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_open
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+
+#         if stepcnt == 0:
+#             downjnts.append(intermediate_joints.copy())
+
+#         # if stepcnt == 5:
+#         #     downjnts.append(intermediate_joints.copy())
+
+#         stepcnt+=1
+
+#     ### close gripper
+#     grip_closed = current.copy()
+#     grip_closed[5] = gripper_angle_closed  # adjust as needed
+#     jntslist.append(grip_closed)
+#     current = grip_closed.copy()
+#     copy = jntslist.copy()
+#     closeidx = len(copy) - 1
+
+
+
+
+
+#     ###lift back via downjnts
+#     for j in downjnts[::-1]:
+#         j[5] = gripper_angle_closed
+#         jntslist.append(j)
+#         # jntslist.extend(smoothjnts(current, j))
+#         current = j.copy()
+
+#     # aboveboard_closedjnts = aboveboardjnts.copy()
+#     # aboveboard_closedjnts[5] = gripper_angle_closed
+
+#     # jntslist.append(aboveboardjnts)
+#     # current = aboveboardjnts.copy()
+
+#     ###lift 
+#     # target_xyz = from_xyz + np.array([0, 0, height])
+#     # start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     # nsteps = 2
+
+#     # for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#     #     intermediate_xyz = (
+#     #         (1 - alpha) * start_xyz
+#     #         + alpha * target_xyz
+#     #     )
+
+#     #     intermediate_joints = xyz_homeref(
+#     #         intermediate_xyz,
+#     #         current,
+#     #         GRASP_OFFSET, 
+#     #         downflag
+#     #     )
+
+#     #     intermediate_joints[5] = gripper_angle_closed
+
+#     #     jntslist.append(intermediate_joints)
+
+#     #     current = intermediate_joints.copy()
+    
+
+#     # return jntslist
+#     # 3. Move to to_square (above)
+#     # downflag = True
+#     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+#     # above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+#     # above_to[5] = gripper_angle_closed  # keep gripper closed
+#     # jntslist.append(above_to)
+
+#     target_xyz = to_xyz + np.array([0, 0, height])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 5
+
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_closed
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+#     ###
+ 
+
+
+#     return jntslist, closeidx
+
+#     current = above_to.copy()
+#     # Lower to to_square
+#     at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
+#     jntslist.append(at_to)
+
+#     #close gripper
+#     at_to_grip = at_to.copy()
+#     at_to_grip[5] = gripper_angle_closed  # keep gripper closed
+#     # smoothmove(current, at_to)
+#     jntslist.append(at_to_grip)
+
+#     current = at_to.copy()
+#     # Open gripper
+#     grip_open = current.copy()
+#     grip_open[5] = gripper_angle_open  # adjust as needed
+#     # smoothmove(current, grip_open)
+#     jntslist.append(grip_open)
+
+#     current = grip_open.copy()
+#     # Lift up
+#     lifted = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+#     # smoothmove(current, lifted)
+#     jntslist.append(lifted)
+ 
+#     current = lifted.copy()
+
+#     # 4. Return to home
+#     # smoothmove(current, home)
+#     jntslist.append(home)
+#     current = home.copy()
+
+#     return jntslist
+
+
+
+# def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
+#     """
+#     Move from current_joints to home, then from home to from_square, pick up piece,
+#     move to to_square, place piece, and return to home. Returns the final joint position (home).
+#     """
+#     global home
+#     # 1. Move to home
+#     # height = 0.23  # height to lift above squares
+#     height = 0.13  # height to lift above squares
+#     # height = 0.11  # height to lift above squares
+
+
+
+#     jntslist = []
+#     far_rows = ["f","g", "h"]
+#     # far_rows = []
+
+#     # current = home.copy()
+#     # if "g" in from_square or "h" in from_square:
+#     if from_square[0] in far_rows:
+#         downflag = False
+
+#         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
+#         current = reach_pose.copy()
+#         jntslist.append(current)
+#     else:
+#         downflag = True 
+#         # downflag = False 
+#         current = home.copy()
+
+
+#     # downflag = True
+#     ###move above square
+#     from_xyz = chess_to_xy(
+#         from_square,
+#         board_origin=board_origin
+#     )
+
+#     target_xyz = from_xyz + np.array([0, 0, height])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 10
+
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_open
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+#     ###
+#     # aboveboardjnts = current.copy()
+
+#     ### lower to board
+#     target_xyz = from_xyz + np.array([0, 0, 0])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     # nsteps = 10
+#     nsteps = 10
+#     downjnts = []
+#     stepcnt = 0
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_open
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+
+#         if stepcnt == 0:
+#             downjnts.append(intermediate_joints.copy())
+
+#         # if stepcnt == 5:
+#         #     downjnts.append(intermediate_joints.copy())
+
+#         stepcnt+=1
+
+#     ### close gripper
+#     grip_closed = current.copy()
+#     grip_closed[5] = gripper_angle_closed  # adjust as needed
+#     jntslist.append(grip_closed)
+#     current = grip_closed.copy()
+#     copy = jntslist.copy()
+#     closeidx = len(copy) - 1
+
+
+
+
+
+
+#     ###lift back via downjnts
+#     for j in downjnts[::-1]:
+#         j[5] = gripper_angle_closed
+#         jntslist.append(j)
+#         # jntslist.extend(smoothjnts(current, j))
+#         current = j.copy()
+
+
+
+#     # 3. Move to to_square (above)
+#     # downflag = True
+#     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+#     # above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
+#     # above_to[5] = gripper_angle_closed  # keep gripper closed
+#     # jntslist.append(above_to)
+
+#     target_xyz = to_xyz + np.array([0, 0, height])
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 5
+
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_closed
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+#     ###
+ 
+
+#     ### lower to board
+#     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+#     target_xyz = to_xyz + np.array([0, 0, 0.04]) #wiggle room for drop
+#     # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
+#     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
+#     start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+#     nsteps = 10
+#     downjnts = []
+#     stepcnt = 0
+#     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+#         intermediate_xyz = (
+#             (1 - alpha) * start_xyz
+#             + alpha * target_xyz
+#         )
+
+#         intermediate_joints = xyz_homeref(
+#             intermediate_xyz,
+#             current,
+#             GRASP_OFFSET, 
+#             downflag
+#         )
+
+#         intermediate_joints[5] = gripper_angle_closed
+
+#         jntslist.append(intermediate_joints)
+
+#         current = intermediate_joints.copy()
+
+#         if stepcnt == 0:
+#             downjnts.append(intermediate_joints.copy())
+
+#         # if stepcnt == 5:
+#         #     downjnts.append(intermediate_joints.copy())
+
+#         stepcnt+=1
+
+
+#     # return jntslist, closeidx
+
+#     # Open gripper
+#     grip_open = current.copy()
+#     grip_open[5] = gripper_angle_open  # adjust as needed
+#     # smoothmove(current, grip_open)
+#     jntslist.append(grip_open)
+
+#     current = grip_open.copy()
+
+#     for j in downjnts[::-1]:
+#         j[5] = gripper_angle_closed
+#         jntslist.append(j)
+#         # jntslist.extend(smoothjnts(current, j))
+#         current = j.copy()
+
+
+#     ###
+#     home_xyz = kinematics.forward_kinematics(home)[:3,3]
+
+#     above_home = xyz_homeref(
+#         home_xyz + np.array([0, 0, 0.10]),
+#         current,
+#         GRASP_OFFSET
+#     )
+
+#     above_home[5] = current[5]
+
+#     jntslist.append(above_home)
+
+#     current = above_home.copy()
+
+#     jntslist.append(home)
+
+#     current = home.copy()
+#     ##
+#     jntslist.append(home)
+#     current = home.copy()
+
+#     return jntslist, closeidx
+
+def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
     """
     global home
     # 1. Move to home
-    height = 0.13  # height to lift above squares
+    # height = 0.23  # height to lift above squares
+    # height = 0.13  # height to lift above squares
+    height = 0.03  # height to lift above squares
     # height = 0.11  # height to lift above squares
 
 
 
     jntslist = []
     far_rows = ["f","g", "h"]
+    # far_rows = []
 
     # current = home.copy()
     # if "g" in from_square or "h" in from_square:
@@ -299,13 +862,14 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         downflag = False
 
         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
-        current = reach_pose.copy()
-        jntslist.append(current)
+        current = home.copy()
     else:
         downflag = True 
+        # downflag = False 
         current = home.copy()
 
 
+    # downflag = True
     ###move above square
     from_xyz = chess_to_xy(
         from_square,
@@ -313,29 +877,46 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     )
 
     target_xyz = from_xyz + np.array([0, 0, height])
-    start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    nsteps = 10
-
-    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
-
-        intermediate_xyz = (
-            (1 - alpha) * start_xyz
-            + alpha * target_xyz
-        )
-
-        intermediate_joints = xyz_homeref(
-            intermediate_xyz,
-            current,
-            GRASP_OFFSET, 
+    if from_square[0] in far_rows:
+        above_from = solve_seeded_target_xyz_prefer_down(
+            target_xyz,
+            reach_pose,
+            GRASP_OFFSET,
+            gripper_angle_open,
             downflag
         )
+        current = append_joint_interpolation(
+            jntslist,
+            current,
+            above_from,
+            gripper_angle_open,
+            nsteps=10
+        )
+    else:
+        start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-        intermediate_joints[5] = gripper_angle_open
+        nsteps = 10
 
-        jntslist.append(intermediate_joints)
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
-        current = intermediate_joints.copy()
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
+
+            intermediate_joints = xyz_homeref(
+                intermediate_xyz,
+                current,
+                GRASP_OFFSET, 
+                downflag
+            )
+
+            intermediate_joints[5] = gripper_angle_open
+
+            jntslist.append(intermediate_joints)
+
+            current = intermediate_joints.copy()
     ###
     # aboveboardjnts = current.copy()
 
@@ -343,6 +924,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     target_xyz = from_xyz + np.array([0, 0, 0])
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
+    # nsteps = 10
     nsteps = 10
     downjnts = []
     stepcnt = 0
@@ -386,6 +968,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
 
 
 
+
     ###lift back via downjnts
     for j in downjnts[::-1]:
         j[5] = gripper_angle_closed
@@ -393,41 +976,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         # jntslist.extend(smoothjnts(current, j))
         current = j.copy()
 
-    # aboveboard_closedjnts = aboveboardjnts.copy()
-    # aboveboard_closedjnts[5] = gripper_angle_closed
 
-    # jntslist.append(aboveboardjnts)
-    # current = aboveboardjnts.copy()
 
-    ###lift 
-    # target_xyz = from_xyz + np.array([0, 0, height])
-    # start_xyz = kinematics.forward_kinematics(current)[:3,3]
-
-    # nsteps = 2
-
-    # for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
-
-    #     intermediate_xyz = (
-    #         (1 - alpha) * start_xyz
-    #         + alpha * target_xyz
-    #     )
-
-    #     intermediate_joints = xyz_homeref(
-    #         intermediate_xyz,
-    #         current,
-    #         GRASP_OFFSET, 
-    #         downflag
-    #     )
-
-    #     intermediate_joints[5] = gripper_angle_closed
-
-    #     jntslist.append(intermediate_joints)
-
-    #     current = intermediate_joints.copy()
-    
-
-    # return jntslist
     # 3. Move to to_square (above)
+    if to_square[0] in far_rows:
+        downflag = False
+
+        reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
     # downflag = True
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
     # above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
@@ -435,10 +990,60 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     # jntslist.append(above_to)
 
     target_xyz = to_xyz + np.array([0, 0, height])
+
+    if to_square[0] in far_rows:
+        above_to = solve_seeded_target_xyz_prefer_down(
+            target_xyz,
+            reach_pose,
+            PLACE_OFFSET,
+            gripper_angle_closed,
+            downflag
+        )
+        current = append_joint_interpolation(
+            jntslist,
+            current,
+            above_to,
+            gripper_angle_closed,
+            nsteps=5
+        )
+    else:
+        start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+        nsteps = 5
+
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
+
+            intermediate_joints = xyz_homeref(
+                intermediate_xyz,
+                current,
+                PLACE_OFFSET, 
+                downflag
+            )
+
+            intermediate_joints[5] = gripper_angle_closed
+
+            jntslist.append(intermediate_joints)
+
+            current = intermediate_joints.copy()
+    ###
+ 
+
+    ### lower to board
+    to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+    target_xyz = to_xyz + np.array([0, 0, 0.02]) #wiggle room for drop
+    # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
+    # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    nsteps = 5
-
+    # nsteps = 10
+    nsteps = 2
+    downjnts = []
+    stepcnt = 0
     for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
         intermediate_xyz = (
@@ -449,7 +1054,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         intermediate_joints = xyz_homeref(
             intermediate_xyz,
             current,
-            GRASP_OFFSET, 
+            PLACE_OFFSET, 
             downflag
         )
 
@@ -458,24 +1063,18 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
         jntslist.append(intermediate_joints)
 
         current = intermediate_joints.copy()
-    ###
- 
+
+        if stepcnt == 0:
+            downjnts.append(intermediate_joints.copy())
+
+        # if stepcnt == 5:
+        #     downjnts.append(intermediate_joints.copy())
+
+        stepcnt+=1
 
 
-    return jntslist, closeidx
+    # return jntslist, closeidx
 
-    current = above_to.copy()
-    # Lower to to_square
-    at_to = xyz_homeref(to_xyz, current, GRASP_OFFSET)
-    jntslist.append(at_to)
-
-    #close gripper
-    at_to_grip = at_to.copy()
-    at_to_grip[5] = gripper_angle_closed  # keep gripper closed
-    # smoothmove(current, at_to)
-    jntslist.append(at_to_grip)
-
-    current = at_to.copy()
     # Open gripper
     grip_open = current.copy()
     grip_open[5] = gripper_angle_open  # adjust as needed
@@ -483,20 +1082,202 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET):
     jntslist.append(grip_open)
 
     current = grip_open.copy()
-    # Lift up
-    lifted = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
-    # smoothmove(current, lifted)
-    jntslist.append(lifted)
- 
-    current = lifted.copy()
 
-    # 4. Return to home
-    # smoothmove(current, home)
+
+    # causing problems with far squares for some reason, so skipping for now
+    if to_square[0] not in far_rows:
+        for j in downjnts[::-1]:
+            j[5] = gripper_angle_closed
+            jntslist.append(j)
+            # jntslist.extend(smoothjnts(current, j))
+            current = j.copy()
+    else:
+        target_xyz = to_xyz + np.array([0, 0, height])
+        above_to = solve_seeded_target_xyz_prefer_down(
+            target_xyz,
+            reach_pose,
+            GRASP_OFFSET,
+            gripper_angle_open,
+            downflag
+        )
+        current = append_joint_interpolation(
+            jntslist,
+            current,
+            above_to,
+            gripper_angle_open,
+            nsteps=10
+        )
+
+    # above_to = xyz_homeref(
+    #     to_xyz + np.array([0, 0, 0.10]),
+    #     current,
+    #     GRASP_OFFSET
+    # )
+    # above_to[5] = current[5]
+    # jntslist.append(above_to)
+    # current = above_to.copy()
+    ###
+    home_xyz = kinematics.forward_kinematics(home)[:3,3]
+
+    above_home = xyz_homeref(
+        home_xyz + np.array([0, 0, 0.10]),
+        current,
+        GRASP_OFFSET
+    )
+
+    above_home[5] = current[5]
+
+    jntslist.append(above_home)
+
+    current = above_home.copy()
+
+    jntslist.append(home)
+
+    current = home.copy()
+    ##
     jntslist.append(home)
     current = home.copy()
 
-    return jntslist
+    return jntslist, closeidx
 
+def calib_board(board_origin, GRASP_OFFSET=np.array([0,0,0]), PLACE_OFFSET=np.array([0,0,0])):
+    """
+    Calibrate the 4 corners of the board, returning a list of joint trajectories to each corner.
+    """
+    global home
+    # 1. Move to home
+    # height = 0.23  # height to lift above squares
+    height = 0.13  # height to lift above squares
+    # height = 0.11  # height to lift above squares
+
+    sqlist = ["a1", "a8", "h1", "h8"]
+    alljntslist = []
+    for sq in sqlist:
+        print(f"Calibrating square {sq}...")
+        jntslist = []
+        # far_rows = ["f","g", "h"]
+        far_rows = ["e","f","g", "h"]
+        # far_rows = []
+
+        # current = home.copy()
+        # if "g" in from_square or "h" in from_square:
+        if sq[0] in far_rows:
+            downflag = False
+            reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
+            current = reach_pose.copy()
+            jntslist.append(current)
+        else:
+            downflag = True 
+            # downflag = False 
+            current = home.copy()
+
+
+
+        ###move above square
+        from_xyz = chess_to_xycalib(
+            sq,
+            board_origin=board_origin
+        )
+
+        target_xyz = from_xyz + np.array([0, 0, height])
+        start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+        nsteps = 10
+
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
+
+            intermediate_joints = xyz_homeref(
+                intermediate_xyz,
+                current,
+                GRASP_OFFSET, 
+                downflag
+            )
+
+            intermediate_joints[5] = gripper_angle_open
+
+            jntslist.append(intermediate_joints)
+
+            current = intermediate_joints.copy()
+        ###
+        # aboveboardjnts = current.copy()
+
+        ### lower to board
+        target_xyz = from_xyz + np.array([0, 0, 0])
+        start_xyz = kinematics.forward_kinematics(current)[:3,3]
+
+        # nsteps = 10
+        nsteps = 10
+        downjnts = []
+        stepcnt = 0
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
+
+            intermediate_joints = xyz_homeref(
+                intermediate_xyz,
+                current,
+                GRASP_OFFSET, 
+                downflag
+            )
+
+            intermediate_joints[5] = gripper_angle_open
+
+            jntslist.append(intermediate_joints)
+
+            current = intermediate_joints.copy()
+
+            if stepcnt == 0:
+                downjnts.append(intermediate_joints.copy())
+
+            # if stepcnt == 5:
+            #     downjnts.append(intermediate_joints.copy())
+
+            stepcnt+=1
+
+
+
+        ###lift back via downjnts
+        for j in downjnts[::-1]:
+            j[5] = gripper_angle_closed
+            jntslist.append(j)
+            # jntslist.extend(smoothjnts(current, j))
+            current = j.copy()
+
+
+        ###
+        home_xyz = kinematics.forward_kinematics(home)[:3,3]
+
+        above_home = xyz_homeref(
+            home_xyz + np.array([0, 0, 0.10]),
+            current,
+            GRASP_OFFSET
+        )
+
+        above_home[5] = current[5]
+
+        jntslist.append(above_home)
+
+        current = above_home.copy()
+
+        jntslist.append(home)
+
+        current = home.copy()
+        ##
+        jntslist.append(home)
+        current = home.copy()
+
+
+        alljntslist.append(jntslist)
+    
+    return alljntslist
 
 if __name__ == "__main__":
 
@@ -526,4 +1307,3 @@ if __name__ == "__main__":
     time.sleep(5)
 
     move_to_square_v2(home, "a1", "a5")
-

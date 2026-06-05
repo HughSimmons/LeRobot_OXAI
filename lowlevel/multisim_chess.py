@@ -7,18 +7,18 @@ from pathlib import Path
 from chess_traj import pickupmove_traj, chess_to_xy, gripper_angle_closed, gripper_angle_open
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
-# video_on = False
-video_on = True
-runid = "multisim_dev_pickplace"
+video_on = False
+# video_on = True
+runid = "multisim_place_e1e5"
 
 
 FILES = "abcdefgh"
-# FILES = "fgh"
+# FILES = "a"
 
 squares = [
     f"{file}{rank}"
     for rank in range(1, 9)
-    # for rank in range(1, 2)
+    # for rank in range(5, 6)
     for file in FILES
 ]
 
@@ -46,8 +46,28 @@ GRASP_OFFSET = np.array([
 ])
 
 
+# GRASP_OFFSET = np.array([
+#     -0.0121,
+#     -0.0,
+#     -0.005
+# ])
+
+
+# PLACE_OFFSET = np.array([
+#     -0.015,
+#     # 0,
+#     0.005,
+#     0
+# ])
+
+PLACE_OFFSET = GRASP_OFFSET.copy()
+
+
 renderfreq = 50
 WIDTH, HEIGHT = 640, 360
+SOLVER_ITERATIONS = 200
+SOLVER_SUBSTEPS = 4
+POST_MOVE_SETTLE_STEPS = 1000
 
 # Robot joint waypoints (from simfk.py)
 home = np.array([96.92, -107.87, 97.36, 65.19, -29.85, 4.63])
@@ -66,8 +86,39 @@ corner2_rad = np.deg2rad(corner2)
 # Interpolation
 # ----------------------------------------
 
-def interpolate_joints(start, end, alpha):
-    return (1 - alpha) * start + alpha * end
+def catmull_rom_joints(prev_pos, start_pos, end_pos, next_pos, alpha):
+    alpha2 = alpha * alpha
+    alpha3 = alpha2 * alpha
+
+    return 0.5 * (
+        (2 * start_pos)
+        + (-prev_pos + end_pos) * alpha
+        + (2 * prev_pos - 5 * start_pos + 4 * end_pos - next_pos) * alpha2
+        + (-prev_pos + 3 * start_pos - 3 * end_pos + next_pos) * alpha3
+    )
+
+
+def interpolate_joints(moves, move_idx, alpha):
+    start_idx = max(move_idx - 1, 0)
+    end_idx = move_idx
+    prev_idx = max(start_idx - 1, 0)
+    next_idx = min(end_idx + 1, len(moves) - 1)
+
+    prev_pos = moves[prev_idx][0]
+    start_pos = moves[start_idx][0]
+    end_pos = moves[end_idx][0]
+    next_pos = moves[next_idx][0]
+
+    target_joints = end_pos.copy()
+    target_joints[:5] = catmull_rom_joints(
+        prev_pos[:5],
+        start_pos[:5],
+        end_pos[:5],
+        next_pos[:5],
+        alpha
+    )
+
+    return target_joints
 
 ##fn to generate pices 
 def create_piece(sq="a1"):
@@ -87,11 +138,11 @@ def create_piece(sq="a1"):
     p.changeDynamics(
         piece_id,
         -1,
-        lateralFriction=10.0,
-        rollingFriction=0.2,
-        spinningFriction=0.2,
-        linearDamping=0.5,
-        angularDamping=1.0
+        lateralFriction=1.0,
+        rollingFriction=0.02,
+        spinningFriction=0.02,
+        linearDamping=0.2,
+        angularDamping=0.2
     )
     return(piece_id)
 
@@ -106,12 +157,14 @@ GRIPPER_IDX = 6
 CONTROL_JOINTS = ARM_JOINTS + [GRIPPER_IDX]
 
 
-def simchess(i,j, GRASP_OFFSET):
+def simchess(i, j, GRASP_OFFSET, place_offset=None, return_metrics=False, record_video=None):
     sq1, sq2 = squares[i], squares[j]
     init_posit = [sq1]
     simid = f"{sq1}_to_{sq2}"
+    active_place_offset = PLACE_OFFSET if place_offset is None else place_offset
+    video_enabled = video_on if record_video is None else record_video
 
-    movelist, closeidx = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET)  
+    movelist, closeidx = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=GRASP_OFFSET, PLACE_OFFSET=active_place_offset)  
 
     create_sim = True
 
@@ -121,6 +174,10 @@ def simchess(i,j, GRASP_OFFSET):
         # p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
         p.resetSimulation()
+        p.setPhysicsEngineParameter(
+            numSolverIterations=SOLVER_ITERATIONS,
+            numSubSteps=SOLVER_SUBSTEPS
+        )
 
         p.setGravity(0, 0, -9.81)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -140,8 +197,8 @@ def simchess(i,j, GRASP_OFFSET):
             p.changeDynamics(
                 robot_id,
                 6,
-                lateralFriction=10.0,
-                spinningFriction=1.0,
+                lateralFriction=2.0,
+                spinningFriction=0.2,
                 contactStiffness=10000,
                 contactDamping=100
             )
@@ -197,7 +254,7 @@ def simchess(i,j, GRASP_OFFSET):
 
     moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
 
-    if video_on:
+    if video_enabled:
         # Setup video recording with THREE cameras
         camera_params = {
             'eye': [0.0, -0.6, 0.25],
@@ -241,7 +298,7 @@ def simchess(i,j, GRASP_OFFSET):
 
     try:
 
-        for global_step in range(total_steps + 100):
+        for global_step in range(total_steps + POST_MOVE_SETTLE_STEPS):
 
 
             # ----------------------------------------
@@ -265,8 +322,8 @@ def simchess(i,j, GRASP_OFFSET):
             alpha = min(move_local_step / move_steps, 1.0)
 
             target_joints = interpolate_joints(
-                current_start_pos,
-                current_target_pos,
+                moves,
+                move_idx,
                 alpha
             )
 
@@ -341,7 +398,7 @@ def simchess(i,j, GRASP_OFFSET):
                 # return(pickup_success)
                 # sys.exit()
 
-            if video_on:
+            if video_enabled:
                 if global_step % renderfreq == 0:
                     # ----------------------------------------
                     # Camera rendering
@@ -407,18 +464,18 @@ def simchess(i,j, GRASP_OFFSET):
                     6
                 )[0]
 
-                print(
-                    f"Frame {global_step} | "
-                    f"{move_name} | "
-                    f"alpha={alpha:.2f} | "
-                    f"target_gripper={target_joints[5]:.2f} | "
-                    f"actual_gripper={actual_gripper:.2f}"
-                )
+                # print(
+                #     f"Frame {global_step} | "
+                #     f"{move_name} | "
+                #     f"alpha={alpha:.2f} | "
+                #     f"target_gripper={target_joints[5]:.2f} | "
+                #     f"actual_gripper={actual_gripper:.2f}"
+                # )
 
             move_local_step += 1
 
     finally:
-        if video_on:
+        if video_enabled:
             writer.close()
             writer_topdown.close()
 
@@ -426,7 +483,35 @@ def simchess(i,j, GRASP_OFFSET):
 
     # p.disconnect()
 
+    final_piece_pos, final_piece_orn = p.getBasePositionAndOrientation(piece_ids[0])
+    expected_piece_pos = chess_to_xy(sq2, board_origin=board_origin)
+    final_piece_pos = np.array(final_piece_pos)
+    expected_piece_pos = np.array(expected_piece_pos)
+    position_error = final_piece_pos - expected_piece_pos
+    xy_error = np.linalg.norm(position_error[:2])
+    z_error = abs(position_error[2])
+    final_piece_rot = np.array(p.getMatrixFromQuaternion(final_piece_orn)).reshape(3, 3)
+    piece_axis_z = final_piece_rot[:, 2]
+    final_tilt_deg = np.rad2deg(np.arccos(np.clip(abs(piece_axis_z[2]), -1.0, 1.0)))
+    final_euler_deg = np.rad2deg(p.getEulerFromQuaternion(final_piece_orn))
+
     print("Pick up success:", pickup_success)
+    if return_metrics:
+        return {
+            "pickup_success": pickup_success,
+            "from_square": sq1,
+            "to_square": sq2,
+            "place_offset": active_place_offset.copy(),
+            "final_position": final_piece_pos,
+            "final_orientation": final_piece_orn,
+            "expected_position": expected_piece_pos,
+            "position_error": position_error,
+            "xy_error": xy_error,
+            "z_error": z_error,
+            "final_tilt_deg": final_tilt_deg,
+            "final_euler_deg": final_euler_deg,
+        }
+
     return pickup_success
 
 
@@ -456,6 +541,77 @@ def grasptest(grasp_offset):
     print(f"Total successful pickups: {success_count} out of {len(squares)} moves")
     print(f"Failed squares: {failsquares}")
     return success_count
+
+
+def score_place_result(result):
+    if not result["pickup_success"]:
+        return 1000.0
+
+    return result["xy_error"] + 0.25 * result["z_error"]
+
+
+def make_centered_samples(sample_count):
+    if sample_count < 1:
+        raise ValueError("sample_count must be at least 1")
+
+    center = (sample_count - 1) / 2
+    return np.arange(sample_count) - center
+
+
+def find_best_place_offset(
+    from_square="e1",
+    to_square="e5",
+    grasp_offset=GRASP_OFFSET,
+    base_place_offset=None,
+    delta=0.0015,
+    sample_count=1
+):
+    if base_place_offset is None:
+        base_place_offset = grasp_offset.copy()
+
+    from_idx = squares.index(from_square)
+    to_idx = squares.index(to_square)
+    samples = make_centered_samples(sample_count)
+    results = []
+
+    for dx in samples:
+        for dy in samples:
+        #     for dz in samples:
+            place_offset = base_place_offset + delta * np.array([dx, dy, 0])
+            print(f"Testing PLACE_OFFSET: {place_offset}")
+
+            result = simchess(
+                from_idx,
+                to_idx,
+                grasp_offset,
+                place_offset=place_offset,
+                return_metrics=True,
+                record_video=False
+            )
+
+            result["score"] = score_place_result(result)
+            results.append(result)
+
+            print(
+                f"score={result['score']:.5f} | "
+                f"xy_error={result['xy_error']:.5f} | "
+                f"z_error={result['z_error']:.5f} | "
+                f"pickup={result['pickup_success']}"
+            )
+
+    results.sort(key=lambda item: item["score"])
+
+    print("\nBest PLACE_OFFSET results:")
+    for rank, result in enumerate(results[:10], start=1):
+        print(
+            f"{rank}: offset={result['place_offset']} | "
+            f"score={result['score']:.5f} | "
+            f"xy_error={result['xy_error']:.5f} | "
+            f"z_error={result['z_error']:.5f} | "
+            f"final_position={result['final_position']}"
+        )
+
+    return results[0], results
 
 
 # base_grasp_offset = np.array([
@@ -505,25 +661,60 @@ for dx in dellist:
     grasp_offsets.append(offset)
 
 
+RUN_PLACE_OFFSET_SEARCH = True
+
 physics_client = p.connect(p.DIRECT)
 
 p.setGravity(0, 0, -9.81)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
+if RUN_PLACE_OFFSET_SEARCH:
+    search_from_square = "e1"
+    search_to_square = "a1"
 
+    best_result, place_results = find_best_place_offset(
+        from_square=search_from_square,
+        to_square=search_to_square,
+        grasp_offset=GRASP_OFFSET,
+        base_place_offset=GRASP_OFFSET,
+        delta=0.0001,
+        sample_count=10
+    )
 
-# print(grasp_offsets)
-cnt = 0
-successlist = []
-for grasp_offset in grasp_offsets:
-    print(f"Testing GRASP_OFFSET: {cnt}")
-    cnt+=1
-    success = grasptest(grasp_offset)
-    successlist.append(success)
-    print("-----------------------------------\n")
-    print("CNT:", cnt)
+    print("\nBest PLACE_OFFSET:", best_result["place_offset"])
+
+    print("\nRerunning best PLACE_OFFSET with video...")
+    video_result = simchess(
+        squares.index(search_from_square),
+        squares.index(search_to_square),
+        GRASP_OFFSET,
+        place_offset=best_result["place_offset"],
+        return_metrics=True,
+        record_video=True
+    )
+
+    video_output_dir = Path(f"./recordings/{runid}/{search_from_square}_to_{search_to_square}")
+    print("Video rerun pickup success:", video_result["pickup_success"])
+    print("Video rerun final position:", video_result["final_position"])
+    print("Video rerun xy error:", video_result["xy_error"])
+    print("Video rerun z error:", video_result["z_error"])
+    print("Video rerun final tilt deg:", video_result["final_tilt_deg"])
+    print("Video rerun final euler deg:", video_result["final_euler_deg"])
+    print("Video output directory:", video_output_dir)
+else:
+    # print(grasp_offsets)
+    cnt = 0
+    successlist = []
+    for grasp_offset in grasp_offsets:
+        print(f"Testing GRASP_OFFSET: {cnt}")
+        cnt+=1
+        success = grasptest(grasp_offset)
+        successlist.append(success)
+        print("-----------------------------------\n")
+        print("CNT:", cnt)
+
+    print(successlist)
 
 p.disconnect()
-print(successlist)
 
 #4 delta best so far with 51/64

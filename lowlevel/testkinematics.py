@@ -144,7 +144,6 @@ def targetcoords(initjnts, target_pose):
     return(joint_solution)
 
 
-
 homeposition = {'shoulder_pan.pos': 96.92307692307692, 'shoulder_lift.pos': -107.86813186813187, 'elbow_flex.pos': 97.36263736263736, 'wrist_flex.pos': 65.18681318681318, 'wrist_roll.pos': -29.846153846153847, 'gripper.pos': 4.62962962962963}
 
 
@@ -298,6 +297,7 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=
     # move_smooth(newac)
     return(newjoints)
 
+
 # direc = np.array([0,0.01,0])
 
 
@@ -385,6 +385,3 @@ if __name__ == "__main__":
         move_smooth(corner3ac)
         time.sleep(5)
         move_smooth(corner4ac)
-
-
-

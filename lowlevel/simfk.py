@@ -272,11 +272,11 @@ def move_to_square_v2(current_joints, from_square, to_square):
 
 
 
-from chess_traj import pickupmove_traj
+from chess_traj import calib_board, pickupmove_traj
 
 
-movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
-
+# movelist = pickupmove_traj("e1", "c5", board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
+movelist = calib_board(board_origin=(0.25, 0, 0), GRASP_OFFSET=np.array([0,0,0]))
 
 rlref =  np.array([-6.021978021978022, 13.714285714285714, -93.67032967032966, 7.956043956043956, -30.10989010989011, 4.761904761904762])
 rlref2 = np.array([1.8021978021978022, -0.21978021978021978, -80.48351648351648, -3.340659340659341, -0.04395604395604396, 4.587765957446808])
@@ -301,7 +301,10 @@ reach_pose = np.array([
 
 
 
-smoothmove(start, reach_pose)
+# smoothmove(start, reach_pose)
+
+# sys.exit()
+
 
 ###
 from testkinematics import kinematics
@@ -345,8 +348,6 @@ viz.viewer["test_sphere"].set_object(
 viz.viewer["test_sphere"].set_transform(T)
 
 
-
-
 # viz.viewer["test_sphere"].set_object(
 #     g.Sphere(0.1),
 #     g.MeshLambertMaterial(color=0xff0000)
@@ -364,14 +365,24 @@ viz.viewer["test_sphere"].set_transform(T)
 # viz.loadViewerModel()
 
 ###
+# for calibsq in movelist:
+#     print("pause")
+#     for move in calibsq:
+        
+#         smoothmove(start, move)
+#         print(move)
+#         start = move.copy()
+#         time.sleep(0.1)
 
+for calibsq in movelist:
+    input("Press Enter to run the next calibration square...")
 
-for move in movelist:
-    
-    # smoothmove(start, move)
-    print(move)
-    start = move.copy()
-    time.sleep(1)
+    for move in calibsq:
+        smoothmove(start, move)
+        print(move)
+        start = move.copy()
+        time.sleep(0.01)
+
 
 import sys
 sys.exit()
