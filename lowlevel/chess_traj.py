@@ -4,7 +4,7 @@ import numpy as np
 import time
 import numpy as np
 
-from testkinematics import relativexyz, vectodic
+from testkinematics import relativexyz, relativexyz_with_error, vectodic
 
 def smoothmove(pos1, pos2):
     for alpha in np.linspace(0,1,50):
@@ -145,6 +145,80 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET, downflag=True):
         )
 
 
+def record_fk_error(traj_metrics, stage, target_xyz, fk_error):
+    if traj_metrics is None:
+        return
+
+    traj_metrics["max_fk_error"] = max(
+        traj_metrics["max_fk_error"],
+        float(fk_error)
+    )
+
+    if fk_error > traj_metrics["event_threshold"]:
+        traj_metrics["fk_error_events"].append({
+            "stage": stage,
+            "target_xyz": np.array(target_xyz).copy(),
+            "fk_error": float(fk_error),
+        })
+
+
+def xyz_homeref_with_error(
+    xyzcoords,
+    refjnts,
+    GRASP_OFFSET,
+    downflag=True,
+    traj_metrics=None,
+    stage="xyz_homeref",
+):
+    refpose = kinematics.forward_kinematics(refjnts)
+
+    refxyz = refpose[:3, 3]
+    refrot = refpose[:3, :3]
+
+    current_grasp_xyz = (
+        refxyz
+        + refrot @ GRASP_OFFSET
+    )
+
+    direcxyz = xyzcoords - current_grasp_xyz
+    rot_error = abs(-1 - refrot[2, 2])
+
+    if downflag:
+        mag = np.linalg.norm(direcxyz) + rot_error
+    else:
+        mag = np.linalg.norm(direcxyz)
+
+    min_step = 0.02
+    max_fk_error = 0.0
+
+    if mag > min_step:
+        nsteps = int(mag / min_step) + 1
+        step = direcxyz / nsteps
+        current = refjnts.copy()
+
+        for _ in range(nsteps):
+            current, fk_error = relativexyz_with_error(
+                current,
+                step,
+                GRASP_OFFSET,
+                downflag
+            )
+            max_fk_error = max(max_fk_error, fk_error)
+
+        record_fk_error(traj_metrics, stage, xyzcoords, max_fk_error)
+        return current, max_fk_error
+
+    current, fk_error = relativexyz_with_error(
+        np.array(refjnts),
+        np.array(direcxyz),
+        GRASP_OFFSET,
+        downflag
+    )
+    max_fk_error = max(max_fk_error, fk_error)
+    record_fk_error(traj_metrics, stage, xyzcoords, max_fk_error)
+    return current, max_fk_error
+
+
 WRIST_ROLL_IDX = 4
 
 
@@ -174,12 +248,42 @@ def append_joint_interpolation(jntslist, start, end, gripper_angle, nsteps=10):
     return final_joints
 
 
-def solve_seeded_target_xyz(target_xyz, solve_seed, frame_offset, gripper_angle, downflag):
-    seeded_target = xyz_homeref(
+def solve_xyz_for_traj(target_xyz, refjnts, frame_offset, downflag, traj_metrics=None, stage="xyz_homeref"):
+    if traj_metrics is None:
+        return xyz_homeref(
+            target_xyz,
+            refjnts,
+            frame_offset,
+            downflag
+        )
+
+    solved_joints, _ = xyz_homeref_with_error(
+        target_xyz,
+        refjnts,
+        frame_offset,
+        downflag,
+        traj_metrics=traj_metrics,
+        stage=stage,
+    )
+    return solved_joints
+
+
+def solve_seeded_target_xyz(
+    target_xyz,
+    solve_seed,
+    frame_offset,
+    gripper_angle,
+    downflag,
+    traj_metrics=None,
+    stage="seeded_target",
+):
+    seeded_target = solve_xyz_for_traj(
         target_xyz,
         solve_seed,
         frame_offset,
-        downflag
+        downflag,
+        traj_metrics=traj_metrics,
+        stage=stage,
     )
     seeded_target[5] = gripper_angle
     return seeded_target
@@ -229,6 +333,74 @@ def solve_seeded_target_xyz_prefer_down(
 
     candidates.sort(key=lambda item: item[:3])
     return candidates[0][3]
+
+
+def make_far_square_pickup_seed(square, board_origin, height, reach_pose, GRASP_OFFSET):
+    square_xyz = chess_to_xy(square, board_origin=board_origin)
+    target_xyz = square_xyz + np.array([0, 0, height])
+
+    return solve_seeded_target_xyz(
+        target_xyz,
+        reach_pose,
+        GRASP_OFFSET,
+        gripper_angle_open,
+        downflag=False
+    )
+
+
+def make_square_pickup_lift_path(
+    square,
+    board_origin,
+    height,
+    reach_pose,
+    GRASP_OFFSET,
+    downflag,
+    traj_metrics=None,
+    nsteps=10,
+):
+    square_xyz = chess_to_xy(square, board_origin=board_origin)
+    above_xyz = square_xyz + np.array([0, 0, height])
+
+    above_joints = solve_seeded_target_xyz(
+        above_xyz,
+        reach_pose,
+        GRASP_OFFSET,
+        gripper_angle_open,
+        downflag,
+        traj_metrics=traj_metrics,
+        stage=f"{square}_pickup_style_above"
+    )
+
+    target_xyz = square_xyz + np.array([0, 0, 0])
+    start_xyz = kinematics.forward_kinematics(above_joints)[:3, 3]
+
+    descent_path = []
+    current = above_joints.copy()
+    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+        intermediate_xyz = (
+            (1 - alpha) * start_xyz
+            + alpha * target_xyz
+        )
+
+        intermediate_joints = solve_xyz_for_traj(
+            intermediate_xyz,
+            current,
+            GRASP_OFFSET,
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{square}_pickup_style_lower"
+        )
+        intermediate_joints[5] = gripper_angle_open
+        descent_path.append(intermediate_joints.copy())
+        current = intermediate_joints.copy()
+
+    lift_path = []
+    for joints in descent_path[::-1]:
+        lift_joints = joints.copy()
+        lift_joints[5] = gripper_angle_closed
+        lift_path.append(lift_joints)
+
+    return lift_path
 
 
 
@@ -281,6 +453,7 @@ corner4 = [-108.75, 26.33, 0.79, 81.85, 172.88, 1.4]
 gripper_angle_open = 25
 # gripper_angle_open = 20
 gripper_angle_closed = 5
+RELEASE_SETTLE_WAYPOINTS = 5
 
 
 home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65.18681318681318,  -29.846153846153847,  4.62962962962963])
@@ -838,7 +1011,7 @@ def pickupmove_traj_old(from_square, to_square, board_origin, GRASP_OFFSET):
 
 #     return jntslist, closeidx
 
-def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET):
+def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET, traj_metrics=None):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
@@ -846,8 +1019,8 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     global home
     # 1. Move to home
     # height = 0.23  # height to lift above squares
-    # height = 0.13  # height to lift above squares
-    height = 0.03  # height to lift above squares
+    height = 0.13  # height to lift above squares
+    # height = 0.03  # height to lift above squares
     # height = 0.11  # height to lift above squares
 
 
@@ -879,12 +1052,14 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     target_xyz = from_xyz + np.array([0, 0, height])
 
     if from_square[0] in far_rows:
-        above_from = solve_seeded_target_xyz_prefer_down(
+        above_from = solve_seeded_target_xyz(
             target_xyz,
             reach_pose,
             GRASP_OFFSET,
             gripper_angle_open,
-            downflag
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{from_square}_far_above_pickup"
         )
         current = append_joint_interpolation(
             jntslist,
@@ -905,11 +1080,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
                 + alpha * target_xyz
             )
 
-            intermediate_joints = xyz_homeref(
+            intermediate_joints = solve_xyz_for_traj(
                 intermediate_xyz,
                 current,
                 GRASP_OFFSET, 
-                downflag
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{from_square}_above_pickup"
             )
 
             intermediate_joints[5] = gripper_angle_open
@@ -935,11 +1112,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
             + alpha * target_xyz
         )
 
-        intermediate_joints = xyz_homeref(
+        intermediate_joints = solve_xyz_for_traj(
             intermediate_xyz,
             current,
             GRASP_OFFSET, 
-            downflag
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{from_square}_lower_pickup"
         )
 
         intermediate_joints[5] = gripper_angle_open
@@ -992,12 +1171,22 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     target_xyz = to_xyz + np.array([0, 0, height])
 
     if to_square[0] in far_rows:
-        above_to = solve_seeded_target_xyz_prefer_down(
-            target_xyz,
+        pickup_like_seed = make_far_square_pickup_seed(
+            to_square,
+            board_origin,
+            height,
             reach_pose,
+            GRASP_OFFSET
+        )
+
+        above_to = solve_seeded_target_xyz(
+            target_xyz,
+            pickup_like_seed,
             PLACE_OFFSET,
             gripper_angle_closed,
-            downflag
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{to_square}_far_above_place"
         )
         current = append_joint_interpolation(
             jntslist,
@@ -1018,11 +1207,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
                 + alpha * target_xyz
             )
 
-            intermediate_joints = xyz_homeref(
+            intermediate_joints = solve_xyz_for_traj(
                 intermediate_xyz,
                 current,
-                PLACE_OFFSET, 
-                downflag
+                PLACE_OFFSET,
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{to_square}_above_place"
             )
 
             intermediate_joints[5] = gripper_angle_closed
@@ -1040,46 +1231,75 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    # nsteps = 10
-    nsteps = 2
+    nsteps = 10
+    # nsteps = 2
     downjnts = []
     stepcnt = 0
-    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
-
-        intermediate_xyz = (
-            (1 - alpha) * start_xyz
-            + alpha * target_xyz
+    if to_square == "f1":
+        pickup_lift_path = make_square_pickup_lift_path(
+            to_square,
+            board_origin,
+            height,
+            reach_pose,
+            GRASP_OFFSET,
+            downflag,
+            traj_metrics=traj_metrics,
+            nsteps=nsteps
         )
+        placement_lower_path = pickup_lift_path[::-1]
 
-        intermediate_joints = xyz_homeref(
-            intermediate_xyz,
-            current,
-            PLACE_OFFSET, 
-            downflag
-        )
+        for intermediate_joints in placement_lower_path:
+            intermediate_joints = intermediate_joints.copy()
+            intermediate_joints[5] = gripper_angle_closed
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
 
-        intermediate_joints[5] = gripper_angle_closed
+        target_xyz = to_xyz + np.array([0, 0, 0])
+    else:
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
-        jntslist.append(intermediate_joints)
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
 
-        current = intermediate_joints.copy()
+            intermediate_joints = solve_xyz_for_traj(
+                intermediate_xyz,
+                current,
+                PLACE_OFFSET,
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{to_square}_lower_place"
+            )
 
-        if stepcnt == 0:
-            downjnts.append(intermediate_joints.copy())
+            intermediate_joints[5] = gripper_angle_closed
 
-        # if stepcnt == 5:
-        #     downjnts.append(intermediate_joints.copy())
+            jntslist.append(intermediate_joints)
 
-        stepcnt+=1
+            current = intermediate_joints.copy()
+
+            if stepcnt == 0:
+                downjnts.append(intermediate_joints.copy())
+
+            # if stepcnt == 5:
+            #     downjnts.append(intermediate_joints.copy())
+
+            stepcnt+=1
 
 
     # return jntslist, closeidx
+
+    if traj_metrics is not None:
+        traj_metrics["release_target_xyz"] = target_xyz.copy()
+        traj_metrics["release_target_z"] = float(target_xyz[2])
 
     # Open gripper
     grip_open = current.copy()
     grip_open[5] = gripper_angle_open  # adjust as needed
     # smoothmove(current, grip_open)
     jntslist.append(grip_open)
+    for _ in range(RELEASE_SETTLE_WAYPOINTS):
+        jntslist.append(grip_open.copy())
 
     current = grip_open.copy()
 
@@ -1093,17 +1313,19 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
             current = j.copy()
     else:
         target_xyz = to_xyz + np.array([0, 0, height])
-        above_to = solve_seeded_target_xyz_prefer_down(
+        above_to_open = solve_seeded_target_xyz(
             target_xyz,
             reach_pose,
             GRASP_OFFSET,
             gripper_angle_open,
-            downflag
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{to_square}_far_lift_after_release"
         )
         current = append_joint_interpolation(
             jntslist,
             current,
-            above_to,
+            above_to_open,
             gripper_angle_open,
             nsteps=10
         )
@@ -1119,10 +1341,13 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     ###
     home_xyz = kinematics.forward_kinematics(home)[:3,3]
 
-    above_home = xyz_homeref(
+    above_home = solve_xyz_for_traj(
         home_xyz + np.array([0, 0, 0.10]),
         current,
-        GRASP_OFFSET
+        GRASP_OFFSET,
+        True,
+        traj_metrics=traj_metrics,
+        stage="return_above_home"
     )
 
     above_home[5] = current[5]
@@ -1139,6 +1364,27 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     current = home.copy()
 
     return jntslist, closeidx
+
+
+def pickupmove_traj_with_metrics(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET):
+    traj_metrics = {
+        "max_fk_error": 0.0,
+        "event_threshold": 0.025,
+        "fk_error_events": [],
+        "release_target_xyz": None,
+        "release_target_z": None,
+    }
+
+    jntslist, closeidx = pickupmove_traj(
+        from_square,
+        to_square,
+        board_origin,
+        GRASP_OFFSET,
+        PLACE_OFFSET,
+        traj_metrics=traj_metrics,
+    )
+
+    return jntslist, closeidx, traj_metrics
 
 def calib_board(board_origin, GRASP_OFFSET=np.array([0,0,0]), PLACE_OFFSET=np.array([0,0,0])):
     """

@@ -298,6 +298,43 @@ def relativexyz(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=
     return(newjoints)
 
 
+def relativexyz_with_error(initjnts, changexyz, GRASP_OFFSET=np.array([0, 0, 0]), downflag=True):
+    fk_init = kinematics.forward_kinematics(initjnts)
+    newpose = fk_init.copy()
+
+    if downflag == True:
+        newpose[2, 2] = -1
+
+    newpose[:3, 3] += changexyz
+    newjoints = targetcoords(initjnts, newpose)
+
+    target_position = newpose[:3, 3]
+    fk_pose = kinematics.forward_kinematics(newjoints)
+
+    fk_position = fk_pose[:3, 3]
+
+    # Old offset-point error. This tracks with GRASP_OFFSET/PLACE_OFFSET,
+    # so it is not suitable for offset-independent IK/FK trajectory rejection.
+    # fk_grasp_position = (
+    #     fk_pose[:3, 3]
+    #     + fk_pose[:3, :3] @ GRASP_OFFSET
+    # )
+    #
+    # position_error = np.linalg.norm(
+    #     target_position - fk_grasp_position
+    # )
+
+    position_error = np.linalg.norm(
+        target_position - fk_position
+    )
+
+    if position_error > 0.025:
+        print("Position Error:", position_error)
+        print("Target Position:", target_position)
+
+    return newjoints, position_error
+
+
 # direc = np.array([0,0.01,0])
 
 

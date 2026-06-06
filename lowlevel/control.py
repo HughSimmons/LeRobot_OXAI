@@ -4,7 +4,8 @@ import math
 from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 
 config = SO101FollowerConfig(
-    port="/dev/tty.usbmodem5AB90659861",
+    # port="/dev/tty.usbmodem5AB90659861",
+    port="/dev/tty.usbmodem5B7B0157051",
     # port="/dev/cu.usbmodem5B141140961",
     id="my_awesome_follower_arm"
 )

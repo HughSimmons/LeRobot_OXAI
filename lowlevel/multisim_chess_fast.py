@@ -5,7 +5,7 @@ import numpy as np
 import sys
 import time
 from pathlib import Path
-from chess_traj import pickupmove_traj, chess_to_xy, gripper_angle_closed, gripper_angle_open
+from chess_traj import pickupmove_traj, pickupmove_traj_with_metrics, chess_to_xy, gripper_angle_closed, gripper_angle_open
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 video_on = False
@@ -41,9 +41,9 @@ squares = [
 
 
 GRASP_OFFSET = np.array([
-    -0.015,
-    -0.0,
-    -0.005
+    -0.014,
+    -0.002,
+    -0.002
 ])
 
 
@@ -67,6 +67,8 @@ PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 renderfreq = 50
 WIDTH, HEIGHT = 640, 360
+PIECE_LIFTED_Z_THRESHOLD = 0.05
+PIECE_DROPPED_Z_THRESHOLD = 0.035
 SOLVER_ITERATIONS = 200
 SOLVER_SUBSTEPS = 4
 POST_MOVE_SETTLE_STEPS = 1000
@@ -75,6 +77,8 @@ SEARCH_SOLVER_SUBSTEPS = 4
 SEARCH_POST_MOVE_SETTLE_STEPS = 200
 VERIFY_TOP_K = 1
 MEASURED_CORRECTION_ROUNDS = 1
+MAX_TRAJECTORY_FK_ERROR = 0.025
+XY_ERROR_WEIGHT = 10.0
 # COARSE_TO_FINE_PASSES = (
 #     {"sample_count": 5, "delta": 0.0010},
 #     {"sample_count": 5, "delta": 0.00035},
@@ -137,6 +141,19 @@ def interpolate_joints(moves, move_idx, alpha):
     )
 
     return target_joints
+
+
+def find_release_move_index(movelist, closeidx):
+    for idx in range(closeidx + 1, len(movelist)):
+        gripper_now = movelist[idx][5]
+        gripper_prev = movelist[idx - 1][5]
+        if (
+            np.isclose(gripper_now, gripper_angle_open)
+            and np.isclose(gripper_prev, gripper_angle_closed)
+        ):
+            return idx
+
+    return len(movelist) - 1
 
 ##fn to generate pices 
 def create_piece(sq="a1"):
@@ -262,6 +279,7 @@ def run_sim_move(
     place_offset=None,
     return_metrics=False,
     record_video=None,
+    video_label=None,
     solver_iterations=SOLVER_ITERATIONS,
     solver_substeps=SOLVER_SUBSTEPS,
     post_move_settle_steps=POST_MOVE_SETTLE_STEPS
@@ -282,10 +300,70 @@ def run_sim_move(
     robot_id = world["robot_id"]
     piece_ids = world["piece_ids"]
 
-    movelist, closeidx = pickupmove_traj(sq1, sq2, board_origin=board_origin, GRASP_OFFSET=grasp_offset, PLACE_OFFSET=active_place_offset)  
+    movelist, closeidx, traj_metrics = pickupmove_traj_with_metrics(
+        sq1,
+        sq2,
+        board_origin=board_origin,
+        GRASP_OFFSET=grasp_offset,
+        PLACE_OFFSET=active_place_offset
+    )
+
+    trajectory_fk_error = traj_metrics["max_fk_error"]
+    release_target_z = traj_metrics["release_target_z"]
+    if release_target_z is None:
+        release_target_z = PIECE_DROPPED_Z_THRESHOLD
+
+    # premature_drop_z_threshold = release_target_z + 0.003
+    premature_drop_z_threshold = release_target_z + 0.01
+    lifted_z_threshold = max(
+        PIECE_LIFTED_Z_THRESHOLD,
+        release_target_z + 0.02
+    )
+
+    if trajectory_fk_error > MAX_TRAJECTORY_FK_ERROR:
+        expected_piece_pos = np.array(chess_to_xy(sq2, board_origin=board_origin))
+        result = {
+            "pickup_success": False,
+            "from_square": sq1,
+            "to_square": sq2,
+            "place_offset": active_place_offset.copy(),
+            "final_position": np.full(3, np.nan),
+            "final_orientation": None,
+            "expected_position": expected_piece_pos,
+            "position_error": np.full(3, np.nan),
+            "xy_error": np.inf,
+            "z_error": np.inf,
+            "final_tilt_deg": np.nan,
+            "final_euler_deg": np.full(3, np.nan),
+            "solver_iterations": solver_iterations,
+            "solver_substeps": solver_substeps,
+            "post_move_settle_steps": post_move_settle_steps,
+            "trajectory_fk_error": trajectory_fk_error,
+            "trajectory_fk_error_events": traj_metrics["fk_error_events"],
+            "trajectory_valid": False,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "release_move_idx": None,
+            "release_target_z": release_target_z,
+            "premature_drop_z_threshold": premature_drop_z_threshold,
+            "lifted_z_threshold": lifted_z_threshold,
+            "premature_drop": False,
+            "premature_drop_step": None,
+            "premature_drop_move_idx": None,
+            "premature_drop_z": None,
+            "min_pre_release_piece_z": None,
+            "video_output_dir": None,
+        }
+        print(
+            "Skipping simulation because trajectory FK error is too large: "
+            f"{trajectory_fk_error:.5f}"
+        )
+        if return_metrics:
+            return result
+        return False
 
 
     moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
+    release_move_idx = find_release_move_index(movelist, closeidx)
 
     if video_enabled:
         # Setup video recording with THREE cameras
@@ -303,6 +381,8 @@ def run_sim_move(
 
         # Create subdirectory for this run
         output_dir = Path(f"./recordings/{runid}/{simid}")
+        if video_label is not None:
+            output_dir = output_dir / video_label
         output_dir.mkdir(parents=True, exist_ok=True)
 
         video_path = output_dir / "so101_robot_moves.mp4"
@@ -328,6 +408,12 @@ def run_sim_move(
 
     SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
     pickup_success = False
+    piece_was_lifted = False
+    premature_drop = False
+    premature_drop_step = None
+    premature_drop_move_idx = None
+    premature_drop_z = None
+    min_pre_release_piece_z = np.inf
 
     try:
 
@@ -409,8 +495,15 @@ def run_sim_move(
 
 
             piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
+            piece_z = piece_pos[2]
 
-            if piece_pos[2]>0.05 and global_step > 50:  # Check if the piece has been lifted off the board (adjust threshold as needed)
+            if move_idx < release_move_idx:
+                min_pre_release_piece_z = min(
+                    min_pre_release_piece_z,
+                    piece_z
+                )
+
+            if piece_z > lifted_z_threshold and global_step > 50:  # Check if the piece has been lifted off the board (adjust threshold as needed)
             # if piece_pos[2]>0.1:
 
                 # fk_pose = kinematics.forward_kinematics(np.rad2deg(target_joints))
@@ -427,9 +520,21 @@ def run_sim_move(
                 # print("Recovered GRASP_OFFSET:")
                 # print(grasp_offset)
                 pickup_success = True
+                piece_was_lifted = True
                 # break
                 # return(pickup_success)
                 # sys.exit()
+
+            if (
+                piece_was_lifted
+                and move_idx < release_move_idx
+                and piece_z < premature_drop_z_threshold
+            ):
+                premature_drop = True
+                if premature_drop_step is None:
+                    premature_drop_step = global_step
+                    premature_drop_move_idx = move_idx
+                    premature_drop_z = piece_z
 
             if video_enabled:
                 if global_step % renderfreq == 0:
@@ -527,6 +632,8 @@ def run_sim_move(
     piece_axis_z = final_piece_rot[:, 2]
     final_tilt_deg = np.rad2deg(np.arccos(np.clip(abs(piece_axis_z[2]), -1.0, 1.0)))
     final_euler_deg = np.rad2deg(p.getEulerFromQuaternion(final_piece_orn))
+    if np.isinf(min_pre_release_piece_z):
+        min_pre_release_piece_z = None
 
     print("Pick up success:", pickup_success)
     if return_metrics:
@@ -546,6 +653,19 @@ def run_sim_move(
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
             "post_move_settle_steps": post_move_settle_steps,
+            "trajectory_fk_error": trajectory_fk_error,
+            "trajectory_fk_error_events": traj_metrics["fk_error_events"],
+            "trajectory_valid": True,
+            "release_move_idx": release_move_idx,
+            "release_target_z": release_target_z,
+            "premature_drop_z_threshold": premature_drop_z_threshold,
+            "lifted_z_threshold": lifted_z_threshold,
+            "premature_drop": premature_drop,
+            "premature_drop_step": premature_drop_step,
+            "premature_drop_move_idx": premature_drop_move_idx,
+            "premature_drop_z": premature_drop_z,
+            "min_pre_release_piece_z": min_pre_release_piece_z,
+            "video_output_dir": str(output_dir) if video_enabled else None,
         }
 
     return pickup_success
@@ -597,10 +717,29 @@ def grasptest(grasp_offset):
 
 
 def score_place_result(result):
-    if not result["pickup_success"]:
+    if result.get("trajectory_fk_error", 0.0) > MAX_TRAJECTORY_FK_ERROR:
+        result["reject_reason"] = "trajectory_fk_error_too_large"
         return 1000.0
 
+    if not result["pickup_success"]:
+        result["reject_reason"] = "pickup_failed"
+        return 1000.0
+
+    result["reject_reason"] = None
     return result["xy_error"] + 0.25 * result["z_error"]
+
+
+def score_grasp_result(result):
+    if result.get("trajectory_fk_error", 0.0) > MAX_TRAJECTORY_FK_ERROR:
+        result["reject_reason"] = "trajectory_fk_error_too_large"
+        return 1000.0
+
+    if not result["pickup_success"]:
+        result["reject_reason"] = "pickup_failed"
+        return 1000.0
+
+    result["reject_reason"] = None
+    return result["final_tilt_deg"] + XY_ERROR_WEIGHT * result["xy_error"]
 
 
 def make_centered_samples(sample_count):
@@ -660,9 +799,11 @@ def find_best_place_offset(
 
                 print(
                     f"score={result['score']:.5f} | "
+                    f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
                     f"xy_error={result['xy_error']:.5f} | "
                     f"z_error={result['z_error']:.5f} | "
-                    f"pickup={result['pickup_success']}"
+                    f"pickup={result['pickup_success']} | "
+                    f"reject={result['reject_reason']}"
                 )
     finally:
         if should_remove_state:
@@ -675,8 +816,10 @@ def find_best_place_offset(
         print(
             f"{rank}: offset={result['place_offset']} | "
             f"score={result['score']:.5f} | "
+            f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
             f"xy_error={result['xy_error']:.5f} | "
             f"z_error={result['z_error']:.5f} | "
+            f"reject={result['reject_reason']} | "
             f"final_position={result['final_position']}"
         )
 
@@ -731,6 +874,7 @@ def find_best_place_offset_coarse_to_fine(
 
         print(
             f"Pass {pass_idx} best offset={center_offset} | "
+            f"traj_fk_error={best_result['trajectory_fk_error']:.5f} | "
             f"score={best_result['score']:.5f} | elapsed={pass_elapsed:.2f}s"
         )
 
@@ -806,6 +950,16 @@ def find_best_place_offset_measured_correction(
         result["correction_round"] = round_idx
         results.append(result)
 
+        if result["reject_reason"] == "trajectory_fk_error_too_large":
+            round_elapsed = time.perf_counter() - round_start
+            print(
+                f"score={result['score']:.5f} | "
+                f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
+                f"reject={result['reject_reason']} | "
+                f"elapsed={round_elapsed:.2f}s"
+            )
+            break
+
         measured_error = result["position_error"].copy()
         world_correction = measured_error.copy()
         if not correct_z:
@@ -828,9 +982,11 @@ def find_best_place_offset_measured_correction(
 
         print(
             f"score={result['score']:.5f} | "
+            f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
             f"xy_error={result['xy_error']:.5f} | "
             f"z_error={result['z_error']:.5f} | "
             f"pickup={result['pickup_success']} | "
+            f"reject={result['reject_reason']} | "
             f"measured_error={measured_error} | "
             f"gripper_frame_correction={gripper_frame_correction} | "
             f"next_PLACE_OFFSET={next_place_offset} | "
@@ -847,8 +1003,10 @@ def find_best_place_offset_measured_correction(
             f"{rank}: round={result['correction_round']} | "
             f"offset={result['place_offset']} | "
             f"score={result['score']:.5f} | "
+            f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
             f"xy_error={result['xy_error']:.5f} | "
             f"z_error={result['z_error']:.5f} | "
+            f"reject={result['reject_reason']} | "
             f"final_position={result['final_position']}"
         )
 
@@ -895,9 +1053,11 @@ def verify_top_place_offsets(
         print(
             f"full_score={verified_result['score']:.5f} | "
             f"cheap_score={result['score']:.5f} | "
+            f"traj_fk_error={verified_result['trajectory_fk_error']:.5f} | "
             f"xy_error={verified_result['xy_error']:.5f} | "
             f"z_error={verified_result['z_error']:.5f} | "
-            f"pickup={verified_result['pickup_success']}"
+            f"pickup={verified_result['pickup_success']} | "
+            f"reject={verified_result['reject_reason']}"
         )
 
         if len(verified_results) >= top_k:
@@ -909,25 +1069,41 @@ def verify_top_place_offsets(
         print(
             f"{rank}: offset={result['place_offset']} | "
             f"score={result['score']:.5f} | "
+            f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
             f"xy_error={result['xy_error']:.5f} | "
             f"z_error={result['z_error']:.5f} | "
+            f"reject={result['reject_reason']} | "
             f"final_position={result['final_position']}"
         )
 
     return verified_results[0], verified_results
 
 
-def run_place_offset_search_for_square(world, from_square, to_square, record_video=False):
+def run_place_offset_search_for_square(
+    world,
+    from_square,
+    to_square,
+    grasp_offset=GRASP_OFFSET,
+    base_place_offset=None,
+    record_video=False,
+    use_measured_correction=None
+):
     print(f"\n========== Searching {from_square} -> {to_square} ==========")
 
+    if base_place_offset is None:
+        base_place_offset = grasp_offset.copy()
+
+    if use_measured_correction is None:
+        use_measured_correction = RUN_MEASURED_CORRECTION_SEARCH
+
     search_start = time.perf_counter()
-    if RUN_MEASURED_CORRECTION_SEARCH:
+    if use_measured_correction:
         best_search_result, place_results = find_best_place_offset_measured_correction(
             world,
             from_square,
             to_square,
-            grasp_offset=GRASP_OFFSET,
-            base_place_offset=GRASP_OFFSET,
+            grasp_offset=grasp_offset,
+            base_place_offset=base_place_offset,
             rounds=MEASURED_CORRECTION_ROUNDS
         )
     else:
@@ -935,8 +1111,8 @@ def run_place_offset_search_for_square(world, from_square, to_square, record_vid
             world,
             from_square,
             to_square,
-            grasp_offset=GRASP_OFFSET,
-            base_place_offset=GRASP_OFFSET
+            grasp_offset=grasp_offset,
+            base_place_offset=base_place_offset
         )
     search_elapsed = time.perf_counter() - search_start
 
@@ -948,7 +1124,7 @@ def run_place_offset_search_for_square(world, from_square, to_square, record_vid
         world,
         from_square,
         to_square,
-        GRASP_OFFSET,
+        grasp_offset,
         place_results,
         top_k=VERIFY_TOP_K
     )
@@ -965,7 +1141,7 @@ def run_place_offset_search_for_square(world, from_square, to_square, record_vid
             world,
             from_square,
             to_square,
-            GRASP_OFFSET,
+            grasp_offset,
             place_offset=best_result["place_offset"],
             return_metrics=True,
             record_video=True,
@@ -977,6 +1153,7 @@ def run_place_offset_search_for_square(world, from_square, to_square, record_vid
 
         video_output_dir = Path(f"./recordings/{runid}/{from_square}_to_{to_square}")
         print("Video rerun pickup success:", video_result["pickup_success"])
+        print("Video rerun trajectory FK error:", video_result["trajectory_fk_error"])
         print("Video rerun final position:", video_result["final_position"])
         print("Video rerun xy error:", video_result["xy_error"])
         print("Video rerun z error:", video_result["z_error"])
@@ -986,6 +1163,326 @@ def run_place_offset_search_for_square(world, from_square, to_square, record_vid
         print(f"Fast sim video rerun time: {video_elapsed:.2f}s")
 
     return best_result, place_results, verified_results, video_result
+
+
+def find_best_grasp_offset_for_move(
+    world,
+    from_square="e1",
+    to_square="f1",
+    base_grasp_offset=GRASP_OFFSET,
+    place_offset=PLACE_OFFSET,
+    delta=0.001
+):
+    # dx_samples = [-3, 0, 3]
+    # dy_samples = [-2, 0, 2]
+    # dz_samples = [-5, -2, 0, 1, 2, 3]
+    dx_samples = [-1,0,1]
+    dy_samples = [-1,0,1]
+    dz_samples = [-1,0,1]
+    results = []
+
+    print(f"\n========== Searching GRASP_OFFSET {from_square} -> {to_square} ==========")
+    for dx in dx_samples:
+        for dy in dy_samples:
+            for dz in dz_samples:
+                grasp_offset = base_grasp_offset + delta * np.array([dx, dy, dz])
+                print(f"Testing GRASP_OFFSET: {grasp_offset}")
+                video_label = f"grasp_dx{dx}_dy{dy}_dz{dz}"
+
+                result = run_sim_move(
+                    world,
+                    from_square,
+                    to_square,
+                    grasp_offset,
+                    place_offset=place_offset,
+                    return_metrics=True,
+                    record_video=True,
+                    video_label=video_label,
+                    solver_iterations=SEARCH_SOLVER_ITERATIONS,
+                    solver_substeps=SEARCH_SOLVER_SUBSTEPS,
+                    post_move_settle_steps=SEARCH_POST_MOVE_SETTLE_STEPS
+                )
+                result["grasp_offset"] = grasp_offset.copy()
+                result["score"] = score_grasp_result(result)
+                results.append(result)
+
+                print(
+                    f"score={result['score']:.5f} | "
+                    f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
+                    f"pickup={result['pickup_success']} | "
+                    f"premature_drop={result['premature_drop']} | "
+                    f"drop_height={result['premature_drop_z']} | "
+                    f"min_pre_release_z={result['min_pre_release_piece_z']} | "
+                    f"drop_z={result['premature_drop_z_threshold']:.5f} | "
+                    f"xy_error={result['xy_error']:.5f} | "
+                    f"z_error={result['z_error']:.5f} | "
+                    f"tilt={result['final_tilt_deg']:.2f} | "
+                    f"reject={result['reject_reason']} | "
+                    f"video_dir={result['video_output_dir']}"
+                )
+
+    results.sort(key=lambda item: item["score"])
+
+    print("\nBest GRASP_OFFSET results:")
+    for rank, result in enumerate(results[:10], start=1):
+        print(
+            f"{rank}: grasp_offset={result['grasp_offset']} | "
+            f"score={result['score']:.5f} | "
+            f"traj_fk_error={result['trajectory_fk_error']:.5f} | "
+            f"pickup={result['pickup_success']} | "
+            f"premature_drop={result['premature_drop']} | "
+            f"drop_height={result['premature_drop_z']} | "
+            f"min_pre_release_z={result['min_pre_release_piece_z']} | "
+            f"drop_z={result['premature_drop_z_threshold']:.5f} | "
+            f"xy_error={result['xy_error']:.5f} | "
+            f"z_error={result['z_error']:.5f} | "
+            f"tilt={result['final_tilt_deg']:.2f} | "
+            f"reject={result['reject_reason']} | "
+            f"video_dir={result['video_output_dir']} | "
+            f"final_position={result['final_position']}"
+        )
+
+    return results[0], results
+
+
+def run_grasp_offset_search(record_video=True):
+    search_from_square = "e1"
+    search_to_square = "f1"
+
+    setup_start = time.perf_counter()
+    world = setup_sim_world(search_from_square)
+    setup_elapsed = time.perf_counter() - setup_start
+    print(f"Fast sim setup time: {setup_elapsed:.2f}s")
+
+    try:
+        search_start = time.perf_counter()
+        best_result, grasp_results = find_best_grasp_offset_for_move(
+            world,
+            from_square=search_from_square,
+            to_square=search_to_square,
+            base_grasp_offset=GRASP_OFFSET,
+            place_offset=PLACE_OFFSET
+        )
+        search_elapsed = time.perf_counter() - search_start
+
+        print("\nBest GRASP_OFFSET:", best_result["grasp_offset"])
+        print(f"Fast sim grasp search time: {search_elapsed:.2f}s")
+
+        video_result = None
+        if record_video:
+            print("\nRerunning best GRASP_OFFSET with video...")
+            video_start = time.perf_counter()
+            video_result = run_sim_move(
+                world,
+                search_from_square,
+                search_to_square,
+                best_result["grasp_offset"],
+                place_offset=PLACE_OFFSET,
+                return_metrics=True,
+                record_video=True,
+                solver_iterations=SOLVER_ITERATIONS,
+                solver_substeps=SOLVER_SUBSTEPS,
+                post_move_settle_steps=POST_MOVE_SETTLE_STEPS
+            )
+            video_elapsed = time.perf_counter() - video_start
+
+            video_output_dir = Path(f"./recordings/{runid}/{search_from_square}_to_{search_to_square}")
+            print("Video rerun pickup success:", video_result["pickup_success"])
+            print("Video rerun trajectory FK error:", video_result["trajectory_fk_error"])
+            print("Video rerun final position:", video_result["final_position"])
+            print("Video rerun xy error:", video_result["xy_error"])
+            print("Video rerun z error:", video_result["z_error"])
+            print("Video rerun final tilt deg:", video_result["final_tilt_deg"])
+            print("Video rerun final euler deg:", video_result["final_euler_deg"])
+            print("Video output directory:", video_output_dir)
+            print(f"Fast sim video rerun time: {video_elapsed:.2f}s")
+
+        return best_result, grasp_results, video_result
+    finally:
+        p.removeState(world["state_id"])
+
+
+def run_grasp_only_until_held(from_square="e1", to_square="f1", record_video=True):
+    setup_start = time.perf_counter()
+    world = setup_sim_world(from_square)
+    setup_elapsed = time.perf_counter() - setup_start
+    print(f"Fast sim setup time: {setup_elapsed:.2f}s")
+
+    try:
+        search_start = time.perf_counter()
+        best_result, grasp_results = find_best_grasp_offset_for_move(
+            world,
+            from_square=from_square,
+            to_square=to_square,
+            base_grasp_offset=GRASP_OFFSET,
+            place_offset=PLACE_OFFSET
+        )
+        search_elapsed = time.perf_counter() - search_start
+
+        valid_results = [
+            result for result in grasp_results
+            if result["reject_reason"] is None
+        ]
+
+        if not valid_results:
+            print("\nNo valid GRASP_OFFSET found.")
+            print("Least-bad GRASP_OFFSET candidates:")
+            for rank, result in enumerate(grasp_results[:10], start=1):
+                print(
+                    f"{rank}: grasp_offset={result['grasp_offset']} | "
+                    f"score={result['score']:.5f} | "
+                    f"pickup={result['pickup_success']} | "
+                    f"premature_drop={result['premature_drop']} | "
+                    f"tilt={result['final_tilt_deg']:.2f} | "
+                    f"reject={result['reject_reason']}"
+                )
+            print(f"Fast sim grasp-only search time: {search_elapsed:.2f}s")
+            return None, grasp_results, None
+
+        print("\nBest GRASP_OFFSET:", best_result["grasp_offset"])
+        print("Best grasp tilt deg:", best_result["final_tilt_deg"])
+        print("Best grasp pickup success:", best_result["pickup_success"])
+        print("Best grasp premature drop:", best_result["premature_drop"])
+        print("Best grasp release target z:", best_result["release_target_z"])
+        print("Best grasp premature drop z threshold:", best_result["premature_drop_z_threshold"])
+        print("Best grasp trajectory FK error:", best_result["trajectory_fk_error"])
+        print("Best grasp xy error:", best_result["xy_error"])
+        print("Best grasp z error:", best_result["z_error"])
+        print(f"Fast sim grasp-only search time: {search_elapsed:.2f}s")
+
+        video_result = None
+        if record_video:
+            print("\nRerunning best GRASP_OFFSET with video...")
+            video_start = time.perf_counter()
+            video_result = run_sim_move(
+                world,
+                from_square,
+                to_square,
+                best_result["grasp_offset"],
+                place_offset=PLACE_OFFSET,
+                return_metrics=True,
+                record_video=True,
+                solver_iterations=SOLVER_ITERATIONS,
+                solver_substeps=SOLVER_SUBSTEPS,
+                post_move_settle_steps=POST_MOVE_SETTLE_STEPS
+            )
+            video_elapsed = time.perf_counter() - video_start
+
+            video_output_dir = Path(f"./recordings/{runid}/{from_square}_to_{to_square}")
+            print("Video rerun pickup success:", video_result["pickup_success"])
+            print("Video rerun premature drop:", video_result["premature_drop"])
+            print("Video rerun final tilt deg:", video_result["final_tilt_deg"])
+            print("Video rerun final euler deg:", video_result["final_euler_deg"])
+            print("Video output directory:", video_output_dir)
+            print(f"Fast sim grasp-only video rerun time: {video_elapsed:.2f}s")
+
+        return best_result, grasp_results, video_result
+    finally:
+        p.removeState(world["state_id"])
+
+
+def run_single_video_inspection(from_square="e1", to_square="f1"):
+    setup_start = time.perf_counter()
+    world = setup_sim_world(from_square)
+    setup_elapsed = time.perf_counter() - setup_start
+    print(f"Fast sim setup time: {setup_elapsed:.2f}s")
+
+    try:
+        print(f"\n========== Single video inspection {from_square} -> {to_square} ==========")
+        print("Using GRASP_OFFSET:", GRASP_OFFSET)
+        print("Using PLACE_OFFSET:", PLACE_OFFSET)
+
+        run_start = time.perf_counter()
+        result = run_sim_move(
+            world,
+            from_square,
+            to_square,
+            GRASP_OFFSET,
+            place_offset=PLACE_OFFSET,
+            return_metrics=True,
+            record_video=True,
+            solver_iterations=SOLVER_ITERATIONS,
+            solver_substeps=SOLVER_SUBSTEPS,
+            post_move_settle_steps=POST_MOVE_SETTLE_STEPS
+        )
+        run_elapsed = time.perf_counter() - run_start
+
+        video_output_dir = Path(f"./recordings/{runid}/{from_square}_to_{to_square}")
+        print("Single run pickup success:", result["pickup_success"])
+        print("Single run premature drop:", result["premature_drop"])
+        print("Single run trajectory FK error:", result["trajectory_fk_error"])
+        print("Single run final position:", result["final_position"])
+        print("Single run xy error:", result["xy_error"])
+        print("Single run z error:", result["z_error"])
+        print("Single run final tilt deg:", result["final_tilt_deg"])
+        print("Single run final euler deg:", result["final_euler_deg"])
+        print("Video output directory:", video_output_dir)
+        print(f"Fast sim single video run time: {run_elapsed:.2f}s")
+
+        return result
+    finally:
+        p.removeState(world["state_id"])
+
+
+def run_grasp_then_place_search(from_square="e1", to_square="f1", record_video=True):
+    setup_start = time.perf_counter()
+    world = setup_sim_world(from_square)
+    setup_elapsed = time.perf_counter() - setup_start
+    print(f"Fast sim setup time: {setup_elapsed:.2f}s")
+
+    try:
+        grasp_start = time.perf_counter()
+        best_grasp_result, grasp_results = find_best_grasp_offset_for_move(
+            world,
+            from_square=from_square,
+            to_square=to_square,
+            base_grasp_offset=GRASP_OFFSET,
+            place_offset=PLACE_OFFSET
+        )
+        grasp_elapsed = time.perf_counter() - grasp_start
+        best_grasp_offset = best_grasp_result["grasp_offset"].copy()
+
+        print("\nBest GRASP_OFFSET:", best_grasp_offset)
+        print("Best grasp tilt deg:", best_grasp_result["final_tilt_deg"])
+        print("Best grasp pickup success:", best_grasp_result["pickup_success"])
+        print("Best grasp premature drop:", best_grasp_result["premature_drop"])
+        print("Best grasp release target z:", best_grasp_result["release_target_z"])
+        print("Best grasp premature drop z threshold:", best_grasp_result["premature_drop_z_threshold"])
+        print("Best grasp trajectory FK error:", best_grasp_result["trajectory_fk_error"])
+        print("Best grasp xy error:", best_grasp_result["xy_error"])
+        print("Best grasp z error:", best_grasp_result["z_error"])
+        print(f"Fast sim grasp search time: {grasp_elapsed:.2f}s")
+
+        place_start = time.perf_counter()
+        best_place_result, place_results, verified_results, video_result = run_place_offset_search_for_square(
+            world,
+            from_square,
+            to_square,
+            grasp_offset=best_grasp_offset,
+            base_place_offset=best_grasp_offset,
+            record_video=record_video,
+            use_measured_correction=True
+        )
+        place_elapsed = time.perf_counter() - place_start
+
+        print("\n========== Grasp then PLACE_OFFSET summary ==========")
+        print("Best GRASP_OFFSET:", best_grasp_offset)
+        print("Best grasp tilt deg:", best_grasp_result["final_tilt_deg"])
+        print("Best grasp premature drop:", best_grasp_result["premature_drop"])
+        print("Best grasp release target z:", best_grasp_result["release_target_z"])
+        print("Best grasp premature drop z threshold:", best_grasp_result["premature_drop_z_threshold"])
+        print("Best PLACE_OFFSET:", best_place_result["place_offset"])
+        print("Best placement score:", best_place_result["score"])
+        print("Best placement final tilt deg:", best_place_result["final_tilt_deg"])
+        print("Best placement pickup success:", best_place_result["pickup_success"])
+        print("Best placement trajectory FK error:", best_place_result["trajectory_fk_error"])
+        print("Best placement xy error:", best_place_result["xy_error"])
+        print("Best placement z error:", best_place_result["z_error"])
+        print(f"Fast sim placement search+verify+video time: {place_elapsed:.2f}s")
+
+        return best_grasp_result, grasp_results, best_place_result, place_results, verified_results, video_result
+    finally:
+        p.removeState(world["state_id"])
 
 
 # base_grasp_offset = np.array([
@@ -1035,7 +1532,11 @@ for dx in dellist:
     grasp_offsets.append(offset)
 
 
-RUN_PLACE_OFFSET_SEARCH = True
+RUN_SINGLE_VIDEO_INSPECTION = False
+RUN_GRASP_OFFSET_SEARCH = False
+RUN_GRASP_ONLY_UNTIL_HELD = True
+RUN_GRASP_THEN_PLACE_SEARCH = False
+RUN_PLACE_OFFSET_SEARCH = False
 RUN_MEASURED_CORRECTION_SEARCH = True
 RUN_RANK1_PLACE_OFFSET_BATCH = True
 # RECORD_VIDEO_RERUN = False
@@ -1050,7 +1551,26 @@ p.setAdditionalSearchPath(pybullet_data.getDataPath())
 # e1a1 Best verified PLACE_OFFSET: [-0.02246538  0.00114195 -0.00431543]
 # e1b1 Best verified PLACE_OFFSET: [-0.02214579  0.00110381 -0.00460133]
 # e1e1 Best verified PLACE_OFFSET: [-0.02208837  0.0008782  -0.00150453]
-if RUN_PLACE_OFFSET_SEARCH:
+if RUN_SINGLE_VIDEO_INSPECTION:
+    run_single_video_inspection(
+        from_square="e1",
+        to_square="f1"
+    )
+elif RUN_GRASP_ONLY_UNTIL_HELD:
+    run_grasp_only_until_held(
+        from_square="e1",
+        to_square="f1",
+        record_video=RECORD_VIDEO_RERUN
+    )
+elif RUN_GRASP_THEN_PLACE_SEARCH:
+    run_grasp_then_place_search(
+        from_square="e1",
+        to_square="f1",
+        record_video=RECORD_VIDEO_RERUN
+    )
+elif RUN_GRASP_OFFSET_SEARCH:
+    run_grasp_offset_search(record_video=True)
+elif RUN_PLACE_OFFSET_SEARCH:
     search_from_square = "e1"
     search_to_square = "e1"
     search_to_squares = [f"{file}1" for file in FILES] if RUN_RANK1_PLACE_OFFSET_BATCH else [search_to_square]
@@ -1075,6 +1595,8 @@ if RUN_PLACE_OFFSET_SEARCH:
                 "to_square": search_to_square,
                 "place_offset": best_result["place_offset"].copy(),
                 "score": best_result["score"],
+                "trajectory_fk_error": best_result["trajectory_fk_error"],
+                "reject_reason": best_result["reject_reason"],
                 "xy_error": best_result["xy_error"],
                 "z_error": best_result["z_error"],
                 "pickup_success": best_result["pickup_success"],
@@ -1091,9 +1613,11 @@ if RUN_PLACE_OFFSET_SEARCH:
                 f"('{item['to_square']}', "
                 f"np.array({repr(item['place_offset'].tolist())})), "
                 f"# score={item['score']:.5f}, "
+                f"traj_fk={item['trajectory_fk_error']:.5f}, "
                 f"xy={item['xy_error']:.5f}, "
                 f"z={item['z_error']:.5f}, "
                 f"pickup={item['pickup_success']}, "
+                f"reject={item['reject_reason']}, "
                 f"tilt={item['final_tilt_deg']:.2f}"
             )
         print("]")
