@@ -158,8 +158,8 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.0425):
     y = board_y - board_size/2 + (rank + 0.5) * square_size
     x = board_x - board_size/2 + (file + 0.5) * square_size
     # y = board_y - board_size/2 + (rank + 0.85) * square_size
-    # z = board_z + 0.04  # best slightly above the board
-    z = board_z + 0.08  # best slightly above the board
+    z = board_z + 0.04  # best slightly above the board
+    # z = board_z + 0.08  # best slightly above the board
     # z = board_z + 0.075  # for rook best slightly above the board
     # z = board_z + 0.1  # for rook best slightly above the board
     # z = board_z + 0.035  # slightly above the board

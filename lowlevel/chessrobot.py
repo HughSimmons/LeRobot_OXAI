@@ -96,7 +96,8 @@ import math
 from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 
 config = SO101FollowerConfig(
-    port="/dev/tty.usbmodem5AB90659861",
+    # port="/dev/tty.usbmodem5AB90659861",
+    port="/dev/tty.usbmodem5B7B0157051",
     # baudrate=115200,
     # port="/dev/cu.usbmodem5B141140961",
     id="my_awesome_follower_arm"
@@ -264,7 +265,7 @@ if __name__ == "__main__":
 
     for move in movelist:
 
-        moverl = move - np.array([0,0,-10,0,0,0])
+        moverl = move #- np.array([0,0,-10,0,0,0])
 
         if moverl[5] == 8:
             closedcnt += 1
