@@ -13,7 +13,7 @@ video_on = False
 runid = "multisim_place_lookup"
 RECORDINGS_DIR = Path(__file__).resolve().parent / "recordings"
 MOVE_FROM_SQUARE = "e1"
-MOVE_TO_SQUARE = "g1"
+MOVE_TO_SQUARE = "f2"
 
 # Best PLACE_OFFSET: [-0.0165  0.0015 -0.005 ]
 # FILES = "abcdefgh"
@@ -50,10 +50,14 @@ squares = [
 # ])
 
 SOURCE_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002])
+SOURCE_GRASP_OFFSET_OVERRIDES = {
+    ("f2", "e1"): np.array([-0.011, 0.002, -0.003]),
+}
 # Previous reversed y offset was too large for the low-resistance-piece retry:
 # REVERSED_GRASP_OFFSET = np.array([-0.011, 0.007, -0.002]) #for e1->h1
-REVERSED_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002])
+REVERSED_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002]) #works for e1f1
 # REVERSED_GRASP_OFFSET = np.array([-0.01, 0.0085, -0.002])
+# REVERSED_GRASP_OFFSET = np.array([-0.012, 0.00, -0.015])
 GRASP_OFFSET = SOURCE_GRASP_OFFSET.copy()
 # GRASP_OFFSET = np.array([
 #     -0.0121,
@@ -82,40 +86,26 @@ SOLVER_SUBSTEPS = 4
 POST_MOVE_SETTLE_STEPS = 1000
 SEARCH_SOLVER_ITERATIONS = 200
 SEARCH_SOLVER_SUBSTEPS = 4
-SEARCH_POST_MOVE_SETTLE_STEPS = 200
+SEARCH_POST_MOVE_SETTLE_STEPS = 400
 VERIFY_TOP_K = 1
 MEASURED_CORRECTION_ROUNDS = 1
 REVERSED_PLACEMENT_CORRECTION_ROUNDS = 8
-REVERSED_TILT_XY_RESTART_PATIENCE = 3
 REVERSED_PLACEMENT_LOWER_STEPS = 16
 REVERSED_RELEASE_Z_OFFSET = 0.03
 REVERSED_RELEASE_HOLD_WAYPOINTS = 8
 REVERSED_POST_RELEASE_CLEARANCE_STEPS = 8
 REVERSED_POST_RELEASE_CLEARANCE_Z = 0.035
 REVERSED_RETREAT_HOME_STEPS = 16
-RUN_TILT_RELEASE_CORRECTION_TEST = True
-RUN_GRASP_POSE_CORRECTION_TEST = False
-RUN_GRASP_OFFSET_TILT_SEARCH = False
-RUN_XY_CORRECTION_AFTER_TILT_TEST = True
-TILT_RELEASE_CORRECTION_GAIN = 0.5
-TILT_RELEASE_ANGLE_STEP_DEG = 0.2
-TILT_RELEASE_CORRECTION_ITERATIONS = 30
-TILT_RELEASE_MAX_WRIST_DELTA_DEG = 16.0
-TILT_RELEASE_BLEND_STEPS = 4
-GRASP_POSE_CORRECTION_ITERATIONS = 6
-GRASP_POSE_ANGLE_STEP_DEG = 4.0
-GRASP_POSE_CORRECTION_SIGN = 1.0
-GRASP_POSE_MAX_WRIST_DELTA_DEG = 16.0
-GRASP_POSE_HANDOFF_STEPS = 6
-GRASP_OFFSET_TILT_SEARCH_SAMPLES = (5, 11, 1)
-GRASP_OFFSET_TILT_SEARCH_STEP = 0.0005
+DEFAULT_MOVE_STEPS_PER_WAYPOINT = 50
+LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT = 100
+LONG_TRANSPORT_STEP_MOVES = {("e1", "g8")}
+RUN_XY_CORRECTION_TEST = True
 REVERSED_WAYPOINT_FK_ERROR_THRESHOLD = 0.025
 REVERSED_MAX_INTERPOLATED_FK_GAP = 2
 MAX_TRAJECTORY_FK_ERROR = 0.025
 XY_ERROR_WEIGHT = 10.0
 FINAL_TILT_TARGET_DEG = 15.0
 XY_CORRECTION_TARGET_ERROR = 1e-3
-XY_SELECTION_SIMILAR_ERROR_BAND = 1e-3
 SOFTEN_GRIPPER_PINCH = True
 GRIPPER_CLOSE_FORCE = 500
 GRIPPER_TRANSPORT_HOLD_FORCE = 50
@@ -232,10 +222,10 @@ def create_piece(sq="a1"):
         piece_id,
         -1,
         lateralFriction=1.0,
-        rollingFriction=0.0,
-        spinningFriction=0.0,
-        linearDamping=0.0,
-        angularDamping=0.0
+        rollingFriction=0.001,
+        spinningFriction=0.001,
+        linearDamping=0.02,
+        angularDamping=0.02
     )
     return(piece_id)
 
@@ -365,6 +355,78 @@ def setup_sim_world(from_square):
     }
 
 
+def create_video_context(output_dir):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return {
+        "output_dir": output_dir,
+        "writer": imageio.get_writer(
+            str(output_dir / "so101_robot_moves.mp4"),
+            fps=30,
+            codec="libx264",
+            quality=8
+        ),
+        "writer_topdown": imageio.get_writer(
+            str(output_dir / "so101_robot_moves_topdown.mp4"),
+            fps=30,
+            codec="libx264",
+            quality=8
+        ),
+    }
+
+
+def append_video_frame(video_context):
+    proj_matrix = p.computeProjectionMatrixFOV(
+        fov=60,
+        aspect=WIDTH / HEIGHT,
+        nearVal=0.01,
+        farVal=100
+    )
+    camera_params = {
+        "eye": [0.0, -0.6, 0.25],
+        "target": [0.3, 0.0, 0.05],
+        "up": [0, 0, 1],
+    }
+    top_down_camera_params = {
+        "eye": [0.3, 0, 0.6],
+        "target": [0.3, 0, 0],
+        "up": [0, -1, 0],
+    }
+
+    view_matrix = p.computeViewMatrix(
+        cameraEyePosition=camera_params["eye"],
+        cameraTargetPosition=camera_params["target"],
+        cameraUpVector=camera_params["up"]
+    )
+    w, h, rgba, _, _ = p.getCameraImage(
+        WIDTH,
+        HEIGHT,
+        viewMatrix=view_matrix,
+        projectionMatrix=proj_matrix
+    )
+    img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
+    video_context["writer"].append_data(img[:, :, :3])
+
+    view_matrix_topdown = p.computeViewMatrix(
+        cameraEyePosition=top_down_camera_params["eye"],
+        cameraTargetPosition=top_down_camera_params["target"],
+        cameraUpVector=top_down_camera_params["up"]
+    )
+    w2, h2, rgba2, _, _ = p.getCameraImage(
+        WIDTH,
+        HEIGHT,
+        viewMatrix=view_matrix_topdown,
+        projectionMatrix=proj_matrix
+    )
+    img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
+    video_context["writer_topdown"].append_data(img2[:, :, :3])
+
+
+def close_video_context(video_context):
+    video_context["writer"].close()
+    video_context["writer_topdown"].close()
+
+
 def run_sim_move(
     world,
     from_square,
@@ -377,12 +439,16 @@ def run_sim_move(
     trajectory_override=None,
     solver_iterations=SOLVER_ITERATIONS,
     solver_substeps=SOLVER_SUBSTEPS,
-    post_move_settle_steps=POST_MOVE_SETTLE_STEPS
+    post_move_settle_steps=POST_MOVE_SETTLE_STEPS,
+    move_steps_per_waypoint=DEFAULT_MOVE_STEPS_PER_WAYPOINT,
+    restore_state=True,
+    video_context=None,
 ):
-    if from_square != world["from_square"]:
+    if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
 
-    p.restoreState(world["state_id"])
+    if restore_state:
+        p.restoreState(world["state_id"])
     p.setPhysicsEngineParameter(
         numSolverIterations=solver_iterations,
         numSubSteps=solver_substeps
@@ -391,7 +457,7 @@ def run_sim_move(
     sq1, sq2 = from_square, to_square
     simid = f"{sq1}_to_{sq2}"
     active_place_offset = PLACE_OFFSET if place_offset is None else place_offset
-    video_enabled = video_on if record_video is None else record_video
+    video_enabled = video_context is not None or (video_on if record_video is None else record_video)
     robot_id = world["robot_id"]
     piece_ids = world["piece_ids"]
 
@@ -446,6 +512,7 @@ def run_sim_move(
             "final_euler_deg": np.full(3, np.nan),
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
+            "move_steps_per_waypoint": move_steps_per_waypoint,
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
@@ -470,37 +537,45 @@ def run_sim_move(
             return result
         return False
 
-
-    moves = [(np.deg2rad(pos), 50, f"Move to {pos}") for pos in movelist]
+    moves = [
+        (np.deg2rad(pos), move_steps_per_waypoint, f"Move to {pos}")
+        for pos in movelist
+    ]
     release_move_idx = find_release_move_index(movelist, closeidx)
     strong_hold_start_idx = None
     if trajectory_override is not None:
         strong_hold_start_idx = trajectory_override.get("strong_hold_start_idx")
 
+    SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
+    if not restore_state and robot_id is not None and moves:
+        current_joints = np.array([
+            p.getJointState(robot_id, sim_idx)[0]
+            for sim_idx in SIM_JOINT_MAP
+        ])
+        moves.insert(
+            0,
+            (
+                current_joints,
+                move_steps_per_waypoint,
+                "Transition from current robot state",
+            )
+        )
+        closeidx += 1
+        release_move_idx += 1
+        if strong_hold_start_idx is not None:
+            strong_hold_start_idx += 1
+
+    close_video_when_done = False
+    output_dir = None
     if video_enabled:
-        # Setup video recording with THREE cameras
-        camera_params = {
-            'eye': [0.0, -0.6, 0.25],
-            'target': [0.3, 0.0, 0.05],
-            'up': [0, 0, 1],
-        }
-
-        top_down_camera_params = {
-            'eye': [0.3, 0, 0.6],
-            'target': [0.3, 0, 0],
-            'up': [0, -1, 0],
-        }
-
-        # Create subdirectory for this run
         output_dir = RECORDINGS_DIR / runid / simid
         if video_label is not None:
             output_dir = output_dir / video_label
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        video_path = output_dir / "so101_robot_moves.mp4"
-        video_topdown_path = output_dir / "so101_robot_moves_topdown.mp4"
-        writer = imageio.get_writer(str(video_path), fps=30, codec='libx264', quality=8)
-        writer_topdown = imageio.get_writer(str(video_topdown_path), fps=30, codec='libx264', quality=8)
+        if video_context is None:
+            video_context = create_video_context(output_dir)
+            close_video_when_done = True
+        else:
+            output_dir = video_context["output_dir"]
 
     print("Starting robot movement simulation...")
 
@@ -518,7 +593,6 @@ def run_sim_move(
     current_start_pos = moves[0][0].copy()
     current_target_pos, move_steps, move_name = moves[0]
 
-    SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
     pickup_success = False
     piece_was_lifted = False
     premature_drop = False
@@ -667,58 +741,7 @@ def run_sim_move(
 
             if video_enabled:
                 if global_step % renderfreq == 0:
-                    # ----------------------------------------
-                    # Camera rendering
-                    # ----------------------------------------
-
-                    proj_matrix = p.computeProjectionMatrixFOV(
-                        fov=60,
-                        aspect=WIDTH / HEIGHT,
-                        nearVal=0.01,
-                        farVal=100
-                    )
-
-                    # ---------------- Perspective camera ----------------
-
-                    view_matrix = p.computeViewMatrix(
-                        cameraEyePosition=camera_params['eye'],
-                        cameraTargetPosition=camera_params['target'],
-                        cameraUpVector=camera_params['up']
-                    )
-
-                    w, h, rgba, _, _ = p.getCameraImage(
-                        WIDTH,
-                        HEIGHT,
-                        viewMatrix=view_matrix,
-                        projectionMatrix=proj_matrix
-                    )
-
-                    img = np.array(rgba, dtype=np.uint8).reshape((h, w, 4))
-
-                    rgb_array = img[:, :, :3]
-
-                    writer.append_data(rgb_array)
-
-                    # ---------------- Top-down camera ----------------
-
-                    view_matrix_topdown = p.computeViewMatrix(
-                        cameraEyePosition=top_down_camera_params['eye'],
-                        cameraTargetPosition=top_down_camera_params['target'],
-                        cameraUpVector=top_down_camera_params['up']
-                    )
-
-                    w2, h2, rgba2, _, _ = p.getCameraImage(
-                        WIDTH,
-                        HEIGHT,
-                        viewMatrix=view_matrix_topdown,
-                        projectionMatrix=proj_matrix
-                    )
-
-                    img2 = np.array(rgba2, dtype=np.uint8).reshape((h2, w2, 4))
-
-                    rgb_array_topdown = img2[:, :, :3]
-
-                    writer_topdown.append_data(rgb_array_topdown)
+                    append_video_frame(video_context)
 
             # ----------------------------------------
             # Debug
@@ -742,9 +765,8 @@ def run_sim_move(
             move_local_step += 1
 
     finally:
-        if video_enabled:
-            writer.close()
-            writer_topdown.close()
+        if video_enabled and close_video_when_done:
+            close_video_context(video_context)
 
             print("Videos saved.")
 
@@ -781,6 +803,7 @@ def run_sim_move(
             "final_euler_deg": final_euler_deg,
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
+            "move_steps_per_waypoint": move_steps_per_waypoint,
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
@@ -1864,9 +1887,7 @@ def build_reversed_pick_place_trajectory(
     reversed_from_square,
     reversed_to_square,
     grasp_offset=GRASP_OFFSET,
-    place_offset=PLACE_OFFSET,
-    release_wrist_delta_deg=None,
-    grasp_wrist_delta_deg=None
+    place_offset=PLACE_OFFSET
 ):
     source_release_idx = find_release_move_index(source_movelist, source_closeidx)
     reversed_movelist = [
@@ -1891,19 +1912,12 @@ def build_reversed_pick_place_trajectory(
         else:
             joints[5] = gripper_angle_open
 
-    if grasp_wrist_delta_deg is None:
-        grasp_wrist_delta_deg = np.zeros(2)
-    else:
-        grasp_wrist_delta_deg = np.array(grasp_wrist_delta_deg, dtype=float)
-
     pickup_target_xyz = chess_to_xy(
         reversed_from_square,
         board_origin=board_origin
     )
     pickup_downflag = reversed_from_square[0] not in ["f", "g", "h"]
     pickup_solve_seed = reversed_movelist[reversed_closeidx].copy()
-    pickup_solve_seed[3] += grasp_wrist_delta_deg[0]
-    pickup_solve_seed[4] += grasp_wrist_delta_deg[1]
     pickup_contact_record = solve_generated_waypoint(
         pickup_target_xyz,
         pickup_solve_seed,
@@ -1941,37 +1955,12 @@ def build_reversed_pick_place_trajectory(
         filtered_pickup_joints
     ):
         reversed_movelist[idx] = corrected_joints.copy()
-    pickup_contact_joints = reversed_movelist[reversed_closeidx].copy()
-
-    grasp_handoff_start_idx = reversed_closeidx + 1
-    grasp_handoff_end_idx = min(
-        reversed_release_idx - 1,
-        reversed_closeidx + GRASP_POSE_HANDOFF_STEPS
-    )
-    if grasp_handoff_start_idx <= grasp_handoff_end_idx:
-        handoff_target = reversed_movelist[grasp_handoff_end_idx].copy()
-        handoff_target[5] = gripper_angle_closed
-        for idx in range(grasp_handoff_start_idx, grasp_handoff_end_idx + 1):
-            alpha = (
-                (idx - reversed_closeidx)
-                / (grasp_handoff_end_idx - reversed_closeidx)
-            )
-            handoff_joints = (
-                (1 - alpha) * pickup_contact_joints
-                + alpha * handoff_target
-            )
-            handoff_joints[5] = gripper_angle_closed
-            reversed_movelist[idx] = handoff_joints.copy()
 
     release_target_xyz = chess_to_xy(
         reversed_to_square,
         board_origin=board_origin
     ) + np.array([0, 0, REVERSED_RELEASE_Z_OFFSET])
     release_downflag = reversed_to_square[0] not in ["f", "g", "h"]
-    if release_wrist_delta_deg is None:
-        release_wrist_delta_deg = np.zeros(2)
-    else:
-        release_wrist_delta_deg = np.array(release_wrist_delta_deg, dtype=float)
 
     placement_lower_start_idx = max(
         reversed_closeidx + 1,
@@ -2015,49 +2004,6 @@ def build_reversed_pick_place_trajectory(
     )
     if placement_lower_joints:
         current = placement_lower_joints[-1].copy()
-
-    if np.any(np.abs(release_wrist_delta_deg) > 0.0):
-        release_seed = current.copy()
-        release_seed[3] += release_wrist_delta_deg[0]
-        release_seed[4] += release_wrist_delta_deg[1]
-        corrected_release_record = solve_generated_waypoint(
-            release_target_xyz,
-            release_seed,
-            place_offset,
-            release_downflag,
-            gripper_angle_closed,
-            "reversed_release_correction",
-            0,
-            reversed_traj_metrics
-        )
-        corrected_release_joints = corrected_release_record["joints"].copy()
-        corrected_release_joints[5] = gripper_angle_closed
-        if not corrected_release_record["valid"]:
-            mark_reversed_trajectory_rejected(
-                reversed_traj_metrics,
-                "trajectory_waypoint_fk_gap",
-                "reversed_release_correction"
-            )
-
-        blend_steps = min(TILT_RELEASE_BLEND_STEPS, len(placement_lower_joints))
-        blend_start_idx = len(placement_lower_joints) - blend_steps - 1
-        if blend_start_idx >= 0:
-            blend_start = placement_lower_joints[blend_start_idx].copy()
-            blended_tail = []
-            for alpha in np.linspace(0, 1, blend_steps + 1)[1:]:
-                blended_joints = (
-                    (1 - alpha) * blend_start
-                    + alpha * corrected_release_joints
-                )
-                blended_joints[5] = gripper_angle_closed
-                blended_tail.append(blended_joints.copy())
-            placement_lower_joints = (
-                placement_lower_joints[:blend_start_idx + 1]
-                + blended_tail
-            )
-        else:
-            placement_lower_joints[-1] = corrected_release_joints.copy()
-        current = corrected_release_joints.copy()
 
     release_open_joints = current.copy()
     release_open_joints[5] = gripper_angle_open
@@ -2132,11 +2078,7 @@ def build_reversed_pick_place_trajectory(
     reversed_traj_metrics.update({
         "release_target_xyz": release_target_xyz.copy(),
         "release_target_z": float(release_target_xyz[2]),
-        "release_wrist_delta_deg": release_wrist_delta_deg.copy(),
-        "grasp_wrist_delta_deg": grasp_wrist_delta_deg.copy(),
         "grasp_offset": grasp_offset.copy(),
-        "grasp_handoff_start_idx": grasp_handoff_start_idx,
-        "grasp_handoff_end_idx": grasp_handoff_end_idx,
         "source_release_idx": source_release_idx,
         "reversed_release_idx": reversed_release_idx,
     })
@@ -2147,11 +2089,7 @@ def build_reversed_pick_place_trajectory(
         "traj_metrics": reversed_traj_metrics,
         "release_idx": reversed_release_idx,
         "place_offset": place_offset.copy(),
-        "release_wrist_delta_deg": release_wrist_delta_deg.copy(),
-        "grasp_wrist_delta_deg": grasp_wrist_delta_deg.copy(),
         "grasp_offset": grasp_offset.copy(),
-        "grasp_handoff_start_idx": grasp_handoff_start_idx,
-        "grasp_handoff_end_idx": grasp_handoff_end_idx,
         "premature_drop_z_threshold": PIECE_DROPPED_Z_THRESHOLD,
         "strong_hold_start_idx": placement_lower_start_idx,
         "source_grasp_idx": source_closeidx,
@@ -2174,241 +2112,151 @@ def apply_reversed_place_correction(result, trajectory_override, correct_z=False
     return corrected_place_offset, world_correction, gripper_frame_correction
 
 
-def centered_grasp_offset_axis_samples(sample_count, step):
-    if sample_count < 1 or sample_count % 2 == 0:
-        raise ValueError("grasp offset sample counts must be positive odd integers")
-
-    sample_radius = sample_count // 2
-    return [
-        axis_idx * step
-        for axis_idx in range(-sample_radius, sample_radius + 1)
-    ]
-
-
-def make_grasp_offset_tilt_search_candidates(base_grasp_offset, samples, step):
-    if len(samples) != 3:
-        raise ValueError("grasp offset samples must contain x, y, z counts")
-
-    axis_samples = [
-        centered_grasp_offset_axis_samples(sample_count, step)
-        for sample_count in samples
-    ]
-
-    deltas = [np.array([0.0, 0.0, 0.0])]
-    for dx in axis_samples[0]:
-        for dy in axis_samples[1]:
-            for dz in axis_samples[2]:
-                delta = np.array([dx, dy, dz])
-                if np.allclose(delta, 0.0):
-                    continue
-                deltas.append(delta)
-
-    return [
-        (idx, delta, base_grasp_offset + delta)
-        for idx, delta in enumerate(deltas)
-    ]
+def print_result_summary(label, result, include_video=False):
+    metric_keys = (
+        "score",
+        "reject_reason",
+        "pickup_success",
+        "premature_drop",
+        "trajectory_fk_error",
+        "move_steps_per_waypoint",
+        "xy_error",
+        "z_error",
+        "final_tilt_deg",
+    )
+    summary = ", ".join(
+        f"{key}={result.get(key)}"
+        for key in metric_keys
+        if key in result
+    )
+    print(f"{label}: {summary}")
+    if include_video and result.get("video_output_dir"):
+        print("video_output_dir:", result["video_output_dir"])
 
 
-def run_reversed_grasp_offset_tilt_search(
+def run_scored_simulation(
+    from_square,
+    to_square,
+    grasp_offset,
+    place_offset,
+    trajectory_override,
+    record_video=False,
+    video_label=None,
+    move_steps_per_waypoint=DEFAULT_MOVE_STEPS_PER_WAYPOINT
+):
+    world = setup_sim_world(from_square)
+    try:
+        result = run_sim_move(
+            world,
+            from_square,
+            to_square,
+            grasp_offset,
+            place_offset=place_offset,
+            return_metrics=True,
+            record_video=record_video,
+            video_label=video_label,
+            trajectory_override=trajectory_override,
+            move_steps_per_waypoint=move_steps_per_waypoint
+        )
+        result["score"] = score_place_result(result)
+        return result
+    finally:
+        p.removeState(world["state_id"])
+
+
+def move_steps_per_waypoint_for_move(from_square, to_square):
+    if (from_square, to_square) in LONG_TRANSPORT_STEP_MOVES:
+        return LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT
+    return DEFAULT_MOVE_STEPS_PER_WAYPOINT
+
+
+def source_grasp_offset_for_move(source_from_square, source_to_square):
+    return SOURCE_GRASP_OFFSET_OVERRIDES.get(
+        (source_from_square, source_to_square),
+        SOURCE_GRASP_OFFSET
+    )
+
+
+def build_source_trajectory(source_from_square, source_to_square):
+    source_grasp_offset = source_grasp_offset_for_move(
+        source_from_square,
+        source_to_square
+    )
+    movelist, closeidx, traj_metrics = pickupmove_traj_with_metrics(
+        source_from_square,
+        source_to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=source_grasp_offset,
+        PLACE_OFFSET=PLACE_OFFSET
+    )
+    return movelist, closeidx, traj_metrics, {
+        "movelist": movelist,
+        "closeidx": closeidx,
+        "traj_metrics": traj_metrics,
+    }, source_grasp_offset
+
+
+def build_reverse_trajectory(
     source_movelist,
     source_closeidx,
     source_traj_metrics,
     reversed_from_square,
-    reversed_to_square
+    reversed_to_square,
+    place_offset,
+    reversed_grasp_offset=REVERSED_GRASP_OFFSET
 ):
-    print("\n========== Reversed grasp-offset tilt search ==========")
-    print("source_GRASP_OFFSET:", SOURCE_GRASP_OFFSET)
-    print("base_REVERSED_GRASP_OFFSET:", REVERSED_GRASP_OFFSET)
-    print("grasp_offset_tilt_search_samples:", GRASP_OFFSET_TILT_SEARCH_SAMPLES)
-    print("grasp_offset_tilt_search_step:", GRASP_OFFSET_TILT_SEARCH_STEP)
-
-    results = []
-    candidates = make_grasp_offset_tilt_search_candidates(
-        REVERSED_GRASP_OFFSET,
-        GRASP_OFFSET_TILT_SEARCH_SAMPLES,
-        GRASP_OFFSET_TILT_SEARCH_STEP
-    )
-    print("grasp_offset_tilt_candidate_count:", len(candidates))
-
-    for candidate_idx, grasp_offset_delta, grasp_offset in candidates:
-        candidate_override = build_reversed_pick_place_trajectory(
-            source_movelist,
-            source_closeidx,
-            source_traj_metrics,
-            reversed_from_square,
-            reversed_to_square,
-            grasp_offset=grasp_offset,
-            place_offset=PLACE_OFFSET
-        )
-
-        candidate_world = setup_sim_world(reversed_from_square)
-        try:
-            candidate_result = run_sim_move(
-                candidate_world,
-                reversed_from_square,
-                reversed_to_square,
-                grasp_offset,
-                place_offset=PLACE_OFFSET,
-                return_metrics=True,
-                record_video=False,
-                video_label=f"grasp_offset_tilt_candidate_{candidate_idx}",
-                trajectory_override=candidate_override
-            )
-            candidate_result["candidate_idx"] = candidate_idx
-            candidate_result["grasp_offset_delta"] = grasp_offset_delta.copy()
-            candidate_result["grasp_offset"] = grasp_offset.copy()
-            candidate_result["score"] = score_place_result(candidate_result)
-            candidate_result["final_xy_on_board"] = is_xy_on_board(
-                candidate_result["final_position"]
-            )
-            if not candidate_result["final_xy_on_board"]:
-                candidate_result["reject_reason"] = "off_board_xy"
-                candidate_result["score"] = 1000.0
-        finally:
-            p.removeState(candidate_world["state_id"])
-
-        results.append(candidate_result)
-        print(
-            f"candidate={candidate_idx} | "
-            f"delta={grasp_offset_delta} | "
-            f"grasp_offset={grasp_offset} | "
-            f"tilt={candidate_result['final_tilt_deg']:.4f} | "
-            f"xy_error={candidate_result['xy_error']:.5f} | "
-            f"z_error={candidate_result['z_error']:.5f} | "
-            f"on_board={candidate_result['final_xy_on_board']} | "
-            f"pickup={candidate_result['pickup_success']} | "
-            f"premature_drop={candidate_result['premature_drop']} | "
-            f"reject={candidate_result['reject_reason']}"
-        )
-
-    valid_results = [
-        result for result in results
-        if result["reject_reason"] is None
-    ]
-    if valid_results:
-        ranked_results = sorted(
-            valid_results,
-            key=lambda result: (
-                np.inf if not np.isfinite(result["final_tilt_deg"]) else result["final_tilt_deg"],
-                result["xy_error"]
-            )
-        )
-    else:
-        print("\nWARNING: no on-board, unrejected grasp-offset candidates found.")
-        ranked_results = sorted(
-            results,
-            key=lambda result: (
-                not result.get("final_xy_on_board", False),
-                result["xy_error"],
-                np.inf if not np.isfinite(result["final_tilt_deg"]) else result["final_tilt_deg"],
-            )
-        )
-
-    tilt_history = [
-        (
-            int(result["candidate_idx"]),
-            result["grasp_offset_delta"].copy(),
-            float(result["final_tilt_deg"]),
-            bool(result.get("final_xy_on_board", False))
-        )
-        for result in results
-    ]
-    print("\nGrasp offset tilt history:")
-    print(tilt_history)
-
-    print("\nBest grasp-offset tilt candidates:")
-    for rank, result in enumerate(ranked_results[:5], start=1):
-        print(
-            f"{rank}: candidate={result['candidate_idx']} | "
-            f"delta={result['grasp_offset_delta']} | "
-            f"grasp_offset={result['grasp_offset']} | "
-            f"tilt={result['final_tilt_deg']:.4f} | "
-            f"xy_error={result['xy_error']:.5f} | "
-            f"z_error={result['z_error']:.5f} | "
-            f"on_board={result.get('final_xy_on_board', False)} | "
-            f"pickup={result['pickup_success']} | "
-            f"premature_drop={result['premature_drop']} | "
-            f"reject={result['reject_reason']}"
-        )
-
-    return results, ranked_results
-
-
-def compute_release_tilt_wrist_delta_step(result):
-    final_tilt_deg = float(result.get("final_tilt_deg", np.nan))
-    final_euler_deg = np.array(result.get("final_euler_deg", np.full(3, np.nan)))
-    if (
-        not np.isfinite(final_tilt_deg)
-        or final_tilt_deg <= 0.0
-        or final_euler_deg.shape[0] < 2
-        or not np.all(np.isfinite(final_euler_deg[:2]))
-    ):
-        return np.zeros(2)
-
-    roll_error_deg = final_euler_deg[0]
-    pitch_error_deg = final_euler_deg[1]
-    correction_step = min(
-        TILT_RELEASE_ANGLE_STEP_DEG,
-        final_tilt_deg * TILT_RELEASE_CORRECTION_GAIN
-    )
-
-    if abs(pitch_error_deg) >= abs(roll_error_deg):
-        wrist_flex_delta = -np.sign(pitch_error_deg) * correction_step
-        wrist_roll_delta = 0.0
-    else:
-        wrist_flex_delta = 0.0
-        wrist_roll_delta = -np.sign(roll_error_deg) * correction_step
-
-    return np.array([wrist_flex_delta, wrist_roll_delta])
-
-
-def clamp_release_tilt_wrist_delta(release_wrist_delta_deg):
-    return np.clip(
-        release_wrist_delta_deg,
-        -TILT_RELEASE_MAX_WRIST_DELTA_DEG,
-        TILT_RELEASE_MAX_WRIST_DELTA_DEG
+    return build_reversed_pick_place_trajectory(
+        source_movelist,
+        source_closeidx,
+        source_traj_metrics,
+        reversed_from_square,
+        reversed_to_square,
+        grasp_offset=reversed_grasp_offset,
+        place_offset=place_offset
     )
 
 
-def compute_grasp_pose_wrist_delta_step(result):
-    final_tilt_deg = float(result.get("final_tilt_deg", np.nan))
-    final_euler_deg = np.array(result.get("final_euler_deg", np.full(3, np.nan)))
-    if (
-        not np.isfinite(final_tilt_deg)
-        or final_tilt_deg <= 0.0
-        or final_euler_deg.shape[0] < 2
-        or not np.all(np.isfinite(final_euler_deg[:2]))
-    ):
-        return np.zeros(2)
-
-    roll_error_deg = final_euler_deg[0]
-    pitch_error_deg = final_euler_deg[1]
-    correction_step = min(GRASP_POSE_ANGLE_STEP_DEG, final_tilt_deg)
-
-    if abs(pitch_error_deg) >= abs(roll_error_deg):
-        wrist_flex_delta = (
-            GRASP_POSE_CORRECTION_SIGN
-            * -np.sign(pitch_error_deg)
-            * correction_step
-        )
-        wrist_roll_delta = 0.0
-    else:
-        wrist_flex_delta = 0.0
-        wrist_roll_delta = (
-            GRASP_POSE_CORRECTION_SIGN
-            * -np.sign(roll_error_deg)
-            * correction_step
-        )
-
-    return np.array([wrist_flex_delta, wrist_roll_delta])
-
-
-def clamp_grasp_pose_wrist_delta(grasp_wrist_delta_deg):
-    return np.clip(
-        grasp_wrist_delta_deg,
-        -GRASP_POSE_MAX_WRIST_DELTA_DEG,
-        GRASP_POSE_MAX_WRIST_DELTA_DEG
+def run_xy_correction_round(
+    previous_result,
+    previous_override,
+    source_movelist,
+    source_closeidx,
+    source_traj_metrics,
+    reversed_from_square,
+    reversed_to_square,
+    correction_round,
+    record_video=False,
+    move_steps_per_waypoint=DEFAULT_MOVE_STEPS_PER_WAYPOINT,
+    reversed_grasp_offset=REVERSED_GRASP_OFFSET
+):
+    corrected_place_offset, world_correction, gripper_frame_correction = apply_reversed_place_correction(
+        previous_result,
+        previous_override,
+        correct_z=False
     )
+    corrected_override = build_reverse_trajectory(
+        source_movelist,
+        source_closeidx,
+        source_traj_metrics,
+        reversed_from_square,
+        reversed_to_square,
+        corrected_place_offset,
+        reversed_grasp_offset=reversed_grasp_offset
+    )
+    corrected_result = run_scored_simulation(
+        reversed_from_square,
+        reversed_to_square,
+        reversed_grasp_offset,
+        corrected_place_offset,
+        corrected_override,
+        record_video=record_video,
+        video_label=f"placement_corrected_round_{correction_round}",
+        move_steps_per_waypoint=move_steps_per_waypoint
+    )
+    corrected_result["correction_round"] = correction_round
+    corrected_result["world_correction"] = world_correction.copy()
+    corrected_result["gripper_frame_correction"] = gripper_frame_correction.copy()
+    return corrected_result, corrected_override
 
 
 def run_verified_reverse_move(
@@ -2421,341 +2269,64 @@ def run_verified_reverse_move(
     source_to_square = from_square
     reversed_from_square = from_square
     reversed_to_square = to_square
+    reverse_move_steps = move_steps_per_waypoint_for_move(
+        reversed_from_square,
+        reversed_to_square
+    )
 
     print(f"\n========== Verified reverse strategy {from_square} -> {to_square} ==========")
     print(f"Verifying source trajectory {source_from_square} -> {source_to_square}")
-    print("source_GRASP_OFFSET:", SOURCE_GRASP_OFFSET)
+    source_grasp_offset = source_grasp_offset_for_move(
+        source_from_square,
+        source_to_square
+    )
+    print("source_GRASP_OFFSET:", source_grasp_offset)
     print("reversed_GRASP_OFFSET:", REVERSED_GRASP_OFFSET)
 
-    source_movelist, source_closeidx, source_traj_metrics = pickupmove_traj_with_metrics(
+    source_movelist, source_closeidx, source_traj_metrics, source_override, source_grasp_offset = build_source_trajectory(
+        source_from_square,
+        source_to_square
+    )
+    source_result = run_scored_simulation(
         source_from_square,
         source_to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=SOURCE_GRASP_OFFSET,
-        PLACE_OFFSET=PLACE_OFFSET
+        source_grasp_offset,
+        PLACE_OFFSET,
+        source_override
     )
-    source_override = {
-        "movelist": source_movelist,
-        "closeidx": source_closeidx,
-        "traj_metrics": source_traj_metrics,
-    }
-
-    source_world = setup_sim_world(source_from_square)
-    try:
-        source_result = run_sim_move(
-            source_world,
-            source_from_square,
-            source_to_square,
-            SOURCE_GRASP_OFFSET,
-            place_offset=PLACE_OFFSET,
-            return_metrics=True,
-            record_video=False,
-            trajectory_override=source_override
-        )
-        source_result["score"] = score_place_result(source_result)
-    finally:
-        p.removeState(source_world["state_id"])
-
-    print("\nSource verification result:")
-    print("score:", source_result["score"])
-    print("reject:", source_result["reject_reason"])
-    print("pickup_success:", source_result["pickup_success"])
-    print("trajectory_fk_error:", source_result["trajectory_fk_error"])
-    print("xy_error:", source_result["xy_error"])
-    print("z_error:", source_result["z_error"])
-    print("final_tilt_deg:", source_result["final_tilt_deg"])
+    print_result_summary("Source verification result", source_result)
 
     if source_result["reject_reason"] is not None:
         print("Skipping reversed run because source verification failed.")
         return source_result, None
 
-    reversed_override = build_reversed_pick_place_trajectory(
+    reversed_override = build_reverse_trajectory(
         source_movelist,
         source_closeidx,
         source_traj_metrics,
         reversed_from_square,
         reversed_to_square,
-        grasp_offset=REVERSED_GRASP_OFFSET,
-        place_offset=PLACE_OFFSET
+        PLACE_OFFSET
     )
-
-    print(
-        "\nTesting reversed trajectory "
-        f"{reversed_from_square} -> {reversed_to_square} | "
-        f"closeidx={reversed_override['closeidx']} | "
-        f"release_idx={reversed_override['release_idx']}"
+    reversed_result = run_scored_simulation(
+        reversed_from_square,
+        reversed_to_square,
+        REVERSED_GRASP_OFFSET,
+        PLACE_OFFSET,
+        reversed_override,
+        record_video=record_video,
+        video_label="initial_reverse",
+        move_steps_per_waypoint=reverse_move_steps
     )
-    print(
-        "Reverse role mapping: "
-        f"source place idx {reversed_override['source_place_idx']} -> "
-        f"reversed grasp idx {reversed_override['source_place_as_reversed_grasp_idx']} | "
-        f"source grasp idx {reversed_override['source_grasp_idx']} -> "
-        f"reversed place idx {reversed_override['source_grasp_as_reversed_place_idx']}"
-    )
-
-    reversed_world = setup_sim_world(reversed_from_square)
-    try:
-        reversed_result = run_sim_move(
-            reversed_world,
-            reversed_from_square,
-            reversed_to_square,
-            REVERSED_GRASP_OFFSET,
-            place_offset=PLACE_OFFSET,
-            return_metrics=True,
-            record_video=record_video,
-            video_label="initial_reverse",
-            trajectory_override=reversed_override
-        )
-        reversed_result["score"] = score_place_result(reversed_result)
-    finally:
-        p.removeState(reversed_world["state_id"])
-
-    print("\nReversed trajectory result:")
-    print("score:", reversed_result["score"])
-    print("reject:", reversed_result["reject_reason"])
-    print("pickup_success:", reversed_result["pickup_success"])
-    print("premature_drop:", reversed_result["premature_drop"])
-    print("trajectory_fk_error:", reversed_result["trajectory_fk_error"])
-    print("xy_error:", reversed_result["xy_error"])
-    print("z_error:", reversed_result["z_error"])
-    print("final_tilt_deg:", reversed_result["final_tilt_deg"])
-    print("final_euler_deg:", reversed_result["final_euler_deg"])
-    print("reversed_grasp_offset:", REVERSED_GRASP_OFFSET)
-    print("video_output_dir:", reversed_result["video_output_dir"])
+    print_result_summary("Initial reversed result", reversed_result, include_video=True)
 
     corrected_results = []
     previous_result = reversed_result
     previous_override = reversed_override
-    current_release_wrist_delta_deg = np.zeros(2)
-    current_grasp_wrist_delta_deg = np.zeros(2)
 
-    print("\nInitial correction baseline:")
-    print("initial_tilt_deg:", reversed_result["final_tilt_deg"])
-    print("initial_euler_deg:", reversed_result["final_euler_deg"])
-    print("initial_xy_error:", reversed_result["xy_error"])
-
-    if RUN_GRASP_OFFSET_TILT_SEARCH:
-        grasp_offset_results, ranked_grasp_offset_results = run_reversed_grasp_offset_tilt_search(
-            source_movelist,
-            source_closeidx,
-            source_traj_metrics,
-            reversed_from_square,
-            reversed_to_square
-        )
-        corrected_results.extend(grasp_offset_results)
-
-        if not (
-            RUN_GRASP_POSE_CORRECTION_TEST
-            or RUN_TILT_RELEASE_CORRECTION_TEST
-            or RUN_XY_CORRECTION_AFTER_TILT_TEST
-        ):
-            print("\nSkipping pose and XY correction for grasp-offset tilt search.")
-            return source_result, reversed_result, corrected_results
-
-        if ranked_grasp_offset_results:
-            previous_result = ranked_grasp_offset_results[0]
-
-    if RUN_GRASP_POSE_CORRECTION_TEST:
-        cumulative_grasp_wrist_delta_deg = np.zeros(2)
-        grasp_pose_tilt_history = [
-            ("initial_reverse", float(reversed_result["final_tilt_deg"]))
-        ]
-        print("\nGrasp-stage pose correction test:")
-        print("tilt_before_grasp_pose_correction:", reversed_result["final_tilt_deg"])
-        print("euler_before_grasp_pose_correction:", reversed_result["final_euler_deg"])
-        print("grasp_pose_angle_step_deg:", GRASP_POSE_ANGLE_STEP_DEG)
-        print("grasp_pose_correction_iterations:", GRASP_POSE_CORRECTION_ITERATIONS)
-
-        for grasp_round in range(1, GRASP_POSE_CORRECTION_ITERATIONS + 1):
-            grasp_wrist_delta_step_deg = compute_grasp_pose_wrist_delta_step(
-                previous_result
-            )
-            cumulative_grasp_wrist_delta_deg = clamp_grasp_pose_wrist_delta(
-                cumulative_grasp_wrist_delta_deg + grasp_wrist_delta_step_deg
-            )
-
-            print(f"\nTesting grasp pose-corrected reversed trajectory round {grasp_round}")
-            print(
-                "tilt_before_this_grasp_pose_correction:",
-                previous_result["final_tilt_deg"]
-            )
-            print(
-                "euler_before_this_grasp_pose_correction:",
-                previous_result["final_euler_deg"]
-            )
-            print(
-                "grasp_wrist_delta_step_deg [wrist_flex, wrist_roll]:",
-                grasp_wrist_delta_step_deg
-            )
-            print(
-                "cumulative_grasp_wrist_delta_deg [wrist_flex, wrist_roll]:",
-                cumulative_grasp_wrist_delta_deg
-            )
-
-            grasp_corrected_override = build_reversed_pick_place_trajectory(
-                source_movelist,
-                source_closeidx,
-                source_traj_metrics,
-                reversed_from_square,
-                reversed_to_square,
-                grasp_offset=REVERSED_GRASP_OFFSET,
-                place_offset=PLACE_OFFSET,
-                grasp_wrist_delta_deg=cumulative_grasp_wrist_delta_deg
-            )
-            print("grasp_handoff_start_idx:", grasp_corrected_override["grasp_handoff_start_idx"])
-            print("grasp_handoff_end_idx:", grasp_corrected_override["grasp_handoff_end_idx"])
-
-            grasp_corrected_world = setup_sim_world(reversed_from_square)
-            try:
-                grasp_corrected_result = run_sim_move(
-                    grasp_corrected_world,
-                    reversed_from_square,
-                    reversed_to_square,
-                    REVERSED_GRASP_OFFSET,
-                    place_offset=PLACE_OFFSET,
-                    return_metrics=True,
-                    record_video=record_video,
-                    video_label=f"grasp_pose_corrected_round_{grasp_round}",
-                    trajectory_override=grasp_corrected_override
-                )
-                grasp_corrected_result["score"] = score_place_result(grasp_corrected_result)
-                grasp_corrected_result["grasp_pose_correction_round"] = grasp_round
-                grasp_corrected_result["grasp_wrist_delta_step_deg"] = grasp_wrist_delta_step_deg.copy()
-                grasp_corrected_result["grasp_wrist_delta_deg"] = cumulative_grasp_wrist_delta_deg.copy()
-            finally:
-                p.removeState(grasp_corrected_world["state_id"])
-
-            print(f"\nGrasp pose-corrected reversed trajectory round {grasp_round} result:")
-            print("score:", grasp_corrected_result["score"])
-            print("reject:", grasp_corrected_result["reject_reason"])
-            print("pickup_success:", grasp_corrected_result["pickup_success"])
-            print("premature_drop:", grasp_corrected_result["premature_drop"])
-            print("trajectory_fk_error:", grasp_corrected_result["trajectory_fk_error"])
-            print("xy_error:", grasp_corrected_result["xy_error"])
-            print("z_error:", grasp_corrected_result["z_error"])
-            print("tilt_after_grasp_pose_correction:", grasp_corrected_result["final_tilt_deg"])
-            print("euler_after_grasp_pose_correction:", grasp_corrected_result["final_euler_deg"])
-            print("video_output_dir:", grasp_corrected_result["video_output_dir"])
-
-            grasp_pose_tilt_history.append((
-                f"grasp_pose_corrected_round_{grasp_round}",
-                float(grasp_corrected_result["final_tilt_deg"])
-            ))
-            corrected_results.append(grasp_corrected_result)
-            if grasp_corrected_result["reject_reason"] is not None:
-                print(
-                    "Stopping grasp pose correction after rejected round; "
-                    "preserving previous valid trajectory for later correction."
-                )
-                break
-            previous_result = grasp_corrected_result
-            previous_override = grasp_corrected_override
-            current_grasp_wrist_delta_deg = cumulative_grasp_wrist_delta_deg.copy()
-
-        print("\nGrasp pose tilt history:")
-        print(grasp_pose_tilt_history)
-
-        if not RUN_XY_CORRECTION_AFTER_TILT_TEST and not RUN_TILT_RELEASE_CORRECTION_TEST:
-            print("\nSkipping XY placement correction for grasp-pose correction test.")
-            return source_result, reversed_result, corrected_results
-
-    if RUN_TILT_RELEASE_CORRECTION_TEST:
-        cumulative_release_wrist_delta_deg = np.zeros(2)
-        print("\nTilt release angle correction test:")
-        print("tilt_before_angle_correction:", reversed_result["final_tilt_deg"])
-        print("euler_before_angle_correction:", reversed_result["final_euler_deg"])
-        print(
-            "tilt_release_angle_step_deg:",
-            TILT_RELEASE_ANGLE_STEP_DEG
-        )
-        print(
-            "tilt_release_correction_iterations:",
-            TILT_RELEASE_CORRECTION_ITERATIONS
-        )
-
-        for tilt_round in range(1, TILT_RELEASE_CORRECTION_ITERATIONS + 1):
-            release_wrist_delta_step_deg = compute_release_tilt_wrist_delta_step(
-                previous_result
-            )
-            cumulative_release_wrist_delta_deg = clamp_release_tilt_wrist_delta(
-                cumulative_release_wrist_delta_deg + release_wrist_delta_step_deg
-            )
-
-            print(f"\nTesting tilt angle-corrected reversed trajectory round {tilt_round}")
-            print(
-                "tilt_before_this_angle_correction:",
-                previous_result["final_tilt_deg"]
-            )
-            print(
-                "euler_before_this_angle_correction:",
-                previous_result["final_euler_deg"]
-            )
-            print(
-                "release_wrist_delta_step_deg [wrist_flex, wrist_roll]:",
-                release_wrist_delta_step_deg
-            )
-            print(
-                "cumulative_release_wrist_delta_deg [wrist_flex, wrist_roll]:",
-                cumulative_release_wrist_delta_deg
-            )
-
-            tilt_corrected_override = build_reversed_pick_place_trajectory(
-                source_movelist,
-                source_closeidx,
-                source_traj_metrics,
-                reversed_from_square,
-                reversed_to_square,
-                grasp_offset=REVERSED_GRASP_OFFSET,
-                place_offset=PLACE_OFFSET,
-                release_wrist_delta_deg=cumulative_release_wrist_delta_deg
-            )
-
-            tilt_corrected_world = setup_sim_world(reversed_from_square)
-            try:
-                tilt_corrected_result = run_sim_move(
-                    tilt_corrected_world,
-                    reversed_from_square,
-                    reversed_to_square,
-                    REVERSED_GRASP_OFFSET,
-                    place_offset=PLACE_OFFSET,
-                    return_metrics=True,
-                    record_video=record_video,
-                    video_label=f"tilt_angle_corrected_round_{tilt_round}",
-                    trajectory_override=tilt_corrected_override
-                )
-                tilt_corrected_result["score"] = score_place_result(tilt_corrected_result)
-                tilt_corrected_result["tilt_correction_round"] = tilt_round
-                tilt_corrected_result["release_wrist_delta_step_deg"] = release_wrist_delta_step_deg.copy()
-                tilt_corrected_result["release_wrist_delta_deg"] = cumulative_release_wrist_delta_deg.copy()
-            finally:
-                p.removeState(tilt_corrected_world["state_id"])
-
-            print(f"\nTilt angle-corrected reversed trajectory round {tilt_round} result:")
-            print("score:", tilt_corrected_result["score"])
-            print("reject:", tilt_corrected_result["reject_reason"])
-            print("pickup_success:", tilt_corrected_result["pickup_success"])
-            print("premature_drop:", tilt_corrected_result["premature_drop"])
-            print("trajectory_fk_error:", tilt_corrected_result["trajectory_fk_error"])
-            print("xy_error:", tilt_corrected_result["xy_error"])
-            print("z_error:", tilt_corrected_result["z_error"])
-            print("tilt_after_angle_correction:", tilt_corrected_result["final_tilt_deg"])
-            print("euler_after_angle_correction:", tilt_corrected_result["final_euler_deg"])
-            print("video_output_dir:", tilt_corrected_result["video_output_dir"])
-
-            corrected_results.append(tilt_corrected_result)
-            if tilt_corrected_result["reject_reason"] is not None:
-                print(
-                    "Stopping tilt release correction after rejected round; "
-                    "preserving previous valid trajectory for XY correction."
-                )
-                break
-            previous_result = tilt_corrected_result
-            previous_override = tilt_corrected_override
-            current_release_wrist_delta_deg = cumulative_release_wrist_delta_deg.copy()
-
-        if not RUN_XY_CORRECTION_AFTER_TILT_TEST:
-            print("\nSkipping XY placement correction for tilt-only correction test.")
-            return source_result, reversed_result, corrected_results
+    if not RUN_XY_CORRECTION_TEST:
+        print("\nSkipping XY placement correction.")
+        return source_result, reversed_result, corrected_results
 
     for correction_round in range(1, correction_rounds + 1):
         previous_position_error = np.array(
@@ -2771,76 +2342,23 @@ def run_verified_reverse_move(
             )
             break
 
-        corrected_place_offset, world_correction, gripper_frame_correction = apply_reversed_place_correction(
+        corrected_result, corrected_override = run_xy_correction_round(
             previous_result,
             previous_override,
-            correct_z=False
-        )
-        corrected_override = build_reversed_pick_place_trajectory(
             source_movelist,
             source_closeidx,
             source_traj_metrics,
             reversed_from_square,
             reversed_to_square,
-            grasp_offset=REVERSED_GRASP_OFFSET,
-            place_offset=corrected_place_offset,
-            release_wrist_delta_deg=current_release_wrist_delta_deg,
-            grasp_wrist_delta_deg=current_grasp_wrist_delta_deg
+            correction_round,
+            record_video=record_video,
+            move_steps_per_waypoint=reverse_move_steps
         )
-
-        print(f"\nTesting placement-corrected reversed trajectory round {correction_round}")
-        print("previous_PLACE_OFFSET:", previous_override["place_offset"])
-        print("world_correction:", world_correction)
-        print("gripper_frame_correction:", gripper_frame_correction)
-        print("corrected_PLACE_OFFSET:", corrected_place_offset)
-        print("preserved_reversed_GRASP_OFFSET:", REVERSED_GRASP_OFFSET)
-        print(
-            "preserved_release_wrist_delta_deg [wrist_flex, wrist_roll]:",
-            current_release_wrist_delta_deg
+        print_result_summary(
+            f"XY correction round {correction_round}",
+            corrected_result,
+            include_video=True
         )
-        print(
-            "preserved_grasp_wrist_delta_deg [wrist_flex, wrist_roll]:",
-            current_grasp_wrist_delta_deg
-        )
-        print(
-            "Applying correction to reversed place endpoint from source grasp idx:",
-            corrected_override["source_grasp_as_reversed_place_idx"]
-        )
-
-        corrected_world = setup_sim_world(reversed_from_square)
-        try:
-            corrected_result = run_sim_move(
-                corrected_world,
-                reversed_from_square,
-                reversed_to_square,
-                REVERSED_GRASP_OFFSET,
-                place_offset=corrected_place_offset,
-                return_metrics=True,
-                record_video=record_video,
-                video_label=f"placement_corrected_round_{correction_round}",
-                trajectory_override=corrected_override
-            )
-            corrected_result["score"] = score_place_result(corrected_result)
-            corrected_result["correction_round"] = correction_round
-            corrected_result["world_correction"] = world_correction.copy()
-            corrected_result["gripper_frame_correction"] = gripper_frame_correction.copy()
-            corrected_result["release_wrist_delta_deg"] = current_release_wrist_delta_deg.copy()
-            corrected_result["grasp_wrist_delta_deg"] = current_grasp_wrist_delta_deg.copy()
-        finally:
-            p.removeState(corrected_world["state_id"])
-
-        print(f"\nPlacement-corrected reversed trajectory round {correction_round} result:")
-        print("score:", corrected_result["score"])
-        print("reject:", corrected_result["reject_reason"])
-        print("pickup_success:", corrected_result["pickup_success"])
-        print("premature_drop:", corrected_result["premature_drop"])
-        print("trajectory_fk_error:", corrected_result["trajectory_fk_error"])
-        print("xy_error:", corrected_result["xy_error"])
-        print("z_error:", corrected_result["z_error"])
-        print("final_tilt_deg:", corrected_result["final_tilt_deg"])
-        print("final_euler_deg:", corrected_result["final_euler_deg"])
-        print("video_output_dir:", corrected_result["video_output_dir"])
-
         corrected_results.append(corrected_result)
         previous_result = corrected_result
         previous_override = corrected_override
@@ -2881,14 +2399,6 @@ def is_xy_correction_good_enough(result):
     )
 
 
-def is_tilt_correction_good_enough(result):
-    return (
-        is_successful_move_result(result)
-        and np.isfinite(result_tilt_error(result))
-        and result_tilt_error(result) < FINAL_TILT_TARGET_DEG
-    )
-
-
 def is_suitable_reverse_solution(result):
     return (
         is_successful_move_result(result)
@@ -2899,75 +2409,46 @@ def is_suitable_reverse_solution(result):
     )
 
 
-def xy_tilt_selection_key(result):
-    xy_error = result_xy_error(result)
-    tilt_error = result_tilt_error(result)
-    if not np.isfinite(xy_error):
-        xy_error = np.inf
-    if not np.isfinite(tilt_error):
-        tilt_error = np.inf
-
-    if xy_error <= XY_CORRECTION_TARGET_ERROR:
-        xy_band = 0
-    else:
-        xy_band = int(np.floor(xy_error / XY_SELECTION_SIMILAR_ERROR_BAND)) + 1
-
-    return (
-        xy_band,
-        tilt_error,
-        xy_error,
-        float(result.get("score", np.inf)),
-    )
-
-
 def calibrate_verified_reverse_move(
     from_square,
     to_square,
     record_initial_video=False,
     record_intermediate_video=False,
     record_final_video=True,
-    tilt_correction_enabled=True,
     xy_correction_enabled=True,
-    correction_rounds=REVERSED_PLACEMENT_CORRECTION_ROUNDS
+    correction_rounds=REVERSED_PLACEMENT_CORRECTION_ROUNDS,
+    reversed_grasp_offset=REVERSED_GRASP_OFFSET
 ):
     source_from_square = to_square
     source_to_square = from_square
     reversed_from_square = from_square
     reversed_to_square = to_square
+    reverse_move_steps = move_steps_per_waypoint_for_move(
+        reversed_from_square,
+        reversed_to_square
+    )
 
     print(f"\n========== Calibrating reverse lookup {from_square} -> {to_square} ==========")
     print(f"Verifying source trajectory {source_from_square} -> {source_to_square}")
-    print("source_GRASP_OFFSET:", SOURCE_GRASP_OFFSET)
-    print("reversed_GRASP_OFFSET:", REVERSED_GRASP_OFFSET)
+    source_grasp_offset = source_grasp_offset_for_move(
+        source_from_square,
+        source_to_square
+    )
+    print("source_GRASP_OFFSET:", source_grasp_offset)
+    print("reversed_GRASP_OFFSET:", reversed_grasp_offset)
 
-    source_movelist, source_closeidx, source_traj_metrics = pickupmove_traj_with_metrics(
+    source_movelist, source_closeidx, source_traj_metrics, source_override, source_grasp_offset = build_source_trajectory(
+        source_from_square,
+        source_to_square
+    )
+    source_result = run_scored_simulation(
         source_from_square,
         source_to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=SOURCE_GRASP_OFFSET,
-        PLACE_OFFSET=PLACE_OFFSET
+        source_grasp_offset,
+        PLACE_OFFSET,
+        source_override
     )
-    source_override = {
-        "movelist": source_movelist,
-        "closeidx": source_closeidx,
-        "traj_metrics": source_traj_metrics,
-    }
-
-    source_world = setup_sim_world(source_from_square)
-    try:
-        source_result = run_sim_move(
-            source_world,
-            source_from_square,
-            source_to_square,
-            SOURCE_GRASP_OFFSET,
-            place_offset=PLACE_OFFSET,
-            return_metrics=True,
-            record_video=False,
-            trajectory_override=source_override
-        )
-        source_result["score"] = score_place_result(source_result)
-    finally:
-        p.removeState(source_world["state_id"])
+    print_result_summary("Source verification result", source_result)
 
     if source_result["reject_reason"] is not None:
         print("Skipping calibration because source verification failed.")
@@ -2980,65 +2461,41 @@ def calibrate_verified_reverse_move(
             "selected_place_offset": PLACE_OFFSET.copy(),
             "selected_release_wrist_delta_deg": np.zeros(2),
             "selected_grasp_wrist_delta_deg": np.zeros(2),
-            "source_grasp_offset": SOURCE_GRASP_OFFSET.copy(),
-            "reversed_grasp_offset": REVERSED_GRASP_OFFSET.copy(),
+            "source_grasp_offset": source_grasp_offset.copy(),
+            "reversed_grasp_offset": reversed_grasp_offset.copy(),
             "trajectory_metrics": source_traj_metrics,
             "video_output_dir": None,
             "success": False,
             "reject_reason": source_result["reject_reason"],
         }
 
-    current_place_offset = PLACE_OFFSET.copy()
-    current_release_wrist_delta_deg = np.zeros(2)
-    current_grasp_wrist_delta_deg = np.zeros(2)
-
-    reversed_override = build_reversed_pick_place_trajectory(
+    reversed_override = build_reverse_trajectory(
         source_movelist,
         source_closeidx,
         source_traj_metrics,
         reversed_from_square,
         reversed_to_square,
-        grasp_offset=REVERSED_GRASP_OFFSET,
-        place_offset=current_place_offset,
-        release_wrist_delta_deg=current_release_wrist_delta_deg,
-        grasp_wrist_delta_deg=current_grasp_wrist_delta_deg
+        PLACE_OFFSET,
+        reversed_grasp_offset=reversed_grasp_offset
     )
-
-    reversed_world = setup_sim_world(reversed_from_square)
-    try:
-        reversed_result = run_sim_move(
-            reversed_world,
-            reversed_from_square,
-            reversed_to_square,
-            REVERSED_GRASP_OFFSET,
-            place_offset=current_place_offset,
-            return_metrics=True,
-            record_video=record_initial_video,
-            video_label="initial_reverse",
-            trajectory_override=reversed_override
-        )
-        reversed_result["score"] = score_place_result(reversed_result)
-    finally:
-        p.removeState(reversed_world["state_id"])
-
-    print("\nInitial reversed calibration result:")
-    print("score:", reversed_result["score"])
-    print("reject:", reversed_result["reject_reason"])
-    print("pickup_success:", reversed_result["pickup_success"])
-    print("premature_drop:", reversed_result["premature_drop"])
-    print("trajectory_fk_error:", reversed_result["trajectory_fk_error"])
-    print("xy_error:", reversed_result["xy_error"])
-    print("final_tilt_deg:", reversed_result["final_tilt_deg"])
+    reversed_result = run_scored_simulation(
+        reversed_from_square,
+        reversed_to_square,
+        reversed_grasp_offset,
+        PLACE_OFFSET,
+        reversed_override,
+        record_video=record_initial_video,
+        video_label="initial_reverse",
+        move_steps_per_waypoint=reverse_move_steps
+    )
+    print_result_summary("Initial reversed calibration result", reversed_result)
 
     tilt_results = []
     xy_results = []
     selected_result = None
     selected_override = None
-    selected_place_offset = current_place_offset.copy()
-    selected_release_wrist_delta_deg = current_release_wrist_delta_deg.copy()
-    selected_grasp_wrist_delta_deg = current_grasp_wrist_delta_deg.copy()
+    selected_place_offset = PLACE_OFFSET.copy()
     selected_trajectory_metrics = reversed_override["traj_metrics"]
-
     previous_result = reversed_result
     previous_override = reversed_override
 
@@ -3046,243 +2503,72 @@ def calibrate_verified_reverse_move(
         nonlocal selected_result
         nonlocal selected_override
         nonlocal selected_place_offset
-        nonlocal selected_release_wrist_delta_deg
-        nonlocal selected_grasp_wrist_delta_deg
         nonlocal selected_trajectory_metrics
 
         selected_result = result
         selected_override = trajectory_override
         selected_place_offset = trajectory_override["place_offset"].copy()
-        selected_release_wrist_delta_deg = current_release_wrist_delta_deg.copy()
-        selected_grasp_wrist_delta_deg = current_grasp_wrist_delta_deg.copy()
         selected_trajectory_metrics = trajectory_override["traj_metrics"]
 
     if is_suitable_reverse_solution(reversed_result):
         select_solution(reversed_result, reversed_override)
     elif not is_successful_move_result(reversed_result):
         print("Skipping corrections because initial reversed move failed.")
-    else:
-        for restart_cycle in range(1, REVERSED_TILT_XY_RESTART_PATIENCE + 1):
-            print(
-                f"\nCorrection cycle {restart_cycle}/"
-                f"{REVERSED_TILT_XY_RESTART_PATIENCE}"
+    elif xy_correction_enabled:
+        for correction_round in range(1, correction_rounds + 1):
+            previous_position_error = np.array(
+                previous_result.get("position_error", np.full(3, np.nan))
             )
-            cycle_progress = False
-
-            if (
-                tilt_correction_enabled
-                and not is_tilt_correction_good_enough(previous_result)
-            ):
-                for tilt_round in range(1, TILT_RELEASE_CORRECTION_ITERATIONS + 1):
-                    release_wrist_delta_step_deg = compute_release_tilt_wrist_delta_step(
-                        previous_result
-                    )
-                    next_release_wrist_delta_deg = clamp_release_tilt_wrist_delta(
-                        current_release_wrist_delta_deg + release_wrist_delta_step_deg
-                    )
-
-                    tilt_override = build_reversed_pick_place_trajectory(
-                        source_movelist,
-                        source_closeidx,
-                        source_traj_metrics,
-                        reversed_from_square,
-                        reversed_to_square,
-                        grasp_offset=REVERSED_GRASP_OFFSET,
-                        place_offset=current_place_offset,
-                        release_wrist_delta_deg=next_release_wrist_delta_deg,
-                        grasp_wrist_delta_deg=current_grasp_wrist_delta_deg
-                    )
-
-                    tilt_world = setup_sim_world(reversed_from_square)
-                    try:
-                        tilt_result = run_sim_move(
-                            tilt_world,
-                            reversed_from_square,
-                            reversed_to_square,
-                            REVERSED_GRASP_OFFSET,
-                            place_offset=current_place_offset,
-                            return_metrics=True,
-                            record_video=record_intermediate_video,
-                            video_label=(
-                                f"cycle_{restart_cycle}_"
-                                f"tilt_angle_corrected_round_{tilt_round}"
-                            ),
-                            trajectory_override=tilt_override
-                        )
-                        tilt_result["score"] = score_place_result(tilt_result)
-                        tilt_result["restart_cycle"] = restart_cycle
-                        tilt_result["tilt_correction_round"] = tilt_round
-                        tilt_result["release_wrist_delta_step_deg"] = release_wrist_delta_step_deg.copy()
-                        tilt_result["release_wrist_delta_deg"] = next_release_wrist_delta_deg.copy()
-                    finally:
-                        p.removeState(tilt_world["state_id"])
-
-                    tilt_results.append(tilt_result)
-                    print(
-                        f"cycle={restart_cycle} | "
-                        f"tilt_round={tilt_round} | "
-                        f"release_delta={next_release_wrist_delta_deg} | "
-                        f"tilt={tilt_result['final_tilt_deg']} | "
-                        f"xy={tilt_result['xy_error']} | "
-                        f"reject={tilt_result['reject_reason']}"
-                    )
-
-                    if not is_successful_move_result(tilt_result):
-                        print(
-                            "Stopping release tilt correction at first "
-                            "rejected/failed round."
-                        )
-                        break
-
-                    previous_result = tilt_result
-                    previous_override = tilt_override
-                    current_release_wrist_delta_deg = next_release_wrist_delta_deg.copy()
-                    cycle_progress = True
-
-                    if is_suitable_reverse_solution(tilt_result):
-                        select_solution(tilt_result, tilt_override)
-                        break
-
-                    if is_tilt_correction_good_enough(tilt_result):
-                        print(
-                            "Stopping release tilt correction because final_tilt_deg "
-                            f"{tilt_result['final_tilt_deg']} < {FINAL_TILT_TARGET_DEG}"
-                        )
-                        break
-
-                if selected_result is not None:
-                    break
-
-            if (
-                xy_correction_enabled
-                and is_successful_move_result(previous_result)
-                and not is_xy_correction_good_enough(previous_result)
-            ):
-                for correction_round in range(1, correction_rounds + 1):
-                    previous_position_error = np.array(
-                        previous_result.get("position_error", np.full(3, np.nan))
-                    )
-                    if not np.all(np.isfinite(previous_position_error)):
-                        print(
-                            "Stopping XY correction because previous position "
-                            "metrics are invalid."
-                        )
-                        break
-
-                    corrected_place_offset, world_correction, gripper_frame_correction = apply_reversed_place_correction(
-                        previous_result,
-                        previous_override,
-                        correct_z=False
-                    )
-                    xy_override = build_reversed_pick_place_trajectory(
-                        source_movelist,
-                        source_closeidx,
-                        source_traj_metrics,
-                        reversed_from_square,
-                        reversed_to_square,
-                        grasp_offset=REVERSED_GRASP_OFFSET,
-                        place_offset=corrected_place_offset,
-                        release_wrist_delta_deg=current_release_wrist_delta_deg,
-                        grasp_wrist_delta_deg=current_grasp_wrist_delta_deg
-                    )
-
-                    xy_world = setup_sim_world(reversed_from_square)
-                    try:
-                        xy_result = run_sim_move(
-                            xy_world,
-                            reversed_from_square,
-                            reversed_to_square,
-                            REVERSED_GRASP_OFFSET,
-                            place_offset=corrected_place_offset,
-                            return_metrics=True,
-                            record_video=record_intermediate_video,
-                            video_label=(
-                                f"cycle_{restart_cycle}_"
-                                f"placement_corrected_round_{correction_round}"
-                            ),
-                            trajectory_override=xy_override
-                        )
-                        xy_result["score"] = score_place_result(xy_result)
-                        xy_result["restart_cycle"] = restart_cycle
-                        xy_result["correction_round"] = correction_round
-                        xy_result["world_correction"] = world_correction.copy()
-                        xy_result["gripper_frame_correction"] = gripper_frame_correction.copy()
-                        xy_result["release_wrist_delta_deg"] = current_release_wrist_delta_deg.copy()
-                        xy_result["grasp_wrist_delta_deg"] = current_grasp_wrist_delta_deg.copy()
-                    finally:
-                        p.removeState(xy_world["state_id"])
-
-                    xy_results.append(xy_result)
-                    print(
-                        f"cycle={restart_cycle} | "
-                        f"xy_round={correction_round} | "
-                        f"place_offset={corrected_place_offset} | "
-                        f"release_delta={current_release_wrist_delta_deg} | "
-                        f"xy={xy_result['xy_error']} | "
-                        f"tilt={xy_result['final_tilt_deg']} | "
-                        f"reject={xy_result['reject_reason']}"
-                    )
-
-                    if not is_successful_move_result(xy_result):
-                        print("Stopping XY correction at first rejected/failed round.")
-                        break
-
-                    previous_result = xy_result
-                    previous_override = xy_override
-                    current_place_offset = corrected_place_offset.copy()
-                    cycle_progress = True
-
-                    if is_suitable_reverse_solution(xy_result):
-                        select_solution(xy_result, xy_override)
-                        break
-
-                    if is_xy_correction_good_enough(xy_result):
-                        print(
-                            "Stopping XY correction because xy_error "
-                            f"{xy_result['xy_error']} <= {XY_CORRECTION_TARGET_ERROR}"
-                        )
-                        break
-
-                if selected_result is not None:
-                    break
-
-            if selected_result is not None:
+            if not np.all(np.isfinite(previous_position_error)):
+                print("Stopping XY correction because previous position metrics are invalid.")
                 break
 
-            if not is_successful_move_result(previous_result):
-                print("Stopping correction cycles because current result is invalid.")
+            xy_result, xy_override = run_xy_correction_round(
+                previous_result,
+                previous_override,
+                source_movelist,
+                source_closeidx,
+                source_traj_metrics,
+                reversed_from_square,
+                reversed_to_square,
+                correction_round,
+                record_video=record_intermediate_video,
+                move_steps_per_waypoint=reverse_move_steps,
+                reversed_grasp_offset=reversed_grasp_offset
+            )
+            xy_results.append(xy_result)
+            print_result_summary(f"XY correction round {correction_round}", xy_result)
+
+            if not is_successful_move_result(xy_result):
+                print("Stopping XY correction at first rejected/failed round.")
                 break
 
-            if is_xy_correction_good_enough(previous_result):
+            previous_result = xy_result
+            previous_override = xy_override
+
+            if is_suitable_reverse_solution(xy_result):
+                select_solution(xy_result, xy_override)
+                break
+
+            if is_xy_correction_good_enough(xy_result):
                 print(
-                    "XY correction is within target but tilt is not; "
-                    "restarting tilt correction."
+                    "Stopping XY correction because xy_error "
+                    f"{xy_result['xy_error']} <= {XY_CORRECTION_TARGET_ERROR}"
                 )
-
-            if not cycle_progress:
-                print("Stopping correction cycles because no correction phase ran.")
                 break
 
     if record_final_video and is_suitable_reverse_solution(selected_result):
-        final_world = setup_sim_world(reversed_from_square)
-        try:
-            final_video_result = run_sim_move(
-                final_world,
-                reversed_from_square,
-                reversed_to_square,
-                REVERSED_GRASP_OFFSET,
-                place_offset=selected_place_offset,
-                return_metrics=True,
-                record_video=True,
-                video_label="final_corrected_lookup",
-                trajectory_override=selected_override
-            )
-            final_video_result["score"] = score_place_result(final_video_result)
-            final_video_result["release_wrist_delta_deg"] = selected_release_wrist_delta_deg.copy()
-            final_video_result["grasp_wrist_delta_deg"] = selected_grasp_wrist_delta_deg.copy()
-            selected_result = final_video_result
-        finally:
-            p.removeState(final_world["state_id"])
+        selected_result = run_scored_simulation(
+            reversed_from_square,
+            reversed_to_square,
+            reversed_grasp_offset,
+            selected_place_offset,
+            selected_override,
+            record_video=True,
+            video_label="final_corrected_lookup",
+            move_steps_per_waypoint=reverse_move_steps
+        )
+        print_result_summary("Final video verification result", selected_result, include_video=True)
 
     success = is_suitable_reverse_solution(selected_result)
     if success:
@@ -3308,10 +2594,10 @@ def calibrate_verified_reverse_move(
         "xy_results": xy_results,
         "selected_result": selected_result,
         "selected_place_offset": selected_place_offset.copy(),
-        "selected_release_wrist_delta_deg": selected_release_wrist_delta_deg.copy(),
-        "selected_grasp_wrist_delta_deg": selected_grasp_wrist_delta_deg.copy(),
-        "source_grasp_offset": SOURCE_GRASP_OFFSET.copy(),
-        "reversed_grasp_offset": REVERSED_GRASP_OFFSET.copy(),
+        "selected_release_wrist_delta_deg": np.zeros(2),
+        "selected_grasp_wrist_delta_deg": np.zeros(2),
+        "source_grasp_offset": source_grasp_offset.copy(),
+        "reversed_grasp_offset": reversed_grasp_offset.copy(),
         "trajectory_metrics": selected_trajectory_metrics,
         "video_output_dir": selected_result.get("video_output_dir") if selected_result else None,
         "success": success,
@@ -3366,7 +2652,7 @@ for dx in dellist:
     grasp_offsets.append(offset)
 
 
-RUN_SINGLE_VIDEO_INSPECTION = False
+RUN_SINGLE_VIDEO_INSPECTION = True
 RUN_VERIFIED_REVERSE_MOVE = True
 RUN_GRASP_OFFSET_SEARCH = False
 RUN_GRASP_ONLY_UNTIL_HELD = True
@@ -3374,7 +2660,7 @@ RUN_GRASP_THEN_PLACE_SEARCH = False
 RUN_PLACE_OFFSET_SEARCH = False
 RUN_MEASURED_CORRECTION_SEARCH = True
 RUN_RANK1_PLACE_OFFSET_BATCH = True
-RECORD_VIDEO_RERUN = False
+RECORD_VIDEO_RERUN = True
 
 def main():
     ensure_physics_connected()
