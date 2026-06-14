@@ -207,7 +207,7 @@ def build_lookup():
             to_square,
             record_initial_video=False,
             record_intermediate_video=False,
-            record_final_video=True,
+            record_final_video=False,
             xy_correction_enabled=True,
         )
         if calibration["success"]:

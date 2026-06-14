@@ -277,7 +277,7 @@ def calibrate_direct_move(from_square, to_square):
                     to_square,
                     grasp_offset,
                     selected_place_offset,
-                    record_video=True,
+                    record_video=False,
                     video_label="final_corrected_lookup",
                 )
                 break
