@@ -1011,7 +1011,15 @@ def pickupmove_traj_old(from_square, to_square, board_origin, GRASP_OFFSET):
 
 #     return jntslist, closeidx
 
-def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET, traj_metrics=None):
+def pickupmove_traj(
+    from_square,
+    to_square,
+    board_origin,
+    GRASP_OFFSET,
+    PLACE_OFFSET,
+    traj_metrics=None,
+    placement_lower_steps=10,
+):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
     move to to_square, place piece, and return to home. Returns the final joint position (home).
@@ -1026,6 +1034,8 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
 
 
     jntslist = []
+    # Files outside this set, including all a-file destinations, use the
+    # near-square downward pose.
     far_rows = ["f","g", "h"]
     # far_rows = []
 
@@ -1162,7 +1172,10 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
         downflag = False
 
         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
-    # downflag = True
+    elif to_square[0] == "b":
+        downflag = False
+    else:
+        downflag = True
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
     # above_to = xyz_homeref(to_xyz + np.array([0, 0, height]), current, GRASP_OFFSET)
     # above_to[5] = gripper_angle_closed  # keep gripper closed
@@ -1231,7 +1244,7 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
 
-    nsteps = 10
+    nsteps = placement_lower_steps
     # nsteps = 2
     downjnts = []
     stepcnt = 0
@@ -1273,6 +1286,11 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
             )
 
             intermediate_joints[5] = gripper_angle_closed
+
+            if traj_metrics is not None and placement_lower_steps <= 2:
+                traj_metrics.setdefault("slow_waypoint_indices", []).append(
+                    len(jntslist)
+                )
 
             jntslist.append(intermediate_joints)
 
@@ -1366,7 +1384,14 @@ def pickupmove_traj(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OF
     return jntslist, closeidx
 
 
-def pickupmove_traj_with_metrics(from_square, to_square, board_origin, GRASP_OFFSET, PLACE_OFFSET):
+def pickupmove_traj_with_metrics(
+    from_square,
+    to_square,
+    board_origin,
+    GRASP_OFFSET,
+    PLACE_OFFSET,
+    placement_lower_steps=10,
+):
     traj_metrics = {
         "max_fk_error": 0.0,
         "event_threshold": 0.025,
@@ -1382,6 +1407,7 @@ def pickupmove_traj_with_metrics(from_square, to_square, board_origin, GRASP_OFF
         GRASP_OFFSET,
         PLACE_OFFSET,
         traj_metrics=traj_metrics,
+        placement_lower_steps=placement_lower_steps,
     )
 
     return jntslist, closeidx, traj_metrics

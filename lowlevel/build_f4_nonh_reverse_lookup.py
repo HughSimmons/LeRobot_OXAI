@@ -7,7 +7,9 @@ import numpy as np
 import pybullet as p
 
 from multisim_chess_fast import (
+    DEFAULT_MOVE_STEPS_PER_WAYPOINT,
     FINAL_TILT_TARGET_DEG,
+    LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT,
     MAX_TRAJECTORY_FK_ERROR,
     PLACE_OFFSET,
     XY_CORRECTION_TARGET_ERROR,
@@ -21,17 +23,27 @@ from multisim_chess_fast import (
 
 
 LOOKUP_FROM_SQUARE = "f4"
-LOOKUP_TO_FILES = ("e",)
+LOOKUP_TO_FILES = tuple("abcde")
+# LOOKUP_TO_FILES = tuple("a")
+# LOOKUP_TO_RANKS = range(6, 8)
 LOOKUP_TO_RANKS = range(1, 9)
 LOOKUP_MOVES = tuple(
     (LOOKUP_FROM_SQUARE, f"{file}{rank}")
     for file in LOOKUP_TO_FILES
     for rank in LOOKUP_TO_RANKS
+    if f"{file}{rank}" != LOOKUP_FROM_SQUARE
 )
 DIRECT_GRASP_OFFSET_FOR_LOOKUP = np.array([-0.011, 0.002, -0.003])
-DIRECT_PLACE_CORRECTION_ROUNDS = 8
+DIRECT_PLACE_CORRECTION_ROUNDS = 10
+USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS = True
+LONG_MOVE_STEP_DESTINATION_FILES = ("a", "b")
+RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE = {
+    f"{file}{rank}": 2
+    for file in ("a", "b")
+    for rank in range(1, 9)
+}
 
-OUTPUT_PATH = Path(__file__).resolve().parent / "f4_e_reverse_move_lookup.json"
+OUTPUT_PATH = Path(__file__).resolve().parent / "f4_non_h_reverse_move_lookup.json"
 
 
 def json_safe(value):
@@ -70,6 +82,9 @@ def summarize_result(result):
         "final_euler_deg",
         "trajectory_fk_error",
         "move_steps_per_waypoint",
+        "placement_lower_steps",
+        "relaxed_lowering_move_step_multiplier",
+        "slow_waypoint_indices",
         "pickup_success",
         "premature_drop",
         "reject_reason",
@@ -156,6 +171,15 @@ def build_metadata():
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "lowlevel/build_f4_e_reverse_lookup.py",
         "trajectory_mode": "direct",
+        "from_square": LOOKUP_FROM_SQUARE,
+        "destination_files": list(LOOKUP_TO_FILES),
+        "destination_ranks": list(LOOKUP_TO_RANKS),
+        "excluded_destinations": [LOOKUP_FROM_SQUARE, "h1-h8"],
+        "default_move_steps_per_waypoint": DEFAULT_MOVE_STEPS_PER_WAYPOINT,
+        "long_move_steps_per_waypoint": LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT,
+        "long_move_step_destination_files": list(LONG_MOVE_STEP_DESTINATION_FILES),
+        "default_placement_lower_steps": 10,
+        "relaxed_placement_lower_steps_by_to_square": RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE,
         "board_origin": json_safe(np.array(board_origin)),
         "fk_error_threshold": MAX_TRAJECTORY_FK_ERROR,
         "final_tilt_target_deg": FINAL_TILT_TARGET_DEG,
@@ -201,13 +225,28 @@ def apply_direct_place_correction(from_square, to_square, result, grasp_offset, 
     return place_offset + gripper_frame_correction
 
 
+def move_steps_per_waypoint_for_lookup(to_square):
+    if (
+        USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS
+        and to_square[0] in LONG_MOVE_STEP_DESTINATION_FILES
+    ):
+        return LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT
+    return DEFAULT_MOVE_STEPS_PER_WAYPOINT
+
+
+def placement_lower_steps_for_lookup(to_square):
+    return RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE.get(to_square, 10)
+
+
 def run_direct_move_once(
     world,
     from_square,
     to_square,
     grasp_offset,
     place_offset,
-    record_video=False,
+    move_steps_per_waypoint,
+    placement_lower_steps,
+    record_video=True,
     video_label=None,
 ):
     result = run_sim_move(
@@ -219,6 +258,8 @@ def run_direct_move_once(
         return_metrics=True,
         record_video=record_video,
         video_label=video_label,
+        move_steps_per_waypoint=move_steps_per_waypoint,
+        placement_lower_steps=placement_lower_steps,
     )
     result["score"] = score_place_result(result)
     return result
@@ -241,6 +282,8 @@ def calibrate_direct_move(from_square, to_square):
     world = setup_sim_world(from_square)
     grasp_offset = DIRECT_GRASP_OFFSET_FOR_LOOKUP.copy()
     place_offset = PLACE_OFFSET.copy()
+    move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(to_square)
+    placement_lower_steps = placement_lower_steps_for_lookup(to_square)
     selected_result = None
     selected_place_offset = place_offset.copy()
 
@@ -253,6 +296,8 @@ def calibrate_direct_move(from_square, to_square):
                 to_square,
                 grasp_offset,
                 place_offset,
+                move_steps_per_waypoint,
+                placement_lower_steps,
                 record_video=False,
                 video_label=(
                     "initial_direct"
@@ -263,7 +308,9 @@ def calibrate_direct_move(from_square, to_square):
             result["correction_round"] = correction_round
             print(
                 f"direct_round={correction_round} | "
+                f"lower_steps={placement_lower_steps} | "
                 f"place_offset={place_offset} | "
+                f"fk={result['trajectory_fk_error']} | "
                 f"xy={result['xy_error']} | "
                 f"tilt={result['final_tilt_deg']} | "
                 f"reject={result['reject_reason']}"
@@ -277,6 +324,8 @@ def calibrate_direct_move(from_square, to_square):
                     to_square,
                     grasp_offset,
                     selected_place_offset,
+                    move_steps_per_waypoint,
+                    placement_lower_steps,
                     record_video=False,
                     video_label="final_corrected_lookup",
                 )

@@ -12,8 +12,8 @@ video_on = False
 # video_on = True
 runid = "multisim_place_lookup"
 RECORDINGS_DIR = Path(__file__).resolve().parent / "recordings"
-MOVE_FROM_SQUARE = "e1"
-MOVE_TO_SQUARE = "f2"
+MOVE_FROM_SQUARE = "f4"
+MOVE_TO_SQUARE = "a3"
 
 # Best PLACE_OFFSET: [-0.0165  0.0015 -0.005 ]
 # FILES = "abcdefgh"
@@ -99,6 +99,7 @@ REVERSED_RETREAT_HOME_STEPS = 16
 DEFAULT_MOVE_STEPS_PER_WAYPOINT = 50
 LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT = 100
 LONG_TRANSPORT_STEP_MOVES = {("e1", "g8")}
+RELAXED_LOWERING_MOVE_STEP_MULTIPLIER = 5
 RUN_XY_CORRECTION_TEST = True
 REVERSED_WAYPOINT_FK_ERROR_THRESHOLD = 0.025
 REVERSED_MAX_INTERPOLATED_FK_GAP = 2
@@ -106,6 +107,7 @@ MAX_TRAJECTORY_FK_ERROR = 0.025
 XY_ERROR_WEIGHT = 10.0
 FINAL_TILT_TARGET_DEG = 15.0
 XY_CORRECTION_TARGET_ERROR = 1e-4
+# XY_CORRECTION_TARGET_ERROR = 1e-2
 SOFTEN_GRIPPER_PINCH = True
 GRIPPER_CLOSE_FORCE = 500
 GRIPPER_TRANSPORT_HOLD_FORCE = 50
@@ -443,6 +445,7 @@ def run_sim_move(
     move_steps_per_waypoint=DEFAULT_MOVE_STEPS_PER_WAYPOINT,
     restore_state=True,
     video_context=None,
+    placement_lower_steps=10,
 ):
     if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
@@ -467,7 +470,8 @@ def run_sim_move(
             sq2,
             board_origin=board_origin,
             GRASP_OFFSET=grasp_offset,
-            PLACE_OFFSET=active_place_offset
+            PLACE_OFFSET=active_place_offset,
+            placement_lower_steps=placement_lower_steps,
         )
     else:
         movelist = trajectory_override["movelist"]
@@ -475,6 +479,7 @@ def run_sim_move(
         traj_metrics = trajectory_override["traj_metrics"]
 
     trajectory_fk_error = traj_metrics["max_fk_error"]
+    slow_waypoint_indices = set(traj_metrics.get("slow_waypoint_indices", []))
     release_target_z = traj_metrics["release_target_z"]
     if release_target_z is None:
         release_target_z = PIECE_DROPPED_Z_THRESHOLD
@@ -513,6 +518,9 @@ def run_sim_move(
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
             "move_steps_per_waypoint": move_steps_per_waypoint,
+            "placement_lower_steps": placement_lower_steps,
+            "relaxed_lowering_move_step_multiplier": RELAXED_LOWERING_MOVE_STEP_MULTIPLIER,
+            "slow_waypoint_indices": sorted(slow_waypoint_indices),
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
@@ -538,8 +546,16 @@ def run_sim_move(
         return False
 
     moves = [
-        (np.deg2rad(pos), move_steps_per_waypoint, f"Move to {pos}")
-        for pos in movelist
+        (
+            np.deg2rad(pos),
+            (
+                move_steps_per_waypoint * RELAXED_LOWERING_MOVE_STEP_MULTIPLIER
+                if idx in slow_waypoint_indices
+                else move_steps_per_waypoint
+            ),
+            f"Move to {pos}",
+        )
+        for idx, pos in enumerate(movelist)
     ]
     release_move_idx = find_release_move_index(movelist, closeidx)
     strong_hold_start_idx = None
@@ -804,6 +820,9 @@ def run_sim_move(
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
             "move_steps_per_waypoint": move_steps_per_waypoint,
+            "placement_lower_steps": placement_lower_steps,
+            "relaxed_lowering_move_step_multiplier": RELAXED_LOWERING_MOVE_STEP_MULTIPLIER,
+            "slow_waypoint_indices": sorted(slow_waypoint_indices),
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
