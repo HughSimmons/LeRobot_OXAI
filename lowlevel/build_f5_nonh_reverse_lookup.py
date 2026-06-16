@@ -6,6 +6,11 @@ import sys
 import numpy as np
 import pybullet as p
 
+from visualize_lookup_success import default_output_path, open_in_ide, render_svg
+from visualize_lookup_success import expected_destinations, infer_from_square
+from visualize_lookup_success import move_key as lookup_move_key
+from visualize_lookup_success import move_is_successful
+
 from multisim_chess_fast import (
     DEFAULT_MOVE_STEPS_PER_WAYPOINT,
     FINAL_TILT_TARGET_DEG,
@@ -23,8 +28,10 @@ from multisim_chess_fast import (
 )
 
 
-LOOKUP_FROM_SQUARE = "f3"
+LOOKUP_FROM_SQUARE = "f5"
 LOOKUP_TO_FILES = tuple("abcde")
+# LOOKUP_TO_FILES = tuple("e")
+# LOOKUP_TO_RANKS = range(6, 7)
 LOOKUP_TO_RANKS = range(1, 9)
 LOOKUP_MOVES = tuple(
     (LOOKUP_FROM_SQUARE, f"{file}{rank}")
@@ -33,10 +40,7 @@ LOOKUP_MOVES = tuple(
     if f"{file}{rank}" != LOOKUP_FROM_SQUARE
 )
 DIRECT_GRASP_OFFSET_FOR_LOOKUP = np.array([-0.014, 0.002, -0.003])
-GRASP_OFFSET_OVERRIDES_FOR_LOOKUP = {
-    "a4": np.array([-0.017, -0.001, -0.003]),
-    "b3": np.array([-0.011, 0.005, -0.003]),
-}
+B2_GRASP_OFFSET_FOR_LOOKUP = np.array([-0.011, 0.002, -0.003])
 DIRECT_PLACE_CORRECTION_ROUNDS = 10
 FALLBACK_CORRECTION_GAIN = 0.5
 USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS = True
@@ -50,12 +54,13 @@ RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE = {
     for rank in range(1, 9)
 }
 
-OUTPUT_PATH = Path(__file__).resolve().parent / "f3_non_h_reverse_move_lookup.json"
+OUTPUT_PATH = Path(__file__).resolve().parent / "f5_non_h_reverse_move_lookup.json"
+SUCCESS_MAP_PATH = default_output_path(OUTPUT_PATH)
 
 
 def grasp_offset_for_lookup(to_square):
-    if to_square in GRASP_OFFSET_OVERRIDES_FOR_LOOKUP:
-        return GRASP_OFFSET_OVERRIDES_FOR_LOOKUP[to_square].copy()
+    if to_square == "b2":
+        return B2_GRASP_OFFSET_FOR_LOOKUP.copy()
     return DIRECT_GRASP_OFFSET_FOR_LOOKUP.copy()
 
 
@@ -198,7 +203,7 @@ def compact_existing_move(move):
 def build_metadata():
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source": "lowlevel/build_f3_nonh_reverse_lookup.py",
+        "source": "lowlevel/build_f5_nonh_reverse_lookup.py",
         "trajectory_mode": "direct",
         "from_square": LOOKUP_FROM_SQUARE,
         "destination_files": list(LOOKUP_TO_FILES),
@@ -209,7 +214,7 @@ def build_metadata():
         "long_move_step_destination_files": list(LONG_MOVE_STEP_DESTINATION_FILES),
         "long_move_step_min_square_distance": LONG_MOVE_STEP_MIN_SQUARE_DISTANCE,
         "direct_grasp_offset_for_lookup": json_safe(DIRECT_GRASP_OFFSET_FOR_LOOKUP),
-        "grasp_offset_overrides_for_lookup": json_safe(GRASP_OFFSET_OVERRIDES_FOR_LOOKUP),
+        "b2_grasp_offset_for_lookup": json_safe(B2_GRASP_OFFSET_FOR_LOOKUP),
         "fallback_correction_gain": FALLBACK_CORRECTION_GAIN,
         "lookup_edge_support_margin": LOOKUP_EDGE_SUPPORT_MARGIN,
         "default_placement_lower_steps": 10,
@@ -511,6 +516,109 @@ def build_lookup():
     return lookup
 
 
+def write_and_open_success_map(lookup):
+    moves = lookup.get("moves", {})
+    if not isinstance(moves, dict):
+        moves = {}
+
+    SUCCESS_MAP_PATH.write_text(
+        render_svg(OUTPUT_PATH, lookup, moves),
+        encoding="utf-8"
+    )
+    print(f"Wrote lookup success map: {SUCCESS_MAP_PATH}")
+    if open_in_ide(SUCCESS_MAP_PATH, "auto"):
+        print(f"Opened lookup success map: {SUCCESS_MAP_PATH}")
+    else:
+        print(f"Open lookup success map manually: {SUCCESS_MAP_PATH}")
+
+
+def show_success_map_figure(lookup):
+    try:
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Patch, Rectangle
+    except ImportError:
+        print("matplotlib is not available; skipping success map figure.")
+        return
+
+    moves = lookup.get("moves", {})
+    if not isinstance(moves, dict):
+        moves = {}
+
+    metadata = lookup.get("metadata", {})
+    from_square = infer_from_square(metadata, moves)
+    expected = expected_destinations(metadata, moves, from_square)
+
+    colors = {
+        "success": "#4caf50",
+        "missing": "#e57373",
+        "source": "#42a5f5",
+        "excluded": "#eeeeee",
+    }
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    for file_idx, file in enumerate("abcdefgh"):
+        for rank in range(1, 9):
+            square = f"{file}{rank}"
+            if square == from_square:
+                status = "source"
+            elif square not in expected:
+                status = "excluded"
+            elif move_is_successful(moves.get(lookup_move_key(from_square, square))):
+                status = "success"
+            else:
+                status = "missing"
+
+            rect = Rectangle(
+                (file_idx, rank - 1),
+                1,
+                1,
+                facecolor=colors[status],
+                edgecolor="#263238",
+                linewidth=2 if status == "source" else 1,
+            )
+            ax.add_patch(rect)
+            ax.text(
+                file_idx + 0.5,
+                rank - 0.5,
+                square.upper() if status == "source" else square,
+                ha="center",
+                va="center",
+                fontsize=10,
+                fontweight="bold" if status == "source" else "normal",
+                color="#1f2933",
+            )
+
+    success_count = sum(
+        1
+        for square in expected
+        if move_is_successful(moves.get(lookup_move_key(from_square, square)))
+    )
+    ax.set_title(
+        f"Lookup success map: from {from_square} | "
+        f"{success_count}/{len(expected)} successful"
+    )
+    ax.set_xlim(0, 8)
+    ax.set_ylim(0, 8)
+    ax.set_aspect("equal")
+    ax.set_xticks([idx + 0.5 for idx in range(8)])
+    ax.set_xticklabels(list("abcdefgh"))
+    ax.set_yticks([idx + 0.5 for idx in range(8)])
+    ax.set_yticklabels(range(1, 9))
+    ax.tick_params(length=0)
+    ax.legend(
+        handles=[
+            Patch(facecolor=colors["success"], edgecolor="#263238", label="successful"),
+            Patch(facecolor=colors["missing"], edgecolor="#263238", label="missing/failed"),
+            Patch(facecolor=colors["source"], edgecolor="#263238", label="source"),
+            Patch(facecolor=colors["excluded"], edgecolor="#263238", label="not targeted"),
+        ],
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+    )
+    plt.tight_layout()
+    plt.show()
+
+
 def main():
     try:
         lookup = build_lookup()
@@ -528,6 +636,8 @@ def main():
                 f"fk={metrics.get('trajectory_fk_error')} | "
                 f"reject={metrics.get('reject_reason')}"
             )
+        write_and_open_success_map(lookup)
+        show_success_map_figure(lookup)
     finally:
         if p.isConnected():
             p.disconnect()

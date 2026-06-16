@@ -81,6 +81,13 @@ renderfreq = 50
 WIDTH, HEIGHT = 640, 360
 PIECE_LIFTED_Z_THRESHOLD = 0.05
 PIECE_DROPPED_Z_THRESHOLD = 0.035
+PIECE_DYNAMICS = {
+    "lateralFriction": 1.0,
+    "rollingFriction": 0.001,
+    "spinningFriction": 0.001,
+    "linearDamping": 0.02,
+    "angularDamping": 0.01,
+}
 SOLVER_ITERATIONS = 200
 SOLVER_SUBSTEPS = 4
 POST_MOVE_SETTLE_STEPS = 1000
@@ -223,11 +230,7 @@ def create_piece(sq="a1"):
     p.changeDynamics(
         piece_id,
         -1,
-        lateralFriction=1.0,
-        rollingFriction=0.001,
-        spinningFriction=0.001,
-        linearDamping=0.02,
-        angularDamping=0.02
+        **PIECE_DYNAMICS
     )
     return(piece_id)
 
@@ -277,7 +280,44 @@ def ensure_physics_connected():
     return p.isConnected()
 
 
-def setup_sim_world(from_square):
+def create_board_edge_support(board_origin=board_origin, square_size=0.04, margin=0.0):
+    if margin <= 0.0:
+        return []
+
+    board_x, board_y, board_z = board_origin
+    board_size = 8 * square_size
+    support_half_height = 0.005
+    support_ids = []
+
+    strips = (
+        ([board_size / 2 + margin, margin / 2, support_half_height],
+         [board_x, board_y - board_size / 2 - margin / 2, board_z]),
+        ([board_size / 2 + margin, margin / 2, support_half_height],
+         [board_x, board_y + board_size / 2 + margin / 2, board_z]),
+        ([margin / 2, board_size / 2, support_half_height],
+         [board_x - board_size / 2 - margin / 2, board_y, board_z]),
+        ([margin / 2, board_size / 2, support_half_height],
+         [board_x + board_size / 2 + margin / 2, board_y, board_z]),
+    )
+
+    for half_extents, position in strips:
+        support_shape = p.createCollisionShape(
+            p.GEOM_BOX,
+            halfExtents=half_extents
+        )
+        support_ids.append(
+            p.createMultiBody(
+                baseMass=0,
+                baseCollisionShapeIndex=support_shape,
+                baseVisualShapeIndex=-1,
+                basePosition=position
+            )
+        )
+
+    return support_ids
+
+
+def setup_sim_world(from_square, edge_support_margin=0.0):
     ensure_physics_connected()
     p.resetSimulation()
     p.setPhysicsEngineParameter(
@@ -320,6 +360,11 @@ def setup_sim_world(from_square):
     board_base_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=board_base_shape,
                                     baseVisualShapeIndex=board_base_visual, 
                                     basePosition=[board_x, board_y, board_z])
+    edge_support_ids = create_board_edge_support(
+        board_origin=board_origin,
+        square_size=square_size,
+        margin=edge_support_margin,
+    )
 
     for row in range(8):
         for col in range(8):
@@ -353,6 +398,7 @@ def setup_sim_world(from_square):
         "plane_id": plane_id,
         "robot_id": robot_id,
         "board_base_id": board_base_id,
+        "edge_support_ids": edge_support_ids,
         "piece_ids": piece_ids,
     }
 

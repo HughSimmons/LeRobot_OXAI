@@ -1325,7 +1325,8 @@ def pickupmove_traj(
     # causing problems with far squares for some reason, so skipping for now
     if to_square[0] not in far_rows:
         for j in downjnts[::-1]:
-            j[5] = gripper_angle_closed
+            # Keep the gripper open while retreating from a placed piece.
+            j[5] = gripper_angle_open
             jntslist.append(j)
             # jntslist.extend(smoothjnts(current, j))
             current = j.copy()

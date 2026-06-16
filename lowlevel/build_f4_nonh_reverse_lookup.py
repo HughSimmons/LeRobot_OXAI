@@ -11,11 +11,13 @@ from multisim_chess_fast import (
     FINAL_TILT_TARGET_DEG,
     LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT,
     MAX_TRAJECTORY_FK_ERROR,
+    PIECE_DYNAMICS,
     PLACE_OFFSET,
     XY_CORRECTION_TARGET_ERROR,
     board_origin,
     ensure_physics_connected,
     get_release_gripper_rotation,
+    is_xy_on_board,
     run_sim_move,
     score_place_result,
     setup_sim_world,
@@ -35,8 +37,15 @@ LOOKUP_MOVES = tuple(
 )
 DIRECT_GRASP_OFFSET_FOR_LOOKUP = np.array([-0.011, 0.002, -0.003])
 DIRECT_PLACE_CORRECTION_ROUNDS = 10
+FALLBACK_CORRECTION_GAIN = 0.5
 USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS = True
 LONG_MOVE_STEP_DESTINATION_FILES = ("a", "b")
+USE_LONG_MOVE_STEPS_FOR_DISTANT_DESTINATIONS = True
+LONG_MOVE_STEP_MIN_SQUARE_DISTANCE = 5
+EDGE_CORRECTION_SAFETY_BUFFER = 0.006
+EDGE_CORRECTION_GAIN = 0.5
+EDGE_CORRECTION_MAX_STEP = 0.006
+LOOKUP_EDGE_SUPPORT_MARGIN = 0.08
 RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE = {
     f"{file}{rank}": 2
     for file in ("a", "b")
@@ -92,6 +101,9 @@ def summarize_result(result):
         "release_wrist_delta_deg",
         "grasp_wrist_delta_deg",
         "video_output_dir",
+        "correction_pass",
+        "correction_gain",
+        "correction_round",
     )
     return {
         field: json_safe(result.get(field))
@@ -169,7 +181,7 @@ def compact_existing_move(move):
 def build_metadata():
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source": "lowlevel/build_f4_e_reverse_lookup.py",
+        "source": "lowlevel/build_f4_nonh_reverse_lookup.py",
         "trajectory_mode": "direct",
         "from_square": LOOKUP_FROM_SQUARE,
         "destination_files": list(LOOKUP_TO_FILES),
@@ -178,8 +190,15 @@ def build_metadata():
         "default_move_steps_per_waypoint": DEFAULT_MOVE_STEPS_PER_WAYPOINT,
         "long_move_steps_per_waypoint": LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT,
         "long_move_step_destination_files": list(LONG_MOVE_STEP_DESTINATION_FILES),
+        "long_move_step_min_square_distance": LONG_MOVE_STEP_MIN_SQUARE_DISTANCE,
+        "fallback_correction_gain": FALLBACK_CORRECTION_GAIN,
+        "edge_correction_safety_buffer": EDGE_CORRECTION_SAFETY_BUFFER,
+        "edge_correction_gain": EDGE_CORRECTION_GAIN,
+        "edge_correction_max_step": EDGE_CORRECTION_MAX_STEP,
+        "lookup_edge_support_margin": LOOKUP_EDGE_SUPPORT_MARGIN,
         "default_placement_lower_steps": 10,
         "relaxed_placement_lower_steps_by_to_square": RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE,
+        "piece_dynamics": json_safe(PIECE_DYNAMICS),
         "board_origin": json_safe(np.array(board_origin)),
         "fk_error_threshold": MAX_TRAJECTORY_FK_ERROR,
         "final_tilt_target_deg": FINAL_TILT_TARGET_DEG,
@@ -212,9 +231,23 @@ def load_existing_lookup():
     return lookup
 
 
-def apply_direct_place_correction(from_square, to_square, result, grasp_offset, place_offset):
+def apply_direct_place_correction(
+    from_square,
+    to_square,
+    result,
+    grasp_offset,
+    place_offset,
+    correction_gain=1.0,
+    max_world_step=None,
+):
     world_correction = result["position_error"].copy()
     world_correction[2] = 0.0
+    world_correction *= correction_gain
+    if max_world_step is not None:
+        correction_norm = np.linalg.norm(world_correction[:2])
+        if correction_norm > max_world_step:
+            world_correction *= max_world_step / correction_norm
+
     release_rot, _ = get_release_gripper_rotation(
         from_square,
         to_square,
@@ -225,7 +258,59 @@ def apply_direct_place_correction(from_square, to_square, result, grasp_offset, 
     return place_offset + gripper_frame_correction
 
 
+def is_edge_square(square):
+    return square[0] in ("a", "h") or square[1] in ("1", "8")
+
+
+def edge_inward_world_buffer(square):
+    inward = np.zeros(3)
+    if square[0] == "a":
+        inward[0] += EDGE_CORRECTION_SAFETY_BUFFER
+    elif square[0] == "h":
+        inward[0] -= EDGE_CORRECTION_SAFETY_BUFFER
+
+    rank = int(square[1])
+    if rank == 1:
+        inward[1] += EDGE_CORRECTION_SAFETY_BUFFER
+    elif rank == 8:
+        inward[1] -= EDGE_CORRECTION_SAFETY_BUFFER
+
+    return inward
+
+
+def result_fell_off_edge_square(to_square, result):
+    final_position = result.get("final_position")
+    return (
+        is_edge_square(to_square)
+        and final_position is not None
+        and not is_xy_on_board(final_position)
+    )
+
+
+def apply_edge_safety_buffer(from_square, to_square, grasp_offset, place_offset):
+    release_rot, _ = get_release_gripper_rotation(
+        from_square,
+        to_square,
+        grasp_offset,
+        place_offset
+    )
+    gripper_frame_buffer = release_rot.T @ edge_inward_world_buffer(to_square)
+    return place_offset + gripper_frame_buffer
+
+
 def move_steps_per_waypoint_for_lookup(to_square):
+    from_file_idx = ord(LOOKUP_FROM_SQUARE[0]) - ord("a")
+    to_file_idx = ord(to_square[0]) - ord("a")
+    square_distance = (
+        abs(from_file_idx - to_file_idx)
+        + abs(int(LOOKUP_FROM_SQUARE[1]) - int(to_square[1]))
+    )
+    if (
+        USE_LONG_MOVE_STEPS_FOR_DISTANT_DESTINATIONS
+        and square_distance >= LONG_MOVE_STEP_MIN_SQUARE_DISTANCE
+    ):
+        return LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT
+
     if (
         USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS
         and to_square[0] in LONG_MOVE_STEP_DESTINATION_FILES
@@ -278,19 +363,50 @@ def direct_result_is_suitable(result):
     )
 
 
-def calibrate_direct_move(from_square, to_square):
-    world = setup_sim_world(from_square)
-    grasp_offset = DIRECT_GRASP_OFFSET_FOR_LOOKUP.copy()
+def run_correction_pass(
+    world,
+    from_square,
+    to_square,
+    grasp_offset,
+    move_steps_per_waypoint,
+    placement_lower_steps,
+    correction_gain,
+    pass_label,
+):
     place_offset = PLACE_OFFSET.copy()
-    move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(to_square)
-    placement_lower_steps = placement_lower_steps_for_lookup(to_square)
-    selected_result = None
-    selected_place_offset = place_offset.copy()
 
-    try:
-        for correction_round in range(0, DIRECT_PLACE_CORRECTION_ROUNDS + 1):
-            record_final_candidate = correction_round > 0
-            result = run_direct_move_once(
+    for correction_round in range(0, DIRECT_PLACE_CORRECTION_ROUNDS + 1):
+        result = run_direct_move_once(
+            world,
+            from_square,
+            to_square,
+            grasp_offset,
+            place_offset,
+            move_steps_per_waypoint,
+            placement_lower_steps,
+            record_video=False,
+            video_label=(
+                f"{pass_label}_initial_direct"
+                if correction_round == 0
+                else f"{pass_label}_placement_corrected_round_{correction_round}"
+            ),
+        )
+        result["correction_pass"] = pass_label
+        result["correction_gain"] = correction_gain
+        result["correction_round"] = correction_round
+        print(
+            f"{pass_label}_round={correction_round} | "
+            f"gain={correction_gain} | "
+            f"lower_steps={placement_lower_steps} | "
+            f"place_offset={place_offset} | "
+            f"fk={result['trajectory_fk_error']} | "
+            f"xy={result['xy_error']} | "
+            f"tilt={result['final_tilt_deg']} | "
+            f"reject={result['reject_reason']}"
+        )
+
+        if direct_result_is_suitable(result):
+            selected_result = run_direct_move_once(
                 world,
                 from_square,
                 to_square,
@@ -299,55 +415,117 @@ def calibrate_direct_move(from_square, to_square):
                 move_steps_per_waypoint,
                 placement_lower_steps,
                 record_video=False,
-                video_label=(
-                    "initial_direct"
-                    if correction_round == 0
-                    else f"placement_corrected_round_{correction_round}"
-                ),
+                video_label=f"{pass_label}_final_corrected_lookup",
             )
-            result["correction_round"] = correction_round
+            selected_result["correction_pass"] = pass_label
+            selected_result["correction_gain"] = correction_gain
+            selected_result["correction_round"] = correction_round
+            return {
+                "selected_result": selected_result,
+                "selected_place_offset": place_offset.copy(),
+                "success": True,
+                "stopped_early": True,
+            }
+
+        if result.get("reject_reason") is not None:
+            return {
+                "selected_result": None,
+                "selected_place_offset": PLACE_OFFSET.copy(),
+                "success": False,
+                "stopped_early": True,
+            }
+
+        position_error = np.array(result.get("position_error", np.full(3, np.nan)))
+        if not np.all(np.isfinite(position_error)):
+            return {
+                "selected_result": None,
+                "selected_place_offset": PLACE_OFFSET.copy(),
+                "success": False,
+                "stopped_early": True,
+            }
+
+        if (
+            LOOKUP_EDGE_SUPPORT_MARGIN <= 0.0
+            and result_fell_off_edge_square(to_square, result)
+        ):
+            place_offset = apply_edge_safety_buffer(
+                from_square,
+                to_square,
+                grasp_offset,
+                place_offset
+            )
             print(
-                f"direct_round={correction_round} | "
-                f"lower_steps={placement_lower_steps} | "
-                f"place_offset={place_offset} | "
-                f"fk={result['trajectory_fk_error']} | "
-                f"xy={result['xy_error']} | "
-                f"tilt={result['final_tilt_deg']} | "
-                f"reject={result['reject_reason']}"
+                f"{from_square}->{to_square}: edge safety buffer applied "
+                f"after off-board result"
             )
-
-            if direct_result_is_suitable(result):
-                selected_place_offset = place_offset.copy()
-                selected_result = run_direct_move_once(
-                    world,
-                    from_square,
-                    to_square,
-                    grasp_offset,
-                    selected_place_offset,
-                    move_steps_per_waypoint,
-                    placement_lower_steps,
-                    record_video=False,
-                    video_label="final_corrected_lookup",
-                )
-                break
-
-            if result.get("reject_reason") is not None:
-                break
-
-            position_error = np.array(result.get("position_error", np.full(3, np.nan)))
-            if not np.all(np.isfinite(position_error)):
-                break
+        else:
+            active_correction_gain = correction_gain
+            max_world_step = None
+            if (
+                LOOKUP_EDGE_SUPPORT_MARGIN <= 0.0
+                and is_edge_square(to_square)
+            ):
+                active_correction_gain *= EDGE_CORRECTION_GAIN
+                max_world_step = EDGE_CORRECTION_MAX_STEP
 
             place_offset = apply_direct_place_correction(
                 from_square,
                 to_square,
                 result,
                 grasp_offset,
-                place_offset
+                place_offset,
+                correction_gain=active_correction_gain,
+                max_world_step=max_world_step,
+            )
+
+    return {
+        "selected_result": None,
+        "selected_place_offset": PLACE_OFFSET.copy(),
+        "success": False,
+        "stopped_early": False,
+    }
+
+
+def calibrate_direct_move(from_square, to_square):
+    world = setup_sim_world(
+        from_square,
+        edge_support_margin=LOOKUP_EDGE_SUPPORT_MARGIN
+    )
+    grasp_offset = DIRECT_GRASP_OFFSET_FOR_LOOKUP.copy()
+    move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(to_square)
+    placement_lower_steps = placement_lower_steps_for_lookup(to_square)
+
+    try:
+        calibration = run_correction_pass(
+            world,
+            from_square,
+            to_square,
+            grasp_offset,
+            move_steps_per_waypoint,
+            placement_lower_steps,
+            correction_gain=1.0,
+            pass_label="direct",
+        )
+        if not calibration["success"] and not calibration["stopped_early"]:
+            print(
+                f"{from_square}->{to_square}: standard correction exhausted; "
+                f"retrying with gain={FALLBACK_CORRECTION_GAIN}"
+            )
+            calibration = run_correction_pass(
+                world,
+                from_square,
+                to_square,
+                grasp_offset,
+                move_steps_per_waypoint,
+                placement_lower_steps,
+                correction_gain=FALLBACK_CORRECTION_GAIN,
+                pass_label="damped",
             )
     finally:
         p.removeState(world["state_id"])
 
+    selected_result = calibration["selected_result"]
+    selected_place_offset = calibration["selected_place_offset"]
     success = direct_result_is_suitable(selected_result)
     return {
         "selected_result": selected_result,
