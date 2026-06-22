@@ -6,6 +6,8 @@ import numpy as np
 
 from testkinematics import relativexyz, relativexyz_with_error, vectodic
 
+B_FILE_PLACE_DOWNFLAG = True
+
 def smoothmove(pos1, pos2):
     for alpha in np.linspace(0,1,50):
 
@@ -333,6 +335,30 @@ def solve_seeded_target_xyz_prefer_down(
 
     candidates.sort(key=lambda item: item[:3])
     return candidates[0][3]
+
+
+def mark_segment_start(traj_metrics, name, jntslist):
+    if traj_metrics is None:
+        return
+    segments = traj_metrics.setdefault("segments", {})
+    segments[name] = {
+        "start": len(jntslist),
+        "end": len(jntslist),
+    }
+
+
+def mark_segment_end(traj_metrics, name, jntslist):
+    if traj_metrics is None:
+        return
+    segments = traj_metrics.setdefault("segments", {})
+    segment = segments.setdefault(
+        name,
+        {
+            "start": len(jntslist),
+            "end": len(jntslist),
+        }
+    )
+    segment["end"] = len(jntslist)
 
 
 def make_far_square_pickup_seed(square, board_origin, height, reach_pose, GRASP_OFFSET):
@@ -1172,7 +1198,7 @@ def pickupmove_traj(
         downflag = False
 
         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
-    elif to_square[0] == "b":
+    elif to_square[0] == "b" and not B_FILE_PLACE_DOWNFLAG:
         downflag = False
     else:
         downflag = True
@@ -1183,6 +1209,7 @@ def pickupmove_traj(
 
     target_xyz = to_xyz + np.array([0, 0, height])
 
+    mark_segment_start(traj_metrics, "destination_above_place", jntslist)
     if to_square[0] in far_rows:
         pickup_like_seed = make_far_square_pickup_seed(
             to_square,
@@ -1234,6 +1261,7 @@ def pickupmove_traj(
             jntslist.append(intermediate_joints)
 
             current = intermediate_joints.copy()
+    mark_segment_end(traj_metrics, "destination_above_place", jntslist)
     ###
  
 
@@ -1248,6 +1276,7 @@ def pickupmove_traj(
     # nsteps = 2
     downjnts = []
     stepcnt = 0
+    mark_segment_start(traj_metrics, "destination_lower_place", jntslist)
     if to_square == "f1":
         pickup_lift_path = make_square_pickup_lift_path(
             to_square,
@@ -1304,6 +1333,7 @@ def pickupmove_traj(
 
             stepcnt+=1
 
+    mark_segment_end(traj_metrics, "destination_lower_place", jntslist)
 
     # return jntslist, closeidx
 
@@ -1312,17 +1342,20 @@ def pickupmove_traj(
         traj_metrics["release_target_z"] = float(target_xyz[2])
 
     # Open gripper
+    mark_segment_start(traj_metrics, "release_settle", jntslist)
     grip_open = current.copy()
     grip_open[5] = gripper_angle_open  # adjust as needed
     # smoothmove(current, grip_open)
     jntslist.append(grip_open)
     for _ in range(RELEASE_SETTLE_WAYPOINTS):
         jntslist.append(grip_open.copy())
+    mark_segment_end(traj_metrics, "release_settle", jntslist)
 
     current = grip_open.copy()
 
 
     # causing problems with far squares for some reason, so skipping for now
+    mark_segment_start(traj_metrics, "retreat", jntslist)
     if to_square[0] not in far_rows:
         for j in downjnts[::-1]:
             # Keep the gripper open while retreating from a placed piece.
@@ -1348,6 +1381,7 @@ def pickupmove_traj(
             gripper_angle_open,
             nsteps=10
         )
+    mark_segment_end(traj_metrics, "retreat", jntslist)
 
     # above_to = xyz_homeref(
     #     to_xyz + np.array([0, 0, 0.10]),
@@ -1360,6 +1394,7 @@ def pickupmove_traj(
     ###
     home_xyz = kinematics.forward_kinematics(home)[:3,3]
 
+    mark_segment_start(traj_metrics, "return_home", jntslist)
     above_home = solve_xyz_for_traj(
         home_xyz + np.array([0, 0, 0.10]),
         current,
@@ -1381,6 +1416,7 @@ def pickupmove_traj(
     ##
     jntslist.append(home)
     current = home.copy()
+    mark_segment_end(traj_metrics, "return_home", jntslist)
 
     return jntslist, closeidx
 
@@ -1397,6 +1433,7 @@ def pickupmove_traj_with_metrics(
         "max_fk_error": 0.0,
         "event_threshold": 0.025,
         "fk_error_events": [],
+        "segments": {},
         "release_target_xyz": None,
         "release_target_z": None,
     }

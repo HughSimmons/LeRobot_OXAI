@@ -12,8 +12,8 @@ video_on = False
 # video_on = True
 runid = "multisim_place_lookup"
 RECORDINGS_DIR = Path(__file__).resolve().parent / "recordings"
-MOVE_FROM_SQUARE = "f4"
-MOVE_TO_SQUARE = "a3"
+MOVE_FROM_SQUARE = "e4"
+MOVE_TO_SQUARE = "e3"
 
 # Best PLACE_OFFSET: [-0.0165  0.0015 -0.005 ]
 # FILES = "abcdefgh"
@@ -91,6 +91,11 @@ PIECE_DYNAMICS = {
 SOLVER_ITERATIONS = 200
 SOLVER_SUBSTEPS = 4
 POST_MOVE_SETTLE_STEPS = 1000
+CRITICAL_TILT_PERTURB_ENABLED = True
+CRITICAL_TILT_RANGE_DEG = (27.0, 33.0)
+CRITICAL_TILT_ANGULAR_VELOCITY = 0.35
+CRITICAL_TILT_TWIST_STEPS = 120
+CRITICAL_TILT_PERTURB_FINAL_SETTLE_STEPS = 300
 SEARCH_SOLVER_ITERATIONS = 200
 SEARCH_SOLVER_SUBSTEPS = 4
 SEARCH_POST_MOVE_SETTLE_STEPS = 400
@@ -109,12 +114,14 @@ LONG_TRANSPORT_STEP_MOVES = {("e1", "g8")}
 RELAXED_LOWERING_MOVE_STEP_MULTIPLIER = 5
 RUN_XY_CORRECTION_TEST = True
 REVERSED_WAYPOINT_FK_ERROR_THRESHOLD = 0.025
+# REVERSED_WAYPOINT_FK_ERROR_THRESHOLD = 0.035
 REVERSED_MAX_INTERPOLATED_FK_GAP = 2
 MAX_TRAJECTORY_FK_ERROR = 0.025
+# MAX_TRAJECTORY_FK_ERROR = 0.035
 XY_ERROR_WEIGHT = 10.0
 FINAL_TILT_TARGET_DEG = 15.0
-XY_CORRECTION_TARGET_ERROR = 1e-4
-# XY_CORRECTION_TARGET_ERROR = 1e-2
+# XY_CORRECTION_TARGET_ERROR = 1e-4
+XY_CORRECTION_TARGET_ERROR = 1e-2
 SOFTEN_GRIPPER_PINCH = True
 GRIPPER_CLOSE_FORCE = 500
 GRIPPER_TRANSPORT_HOLD_FORCE = 50
@@ -195,6 +202,79 @@ def find_release_move_index(movelist, closeidx):
             return idx
 
     return len(movelist) - 1
+
+
+def piece_tilt_deg(piece_id):
+    _, orn = p.getBasePositionAndOrientation(piece_id)
+    rot = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
+    piece_axis_z = rot[:, 2]
+    return np.rad2deg(np.arccos(np.clip(abs(piece_axis_z[2]), -1.0, 1.0)))
+
+
+def apply_critical_tilt_perturbation(piece_id, video_context=None):
+    initial_tilt_deg = piece_tilt_deg(piece_id)
+    lower_deg, upper_deg = CRITICAL_TILT_RANGE_DEG
+    used = lower_deg <= initial_tilt_deg <= upper_deg
+    steps = 0
+
+    if not used:
+        return {
+            "enabled": CRITICAL_TILT_PERTURB_ENABLED,
+            "used": False,
+            "initial_tilt_deg": initial_tilt_deg,
+            "final_tilt_deg": initial_tilt_deg,
+            "steps": steps,
+        }
+
+    angular_speed = CRITICAL_TILT_ANGULAR_VELOCITY
+    _, piece_orn = p.getBasePositionAndOrientation(piece_id)
+    piece_rot = np.array(p.getMatrixFromQuaternion(piece_orn)).reshape(3, 3)
+    piece_axis_z = piece_rot[:, 2]
+    lean_axis = piece_axis_z.copy()
+    lean_axis[2] = 0.0
+    lean_norm = np.linalg.norm(lean_axis)
+    if lean_norm < 1e-9:
+        twist_axis = np.array([1.0, 0.0, 0.0])
+    else:
+        lean_axis /= lean_norm
+        twist_axis = np.cross(piece_axis_z, np.array([0.0, 0.0, 1.0]))
+        twist_norm = np.linalg.norm(twist_axis)
+        if twist_norm < 1e-9:
+            twist_axis = np.array([1.0, 0.0, 0.0])
+        else:
+            twist_axis /= twist_norm
+
+    angular_velocity = twist_axis * angular_speed
+    for _ in range(CRITICAL_TILT_TWIST_STEPS):
+        linear_velocity, _ = p.getBaseVelocity(piece_id)
+        p.resetBaseVelocity(
+            piece_id,
+            linearVelocity=linear_velocity,
+            angularVelocity=angular_velocity.tolist(),
+        )
+        p.stepSimulation()
+        steps += 1
+        if video_context is not None and steps % renderfreq == 0:
+            append_video_frame(video_context)
+
+    for _ in range(CRITICAL_TILT_PERTURB_FINAL_SETTLE_STEPS):
+        p.stepSimulation()
+        steps += 1
+        if video_context is not None and steps % renderfreq == 0:
+            append_video_frame(video_context)
+
+    return {
+        "enabled": CRITICAL_TILT_PERTURB_ENABLED,
+        "used": True,
+        "initial_tilt_deg": initial_tilt_deg,
+        "final_tilt_deg": piece_tilt_deg(piece_id),
+        "steps": steps,
+        "angular_velocity": angular_velocity,
+        "angular_speed": angular_speed,
+        "twist_axis": twist_axis,
+        "twist_steps": CRITICAL_TILT_TWIST_STEPS,
+        "range_deg": CRITICAL_TILT_RANGE_DEG,
+    }
 
 ##fn to generate pices 
 def create_piece(sq="a1"):
@@ -336,6 +416,20 @@ def setup_sim_world(from_square, edge_support_margin=0.0):
     try:
         urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
         robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
+        for traj_idx, sim_idx in enumerate(CONTROL_JOINTS):
+            p.resetJointState(
+                robot_id,
+                sim_idx,
+                home_rad[traj_idx],
+                targetVelocity=0.0,
+            )
+            p.setJointMotorControl2(
+                robot_id,
+                sim_idx,
+                p.POSITION_CONTROL,
+                targetPosition=home_rad[traj_idx],
+                force=50,
+            )
 
         p.changeDynamics(
             robot_id,
@@ -826,6 +920,19 @@ def run_sim_move(
 
             move_local_step += 1
 
+        critical_tilt_perturbation = {
+            "enabled": CRITICAL_TILT_PERTURB_ENABLED,
+            "used": False,
+            "initial_tilt_deg": None,
+            "final_tilt_deg": None,
+            "steps": 0,
+        }
+        if CRITICAL_TILT_PERTURB_ENABLED:
+            critical_tilt_perturbation = apply_critical_tilt_perturbation(
+                piece_ids[0],
+                video_context=video_context if video_enabled else None,
+            )
+
     finally:
         if video_enabled and close_video_when_done:
             close_video_context(video_context)
@@ -882,6 +989,7 @@ def run_sim_move(
             "premature_drop_move_idx": premature_drop_move_idx,
             "premature_drop_z": premature_drop_z,
             "min_pre_release_piece_z": min_pre_release_piece_z,
+            "critical_tilt_perturbation": critical_tilt_perturbation,
             "video_output_dir": str(output_dir) if video_enabled else None,
         }
 

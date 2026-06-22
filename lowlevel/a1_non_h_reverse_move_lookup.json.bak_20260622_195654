@@ -1,0 +1,3216 @@
+{
+  "metadata": {
+    "board_origin": [
+      0.25,
+      0.0,
+      0.0
+    ],
+    "configured_grasp_offset_overrides_by_source": {
+      "a1": {}
+    },
+    "default_grasp_offset_by_source": {
+      "a1": [
+        -0.016,
+        -0.001,
+        -0.003
+      ]
+    },
+    "default_move_steps_per_waypoint": 50,
+    "default_placement_lower_steps": 10,
+    "destination_files": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ],
+    "destination_ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "excluded_destinations": [
+      "source_square",
+      "h1-h8"
+    ],
+    "fallback_correction_gain": 0.5,
+    "fallback_grasp_grid_enabled": true,
+    "fallback_grasp_grid_xy_delta": 0.003,
+    "fallback_grasp_grid_xy_steps": [
+      -1,
+      0,
+      1
+    ],
+    "final_tilt_target_deg": 15.0,
+    "fk_error_threshold": 0.025,
+    "from_square": "a1",
+    "generated_at": "2026-06-21T07:57:18.349465+00:00",
+    "initial_grasp_defaults_loaded_count": 48,
+    "initial_grasp_defaults_path": "/Users/zhg603/Documents/OXAI/lowlevel/initial_grasp_defaults_across_ranks.json",
+    "long_move_step_destination_files": [
+      "a",
+      "b"
+    ],
+    "long_move_step_min_square_distance": 5,
+    "long_move_steps_per_waypoint": 100,
+    "lookup_edge_support_margin": 0.08,
+    "piece_dynamics": {
+      "angularDamping": 0.01,
+      "lateralFriction": 1.0,
+      "linearDamping": 0.02,
+      "rollingFriction": 0.001,
+      "spinningFriction": 0.001
+    },
+    "relaxed_placement_lower_steps_by_to_square": {
+      "a1": 2,
+      "a2": 2,
+      "a3": 2,
+      "a4": 2,
+      "a5": 2,
+      "a6": 2,
+      "a7": 2,
+      "a8": 2,
+      "b1": 2,
+      "b2": 2,
+      "b3": 2,
+      "b4": 2,
+      "b5": 2,
+      "b6": 2,
+      "b7": 2,
+      "b8": 2
+    },
+    "source": "lowlevel/build_general_nonh_reverse_lookup.py",
+    "source_squares": [
+      "a1"
+    ],
+    "trajectory_mode": "direct",
+    "xy_correction_target_error": 0.001
+  },
+  "moves": {
+    "a1_to_a2": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0001031656026439186,
+          0.00014810300026490218,
+          3.379866056365652
+        ],
+        "final_tilt_deg": 0.00018049186820830163,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.020773559895701288,
+          0.0038270899317481874,
+          -0.0043120663687292934
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003981423857792889,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.0014928544536900192,
+        "video_output_dir": null,
+        "xy_error": 0.00022892080682868004,
+        "z_error": 0.015010012203856837
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.020773559895701288,
+        0.0038270899317481874,
+        -0.0043120663687292934
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a2",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a3": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00010479110606740239,
+          -6.585442587322431e-05,
+          12.356348097369661
+        ],
+        "final_tilt_deg": 0.00012376478995199323,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.02167380850339859,
+          0.0029515742996087755,
+          -0.004281380549760922
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0041873738391373,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.0039979588262622524,
+        "video_output_dir": null,
+        "xy_error": 0.0004348692310658029,
+        "z_error": 0.015010018432285988
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.02167380850339859,
+        0.0029515742996087755,
+        -0.004281380549760922
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a3",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a4": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 4,
+        "final_euler_deg": [
+          -0.00010328699300826615,
+          0.0001584754007353879,
+          23.964702782318447
+        ],
+        "final_tilt_deg": 0.00018916240967158313,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.02460858579448583,
+          0.009740636557658257,
+          -0.006335763821005997
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004583142477865766,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.00989931340945412,
+        "video_output_dir": null,
+        "xy_error": 0.0008306418883065667,
+        "z_error": 0.0150100023582368
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.02460858579448583,
+        0.009740636557658257,
+        -0.006335763821005997
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a4",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a5": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 2,
+        "final_euler_deg": [
+          6.797854809142281e-05,
+          0.00013028262899466469,
+          29.779815185668674
+        ],
+        "final_tilt_deg": 0.00014695078982906637,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.019414693185780086,
+          0.006056539617292087,
+          -0.005080256764964361
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004181421086523807,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.012710731532532556,
+        "video_output_dir": null,
+        "xy_error": 0.0004289183892648689,
+        "z_error": 0.01501001078903575
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.019414693185780086,
+        0.006056539617292087,
+        -0.005080256764964361
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a5",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a6": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 4,
+        "final_euler_deg": [
+          -0.0001867946056279867,
+          0.0001556068703255376,
+          31.43760345880688
+        ],
+        "final_tilt_deg": 0.00024311719909043592,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01917490503107964,
+          -0.003952305419013031,
+          -0.005913331460849836
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003939505839541224,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.017473051179132323,
+        "video_output_dir": null,
+        "xy_error": 0.00018700625431638645,
+        "z_error": 0.01500999834089935
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01917490503107964,
+        -0.003952305419013031,
+        -0.005913331460849836
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a6",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a7": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 2,
+        "final_euler_deg": [
+          -0.00014820200126775343,
+          0.0001772371215940959,
+          31.017767441434543
+        ],
+        "final_tilt_deg": 0.00023103373585421912,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01904308855375184,
+          -0.0036228248388150783,
+          -0.005606299461441047
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004021426779076679,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.020927880451603077,
+        "video_output_dir": null,
+        "xy_error": 0.00026892635105670433,
+        "z_error": 0.015010001712079897
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01904308855375184,
+        -0.0036228248388150783,
+        -0.005606299461441047
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a7",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_a8": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 2,
+        "final_euler_deg": [
+          -5.5407877732143735e-05,
+          6.598146170704172e-05,
+          28.73894166333902
+        ],
+        "final_tilt_deg": 8.6159256073396e-05,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01880164155498359,
+          -0.004110472387387416,
+          -0.005440649569979281
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038823481463099983,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.016681894158406416,
+        "video_output_dir": null,
+        "xy_error": 0.00012984579950801216,
+        "z_error": 0.015010009387207944
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01880164155498359,
+        -0.004110472387387416,
+        -0.005440649569979281
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "a8",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_b1": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0005064144280618472,
+          8.009634101320956e-05,
+          1.7554538381177085
+        ],
+        "final_tilt_deg": 0.0005127093795540865,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01813819058806028,
+          0.01164007405745904,
+          0.0004243852567208089
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004687135170961111,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 0.0009346200323840412,
+        "z_error": 0.015010060554308279
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01813819058806028,
+        0.01164007405745904,
+        0.0004243852567208089
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "b1",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_b4": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 5,
+        "final_euler_deg": [
+          0.0003523845958617254,
+          0.0001927339394585206,
+          14.255295018809136
+        ],
+        "final_tilt_deg": 0.00040164855401399755,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.019486928615399458,
+          0.010747386692470457,
+          0.001397513722553025
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004624249535595315,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.005609037883513,
+        "video_output_dir": null,
+        "xy_error": 0.0008717438664977626,
+        "z_error": 0.015010022676390209
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.019486928615399458,
+        0.010747386692470457,
+        0.001397513722553025
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "b4",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_b5": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0008976376024749237,
+          0.00023920492084137708,
+          24.87770467616922
+        ],
+        "final_tilt_deg": 0.0009289630098107036,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01318510073481199,
+          0.006565904597856539,
+          -9.415509171786362e-05
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003931575302036871,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.006382965449550199,
+        "video_output_dir": null,
+        "xy_error": 0.00017906160806878253,
+        "z_error": 0.015010054775872354
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01318510073481199,
+        0.006565904597856539,
+        -9.415509171786362e-05
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "b5",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_b6": {
+      "from_square": "a1",
+      "grasp_offset_source": "fallback_grid_override",
+      "grasp_selection": {
+        "attempts": [
+          {
+            "grasp_offset": [
+              -0.019,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": -1,
+            "metrics": {
+              "correction_gain": 1.0,
+              "correction_pass": "grid_dx-1_dy-1_direct",
+              "correction_round": 1,
+              "final_euler_deg": [
+                7.872573889567565e-05,
+                -5.184690592924971e-05,
+                45.558855179834346
+              ],
+              "final_tilt_deg": 9.426372505806948e-05,
+              "move_steps_per_waypoint": 100,
+              "pickup_success": true,
+              "place_offset": [
+                -0.015779084012261996,
+                0.004372106234530664,
+                -0.0016725258760450367
+              ],
+              "placement_lower_steps": 2,
+              "premature_drop": true,
+              "reject_reason": null,
+              "relaxed_lowering_move_step_multiplier": 5,
+              "score": 0.00446659207433628,
+              "slow_waypoint_indices": [
+                27,
+                28
+              ],
+              "trajectory_fk_error": 0.006273228875430415,
+              "video_output_dir": null,
+              "xy_error": 0.0007140906305233776,
+              "z_error": 0.015010005775251613
+            },
+            "reject_reason": null,
+            "success": true
+          },
+          {
+            "grasp_offset": [
+              -0.019,
+              -0.001,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              0.0,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": 0,
+            "metrics": null,
+            "reject_reason": "correction_exhausted",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.019,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              0.003,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.016,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              0.0,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": 0,
+            "grid_dy": -1,
+            "metrics": {
+              "correction_gain": 0.5,
+              "correction_pass": "grid_dx0_dy-1_damped",
+              "correction_round": 4,
+              "final_euler_deg": [
+                -0.00024237158394178437,
+                0.0003537647262526671,
+                39.37254536428901
+              ],
+              "final_tilt_deg": 0.00042882815899944324,
+              "move_steps_per_waypoint": 100,
+              "pickup_success": true,
+              "place_offset": [
+                -0.016283497118381837,
+                0.002417731884766423,
+                -0.0029906915741970833
+              ],
+              "placement_lower_steps": 2,
+              "premature_drop": true,
+              "reject_reason": null,
+              "relaxed_lowering_move_step_multiplier": 5,
+              "score": 0.004275389924713619,
+              "slow_waypoint_indices": [
+                27,
+                28
+              ],
+              "trajectory_fk_error": 0.006239641192304436,
+              "video_output_dir": null,
+              "xy_error": 0.0005228899443194732,
+              "z_error": 0.015009999921576585
+            },
+            "reject_reason": null,
+            "success": true
+          },
+          {
+            "grasp_offset": [
+              -0.016,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              0.0,
+              0.003,
+              0.0
+            ],
+            "grid_dx": 0,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": -1,
+            "metrics": {
+              "correction_gain": 1.0,
+              "correction_pass": "grid_dx1_dy-1_direct",
+              "correction_round": 5,
+              "final_euler_deg": [
+                -0.0004992604001240076,
+                -0.0009630917715641496,
+                34.49102733236971
+              ],
+              "final_tilt_deg": 0.0010848073617713313,
+              "move_steps_per_waypoint": 100,
+              "pickup_success": true,
+              "place_offset": [
+                -0.015055424438926828,
+                -0.0003276222237577867,
+                -0.0026412730377127396
+              ],
+              "placement_lower_steps": 2,
+              "premature_drop": true,
+              "reject_reason": null,
+              "relaxed_lowering_move_step_multiplier": 5,
+              "score": 0.0044155102181571955,
+              "slow_waypoint_indices": [
+                27,
+                28
+              ],
+              "trajectory_fk_error": 0.005891696168899669,
+              "video_output_dir": null,
+              "xy_error": 0.0006629975284834279,
+              "z_error": 0.015010050758695069
+            },
+            "reject_reason": null,
+            "success": true
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              -0.001,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              0.0,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": 0,
+            "metrics": {
+              "correction_gain": 1.0,
+              "correction_pass": "grid_dx1_dy0_direct",
+              "correction_round": 3,
+              "final_euler_deg": [
+                -0.0009099443928449172,
+                0.000559465159400599,
+                42.242542221678264
+              ],
+              "final_tilt_deg": 0.0010681759271381822,
+              "move_steps_per_waypoint": 100,
+              "pickup_success": true,
+              "place_offset": [
+                -0.01550431516445838,
+                0.008076845826669449,
+                -0.0014162080072235143
+              ],
+              "placement_lower_steps": 2,
+              "premature_drop": true,
+              "reject_reason": null,
+              "relaxed_lowering_move_step_multiplier": 5,
+              "score": 0.004023551656446296,
+              "slow_waypoint_indices": [
+                27,
+                28
+              ],
+              "trajectory_fk_error": 0.006500120106212667,
+              "video_output_dir": null,
+              "xy_error": 0.000271047934008712,
+              "z_error": 0.015010014889750335
+            },
+            "reject_reason": null,
+            "success": true
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              0.003,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          }
+        ],
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "grid_xy_delta": 0.003,
+        "grid_xy_steps": [
+          -1,
+          0,
+          1
+        ],
+        "is_override": true,
+        "reason": "default_grasp_failed",
+        "selected_grasp_offset": [
+          -0.013000000000000001,
+          -0.001,
+          -0.003
+        ],
+        "selected_grid_delta": [
+          0.003,
+          0.0,
+          0.0
+        ],
+        "selected_grid_dx": 1,
+        "selected_grid_dy": 0,
+        "source": "fallback_grid_override",
+        "successful_candidate_count": 4
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "grid_dx1_dy0_direct",
+        "correction_round": 3,
+        "final_euler_deg": [
+          -0.0009099443928449172,
+          0.000559465159400599,
+          42.242542221678264
+        ],
+        "final_tilt_deg": 0.0010681759271381822,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01550431516445838,
+          0.008076845826669449,
+          -0.0014162080072235143
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004023551656446296,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.006500120106212667,
+        "video_output_dir": null,
+        "xy_error": 0.000271047934008712,
+        "z_error": 0.015010014889750335
+      },
+      "reversed_grasp_offset": [
+        -0.013000000000000001,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01550431516445838,
+        0.008076845826669449,
+        -0.0014162080072235143
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.013000000000000001,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "b6",
+      "uses_grasp_offset_override": true,
+      "video_output_dir": null
+    },
+    "a1_to_b7": {
+      "from_square": "a1",
+      "grasp_offset_source": "fallback_grid_override",
+      "grasp_selection": {
+        "attempts": [
+          {
+            "grasp_offset": [
+              -0.019,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": -1,
+            "metrics": null,
+            "reject_reason": "correction_exhausted",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.019,
+              -0.001,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              0.0,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": 0,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.019,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              -0.003,
+              0.003,
+              0.0
+            ],
+            "grid_dx": -1,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.016,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              0.0,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": 0,
+            "grid_dy": -1,
+            "metrics": null,
+            "reject_reason": "correction_exhausted",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.016,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              0.0,
+              0.003,
+              0.0
+            ],
+            "grid_dx": 0,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              -0.004,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              -0.003,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": -1,
+            "metrics": null,
+            "reject_reason": "correction_exhausted",
+            "success": false
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              -0.001,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              0.0,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": 0,
+            "metrics": {
+              "correction_gain": 1.0,
+              "correction_pass": "grid_dx1_dy0_direct",
+              "correction_round": 5,
+              "final_euler_deg": [
+                0.000749446463904098,
+                0.00028297940934939893,
+                69.37177897648297
+              ],
+              "final_tilt_deg": 0.0008010913127399669,
+              "move_steps_per_waypoint": 100,
+              "pickup_success": true,
+              "place_offset": [
+                -0.010348564738078665,
+                0.010224586935635528,
+                -0.0023913544587237942
+              ],
+              "placement_lower_steps": 2,
+              "premature_drop": true,
+              "reject_reason": null,
+              "relaxed_lowering_move_step_multiplier": 5,
+              "score": 0.004076696385723457,
+              "slow_waypoint_indices": [
+                27,
+                28
+              ],
+              "trajectory_fk_error": 0.006930395016024511,
+              "video_output_dir": null,
+              "xy_error": 0.00032419096391822917,
+              "z_error": 0.01501002168722091
+            },
+            "reject_reason": null,
+            "success": true
+          },
+          {
+            "grasp_offset": [
+              -0.013000000000000001,
+              0.002,
+              -0.003
+            ],
+            "grid_delta": [
+              0.003,
+              0.003,
+              0.0
+            ],
+            "grid_dx": 1,
+            "grid_dy": 1,
+            "metrics": null,
+            "reject_reason": "trajectory_fk_error_too_large",
+            "success": false
+          }
+        ],
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "grid_xy_delta": 0.003,
+        "grid_xy_steps": [
+          -1,
+          0,
+          1
+        ],
+        "is_override": true,
+        "reason": "default_grasp_failed",
+        "selected_grasp_offset": [
+          -0.013000000000000001,
+          -0.001,
+          -0.003
+        ],
+        "selected_grid_delta": [
+          0.003,
+          0.0,
+          0.0
+        ],
+        "selected_grid_dx": 1,
+        "selected_grid_dy": 0,
+        "source": "fallback_grid_override",
+        "successful_candidate_count": 1
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "grid_dx1_dy0_direct",
+        "correction_round": 5,
+        "final_euler_deg": [
+          0.000749446463904098,
+          0.00028297940934939893,
+          69.37177897648297
+        ],
+        "final_tilt_deg": 0.0008010913127399669,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.010348564738078665,
+          0.010224586935635528,
+          -0.0023913544587237942
+        ],
+        "placement_lower_steps": 2,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004076696385723457,
+        "slow_waypoint_indices": [
+          27,
+          28
+        ],
+        "trajectory_fk_error": 0.006930395016024511,
+        "video_output_dir": null,
+        "xy_error": 0.00032419096391822917,
+        "z_error": 0.01501002168722091
+      },
+      "reversed_grasp_offset": [
+        -0.013000000000000001,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.010348564738078665,
+        0.010224586935635528,
+        -0.0023913544587237942
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.013000000000000001,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "b7",
+      "uses_grasp_offset_override": true,
+      "video_output_dir": null
+    },
+    "a1_to_c1": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00033786440695706267,
+          -0.0002084712555026064,
+          1.4509047074460917
+        ],
+        "final_tilt_deg": 0.00039700474550778534,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.018422733307193333,
+          0.0035109163014924107,
+          -0.004564366841142307
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038319854381982394,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 7.948358174396211e-05,
+        "z_error": 0.01501000742581711
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.018422733307193333,
+        0.0035109163014924107,
+        -0.004564366841142307
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c1",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c2": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.00011399301534966595,
+          0.0004888802352905827,
+          3.131691312244634
+        ],
+        "final_tilt_deg": 0.0005019942194587173,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.0181415606299103,
+          0.0034889419563271158,
+          -0.004564808270579249
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.00385533304649774,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 0.0001028316849548627,
+        "z_error": 0.01501000544617151
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.0181415606299103,
+        0.0034889419563271158,
+        -0.004564808270579249
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c2",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c3": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -4.200001434747847e-05,
+          -0.0011067646215241183,
+          5.694376273078262
+        ],
+        "final_tilt_deg": 0.001107561297286084,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017762265247966917,
+          0.003506820728974563,
+          -0.004534334008096977
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037605555784082593,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0019314652827300757,
+        "video_output_dir": null,
+        "xy_error": 8.0282925533142e-06,
+        "z_error": 0.01501010914341978
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017762265247966917,
+        0.003506820728974563,
+        -0.004534334008096977
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c3",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c4": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.0002916613474387057,
+          0.0008118682427144225,
+          7.736769927988235
+        ],
+        "final_tilt_deg": 0.0008626680341932946,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.019134378292194554,
+          0.0035685137420859263,
+          -0.004632582091462589
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003811360840341297,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.004313118352291264,
+        "video_output_dir": null,
+        "xy_error": 5.8857928835122527e-05,
+        "z_error": 0.0150100116460247
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.019134378292194554,
+        0.0035685137420859263,
+        -0.004632582091462589
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c4",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c5": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.001101212871172704,
+          -0.0003962711751675949,
+          15.390117921011967
+        ],
+        "final_tilt_deg": 0.0011703421268584194,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.016984004272871306,
+          0.00021640381359939933,
+          -0.004969671708793057
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038766060644142134,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.006397496597483194,
+        "video_output_dir": null,
+        "xy_error": 0.00012410077281838997,
+        "z_error": 0.015010021166383294
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.016984004272871306,
+        0.00021640381359939933,
+        -0.004969671708793057
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c5",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c6": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 2,
+        "final_euler_deg": [
+          6.642831066605898e-05,
+          -0.00015880137149139982,
+          20.031861837569394
+        ],
+        "final_tilt_deg": 0.00017213440320663635,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.016924706169271057,
+          -0.0017090042596100206,
+          -0.005140305705278433
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.00380082705035193,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.008542810715211941,
+        "video_output_dir": null,
+        "xy_error": 4.8326640174706836e-05,
+        "z_error": 0.015010001640708894
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.016924706169271057,
+        -0.0017090042596100206,
+        -0.005140305705278433
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c6",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c7": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0003902110936801876,
+          0.00016605181510361626,
+          21.786830454806577
+        ],
+        "final_tilt_deg": 0.0004240729024024414,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017153361006840576,
+          -0.0026027021618370864,
+          -0.005154093680552871
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004451238104320835,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.010812501385408036,
+        "video_output_dir": null,
+        "xy_error": 0.0006987377655969974,
+        "z_error": 0.015010001354895348
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017153361006840576,
+        -0.0026027021618370864,
+        -0.005154093680552871
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c7",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_c8": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.0007387005222874042,
+          0.0005251488799314541,
+          22.679587774415584
+        ],
+        "final_tilt_deg": 0.0009063441631311002,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017373793213287747,
+          -0.004631431099685696,
+          -0.005243406122300174
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004055351891036546,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.011757230236621653,
+        "video_output_dir": null,
+        "xy_error": 0.00030283824597020475,
+        "z_error": 0.015010054580265365
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017373793213287747,
+        -0.004631431099685696,
+        -0.005243406122300174
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "c8",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d1": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.0002028438254761702,
+          0.00017576413847962202,
+          1.8668430053458436
+        ],
+        "final_tilt_deg": 0.00026840014642499427,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01819525662585253,
+          0.003846985177810014,
+          -0.004482142933159251
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038370992610835416,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 8.459824292981459e-05,
+        "z_error": 0.015010004072614908
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01819525662585253,
+        0.003846985177810014,
+        -0.004482142933159251
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d1",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d2": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0003799740925041201,
+          -0.0003491939895234762,
+          3.2135866299662617
+        ],
+        "final_tilt_deg": 0.0005160586762579378,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01795766845678965,
+          0.0036650620545268077,
+          -0.004520957040722345
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037920334485719884,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 3.9530436184436574e-05,
+        "z_error": 0.015010012049550207
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01795766845678965,
+        0.0036650620545268077,
+        -0.004520957040722345
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d2",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d3": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.00039540750867197104,
+          -0.00031568150196421504,
+          4.556054175823465
+        ],
+        "final_tilt_deg": 0.0005059666053986477,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017314227450745123,
+          0.003546707337966851,
+          -0.004507790762184177
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003780003198862849,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.001309486782884196,
+        "video_output_dir": null,
+        "xy_error": 2.7503284591613494e-05,
+        "z_error": 0.015009999657084942
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017314227450745123,
+        0.003546707337966851,
+        -0.004507790762184177
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d3",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d4": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0004622871583943807,
+          -0.00034036950367235115,
+          5.866407814973662
+        ],
+        "final_tilt_deg": 0.0005740737428771117,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.018969586822332907,
+          0.0035085307158116068,
+          -0.004657139481483524
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037979582337651164,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.003097680744294986,
+        "video_output_dir": null,
+        "xy_error": 4.545676091930274e-05,
+        "z_error": 0.015010005891383255
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.018969586822332907,
+        0.0035085307158116068,
+        -0.004657139481483524
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d4",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d5": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.0007688977656180302,
+          -0.00035740423983913425,
+          7.742598123381395
+        ],
+        "final_tilt_deg": 0.0008479042681065016,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.019166145288973754,
+          0.0030936662772627632,
+          -0.004797756530030255
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003788398643673707,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.005314200892476043,
+        "video_output_dir": null,
+        "xy_error": 3.589588985207823e-05,
+        "z_error": 0.015010011015286515
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.019166145288973754,
+        0.0030936662772627632,
+        -0.004797756530030255
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d5",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d6": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0007782740953270078,
+          0.0007239917921996652,
+          13.952830282558534
+        ],
+        "final_tilt_deg": 0.0010629557329533254,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.016954418656775518,
+          -0.00041715428580657533,
+          -0.00498290111818128
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038583038370517088,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.006695907340648767,
+        "video_output_dir": null,
+        "xy_error": 0.00010580163584324535,
+        "z_error": 0.015010008804833854
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.016954418656775518,
+        -0.00041715428580657533,
+        -0.00498290111818128
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d6",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d7": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00015271606810675866,
+          0.0012891710321734893,
+          19.821104397332185
+        ],
+        "final_tilt_deg": 0.0012981849383615067,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01748411378102326,
+          -0.002968405526193372,
+          -0.00527052622498018
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004275824248286505,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.008180717603122143,
+        "video_output_dir": null,
+        "xy_error": 0.0005233075573825584,
+        "z_error": 0.015010066763615788
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01748411378102326,
+        -0.002968405526193372,
+        -0.00527052622498018
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d7",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_d8": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.00031948655783397694,
+          -7.270915483191847e-05,
+          17.625610190689788
+        ],
+        "final_tilt_deg": 0.0003276555899722453,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.016831848861729993,
+          -0.0025531343697945547,
+          -0.005020677565892444
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0038824279155601697,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.010429577729914905,
+        "video_output_dir": null,
+        "xy_error": 0.0001299218781960604,
+        "z_error": 0.015010024149456437
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.016831848861729993,
+        -0.0025531343697945547,
+        -0.005020677565892444
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "d8",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e1": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.0001919348151700165,
+          0.0002953861594395101,
+          2.009787798998148
+        ],
+        "final_tilt_deg": 0.0003522672547541938,
+        "move_steps_per_waypoint": 50,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017810547317837714,
+          0.004530447485704164,
+          -0.004292143923846817
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003948336626219397,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 0.0001958363590619152,
+        "z_error": 0.015010001068629927
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017810547317837714,
+        0.004530447485704164,
+        -0.004292143923846817
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e1",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e2": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00021894134874341715,
+          -0.0004429730203124858,
+          2.937828315883973
+        ],
+        "final_tilt_deg": 0.0004941262460559825,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017330210832513335,
+          0.004200966638900466,
+          -0.004357580688302253
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.00394695978164781,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0007121319901244818,
+        "video_output_dir": null,
+        "xy_error": 0.00019445835734444044,
+        "z_error": 0.015010005697213478
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017330210832513335,
+        0.004200966638900466,
+        -0.004357580688302253
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e2",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e3": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00019533419324602603,
+          0.00010070211549244369,
+          4.2224614151542195
+        ],
+        "final_tilt_deg": 0.0002197650514575005,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017179996084337023,
+          0.00379522500627451,
+          -0.0044344555260714714
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037785744699841612,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.0009777273094533857,
+        "video_output_dir": null,
+        "xy_error": 2.6074772597586318e-05,
+        "z_error": 0.0150099987895463
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017179996084337023,
+        0.00379522500627451,
+        -0.0044344555260714714
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e3",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e4": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00036650633467984493,
+          0.00043454945201984083,
+          5.052545368762224
+        ],
+        "final_tilt_deg": 0.0005684715761202796,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01910268761758955,
+          0.0037604903528676735,
+          -0.004630193189621398
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037898555445605143,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.002186926070652024,
+        "video_output_dir": null,
+        "xy_error": 3.735499905089363e-05,
+        "z_error": 0.015010002182038483
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01910268761758955,
+        0.0037604903528676735,
+        -0.004630193189621398
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e4",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e5": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 0.5,
+        "correction_pass": "default_damped",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.0005695862442709736,
+          -0.0004556578306119351,
+          11.035866146940903
+        ],
+        "final_tilt_deg": 0.0007294195547504223,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.017768091804229478,
+          0.0010649839051506587,
+          -0.004928350203802488
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.004449852620814206,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.00362544793176096,
+        "video_output_dir": null,
+        "xy_error": 0.0006973381276423263,
+        "z_error": 0.015010057972687521
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.017768091804229478,
+        0.0010649839051506587,
+        -0.004928350203802488
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e5",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e6": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 2,
+        "final_euler_deg": [
+          0.00037801823047040766,
+          0.0005714760630658527,
+          12.225394589991097
+        ],
+        "final_tilt_deg": 0.0006851877937715296,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.016898624300032212,
+          8.897913124786294e-05,
+          -0.0049142865535356135
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.0037986279564910983,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.005218939185217032,
+        "video_output_dir": null,
+        "xy_error": 4.6125929392345937e-05,
+        "z_error": 0.01501000810839501
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.016898624300032212,
+        8.897913124786294e-05,
+        -0.0049142865535356135
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e6",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e7": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          -0.00031796845826094494,
+          -0.000985878978850853,
+          17.637950355984582
+        ],
+        "final_tilt_deg": 0.0010358867702637364,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.01651777673390362,
+          -0.0019370388456538558,
+          -0.005022003077639886
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003915197652722846,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.006574134232773321,
+        "video_output_dir": null,
+        "xy_error": 0.00016268928111956796,
+        "z_error": 0.01501003348641311
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.01651777673390362,
+        -0.0019370388456538558,
+        -0.005022003077639886
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e7",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    },
+    "a1_to_e8": {
+      "from_square": "a1",
+      "grasp_offset_source": "default",
+      "grasp_selection": {
+        "base_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "is_override": false,
+        "selected_grasp_offset": [
+          -0.016,
+          -0.001,
+          -0.003
+        ],
+        "source": "default"
+      },
+      "metrics": {
+        "correction_gain": 1.0,
+        "correction_pass": "default_direct",
+        "correction_round": 1,
+        "final_euler_deg": [
+          0.00021762806963243676,
+          0.0005699564134133892,
+          16.29771116246617
+        ],
+        "final_tilt_deg": 0.0006100922147740269,
+        "move_steps_per_waypoint": 100,
+        "pickup_success": true,
+        "place_offset": [
+          -0.015810352874052965,
+          -0.002008519026404102,
+          -0.004774886329295928
+        ],
+        "placement_lower_steps": 10,
+        "premature_drop": true,
+        "reject_reason": null,
+        "relaxed_lowering_move_step_multiplier": 5,
+        "score": 0.003907284203572954,
+        "slow_waypoint_indices": [],
+        "trajectory_fk_error": 0.007823551497374239,
+        "video_output_dir": null,
+        "xy_error": 0.0001547882628048097,
+        "z_error": 0.015009983763072578
+      },
+      "reversed_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "selected_grasp_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "selected_place_offset": [
+        -0.015810352874052965,
+        -0.002008519026404102,
+        -0.004774886329295928
+      ],
+      "selected_release_wrist_delta_deg": [
+        0.0,
+        0.0
+      ],
+      "source_grasp_offset": [
+        -0.016,
+        -0.001,
+        -0.003
+      ],
+      "success": true,
+      "to_square": "e8",
+      "uses_grasp_offset_override": false,
+      "video_output_dir": null
+    }
+  }
+}
