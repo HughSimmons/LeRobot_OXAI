@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,14 +51,51 @@ def normalize_square_sequence(config_name, squares):
     return squares
 
 
+def source_squares_from_env(default_squares):
+    raw_value = os.environ.get("SOURCE_SQUARES")
+    if raw_value is None or not raw_value.strip():
+        return normalize_square_sequence("SOURCE_SQUARES", default_squares)
+
+    squares = tuple(
+        square.strip()
+        for square in raw_value.replace(",", " ").split()
+        if square.strip()
+    )
+    return normalize_square_sequence("SOURCE_SQUARES", squares)
+
+
+def target_moves_from_env():
+    raw_value = os.environ.get("TARGET_MOVES")
+    if raw_value is None or not raw_value.strip():
+        return None
+
+    moves = []
+    for move in raw_value.replace(",", " ").split():
+        move = move.strip()
+        if not move:
+            continue
+        parts = move.split("_to_")
+        if len(parts) != 2:
+            raise ValueError(
+                f"TARGET_MOVES contains invalid move {move!r}; "
+                "use values like 'f1_to_b6'"
+            )
+        from_square, to_square = normalize_square_sequence(
+            "TARGET_MOVES",
+            tuple(parts),
+        )
+        moves.append((from_square, to_square))
+    return tuple(moves)
+
+
 # SOURCE_SQUARES = normalize_square_sequence(
 #     "SOURCE_SQUARES",
 #     ("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8"),
 # )
-SOURCE_SQUARES = normalize_square_sequence(
-    "SOURCE_SQUARES",
+SOURCE_SQUARES = source_squares_from_env(
     ("e2"),
 )
+TARGET_MOVES = target_moves_from_env()
 
 LOOKUP_TO_FILES = tuple("abcde")
 LOOKUP_TO_RANKS = range(1, 9)
@@ -133,8 +171,21 @@ GRASP_OFFSET_OVERRIDES_BY_SOURCE = {
 DIRECT_PLACE_CORRECTION_ROUNDS = 4
 FALLBACK_CORRECTION_GAIN = 0.5
 FALLBACK_GRASP_GRID_ENABLED = True
+FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS = True
+FALLBACK_GRASP_GRID_ORDER = "nearest_physical_delta"
 FALLBACK_GRASP_GRID_XY_DELTA = 0.003
 FALLBACK_GRASP_GRID_XY_STEPS = (-1, 0, 1)
+EXPANDED_GRASP_GRID_ALL_MOVES = True
+EXPANDED_GRASP_GRID_MOVES = {
+    ("f1", "b6"),
+    ("f1", "b7"),
+    ("f1", "c8"),
+    ("d6", "a6"),
+}
+EXPANDED_GRASP_GRID_XY_STEPS = (-2, -1, 0, 1, 2)
+EXPANDED_GRASP_GRID_Z_DELTA = 0.002
+EXPANDED_GRASP_GRID_Z_STEPS = (-1, 0, 1)
+EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3 = True
 REUSE_EXISTING_SUCCESSFUL_MOVES = True
 DONOR_BRIDGE_FALLBACK_ENABLED = True
 DONOR_BRIDGE_INTERPOLATION_STEPS = 5
@@ -170,6 +221,9 @@ def move_key(from_square, to_square):
 
 
 def lookup_moves():
+    if TARGET_MOVES is not None:
+        return TARGET_MOVES
+
     return tuple(
         (from_square, f"{file}{rank}")
         for from_square in SOURCE_SQUARES
@@ -203,20 +257,65 @@ def configured_grasp_offset_for_lookup(from_square, to_square):
     }
 
 
-def fallback_grasp_grid_offsets(base_grasp_offset):
-    for dx in FALLBACK_GRASP_GRID_XY_STEPS:
-        for dy in FALLBACK_GRASP_GRID_XY_STEPS:
-            delta = np.array([
-                dx * FALLBACK_GRASP_GRID_XY_DELTA,
-                dy * FALLBACK_GRASP_GRID_XY_DELTA,
-                0.0,
-            ])
-            yield {
-                "grid_dx": dx,
-                "grid_dy": dy,
-                "grid_delta": delta,
-                "grasp_offset": base_grasp_offset + delta,
-            }
+def uses_expanded_grasp_grid(from_square, to_square):
+    return (
+        EXPANDED_GRASP_GRID_ALL_MOVES
+        or (from_square, to_square) in EXPANDED_GRASP_GRID_MOVES
+    )
+
+
+def fallback_grasp_grid_offsets(base_grasp_offset, from_square=None, to_square=None):
+    expanded_grid = uses_expanded_grasp_grid(from_square, to_square)
+    xy_steps = (
+        EXPANDED_GRASP_GRID_XY_STEPS
+        if expanded_grid
+        else FALLBACK_GRASP_GRID_XY_STEPS
+    )
+    z_steps = EXPANDED_GRASP_GRID_Z_STEPS if expanded_grid else (0,)
+
+    candidates = []
+    for dx in xy_steps:
+        for dy in xy_steps:
+            for dz in z_steps:
+                # The targeted expanded grid is for rerunning known failures; skip
+                # the default and original 3x3 XY grid already tested for them.
+                if (
+                    expanded_grid
+                    and EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3
+                    and dz == 0
+                    and dx in FALLBACK_GRASP_GRID_XY_STEPS
+                    and dy in FALLBACK_GRASP_GRID_XY_STEPS
+                ):
+                    continue
+                delta = np.array([
+                    dx * FALLBACK_GRASP_GRID_XY_DELTA,
+                    dy * FALLBACK_GRASP_GRID_XY_DELTA,
+                    dz * EXPANDED_GRASP_GRID_Z_DELTA,
+                ])
+                candidates.append({
+                    "grid_dx": dx,
+                    "grid_dy": dy,
+                    "grid_dz": dz,
+                    "grid_delta": delta,
+                    "grasp_offset": base_grasp_offset + delta,
+                    "grid_mode": "expanded" if expanded_grid else "default",
+                })
+
+    def candidate_sort_key(candidate):
+        dx = candidate["grid_dx"]
+        dy = candidate["grid_dy"]
+        dz = candidate["grid_dz"]
+        delta = candidate["grid_delta"]
+        return (
+            float(np.dot(delta, delta)),
+            abs(dx) + abs(dy) + abs(dz),
+            abs(dz),
+            dx,
+            dy,
+            dz,
+        )
+
+    yield from sorted(candidates, key=candidate_sort_key)
 
 
 def json_safe(value):
@@ -287,6 +386,8 @@ def summarize_grid_attempt(attempt):
     return {
         "grid_dx": attempt["grid_dx"],
         "grid_dy": attempt["grid_dy"],
+        "grid_dz": attempt.get("grid_dz", 0),
+        "grid_mode": attempt.get("grid_mode", "default"),
         "grid_delta": json_safe(attempt["grid_delta"]),
         "grasp_offset": json_safe(attempt["grasp_offset"]),
         "success": bool(attempt["calibration"].get("success")),
@@ -407,6 +508,14 @@ def build_metadata():
         "trajectory_mode": "direct",
         "from_square": single_source_square,
         "source_squares": list(SOURCE_SQUARES),
+        "target_moves": (
+            [
+                move_key(from_square, to_square)
+                for from_square, to_square in TARGET_MOVES
+            ]
+            if TARGET_MOVES is not None
+            else None
+        ),
         "destination_files": list(LOOKUP_TO_FILES),
         "destination_ranks": list(LOOKUP_TO_RANKS),
         "excluded_destinations": ["source_square", "h1-h8"],
@@ -421,8 +530,23 @@ def build_metadata():
             GRASP_OFFSET_OVERRIDES_BY_SOURCE
         ),
         "fallback_grasp_grid_enabled": FALLBACK_GRASP_GRID_ENABLED,
+        "fallback_grasp_grid_stops_on_first_success": (
+            FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS
+        ),
+        "fallback_grasp_grid_order": FALLBACK_GRASP_GRID_ORDER,
         "fallback_grasp_grid_xy_delta": FALLBACK_GRASP_GRID_XY_DELTA,
         "fallback_grasp_grid_xy_steps": list(FALLBACK_GRASP_GRID_XY_STEPS),
+        "expanded_grasp_grid_all_moves": EXPANDED_GRASP_GRID_ALL_MOVES,
+        "expanded_grasp_grid_moves": [
+            move_key(from_square, to_square)
+            for from_square, to_square in sorted(EXPANDED_GRASP_GRID_MOVES)
+        ],
+        "expanded_grasp_grid_xy_steps": list(EXPANDED_GRASP_GRID_XY_STEPS),
+        "expanded_grasp_grid_z_delta": EXPANDED_GRASP_GRID_Z_DELTA,
+        "expanded_grasp_grid_z_steps": list(EXPANDED_GRASP_GRID_Z_STEPS),
+        "expanded_grasp_grid_skips_default_3x3": (
+            EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3
+        ),
         "reuse_existing_successful_moves": REUSE_EXISTING_SUCCESSFUL_MOVES,
         "donor_bridge_fallback_enabled": DONOR_BRIDGE_FALLBACK_ENABLED,
         "donor_bridge_interpolation_steps": DONOR_BRIDGE_INTERPOLATION_STEPS,
@@ -1070,6 +1194,7 @@ def run_correction_pass(
     pass_label,
 ):
     place_offset = PLACE_OFFSET.copy()
+    saw_trajectory_fk_error = False
 
     for correction_round in range(0, DIRECT_PLACE_CORRECTION_ROUNDS + 1):
         result = run_direct_move_in_fresh_world(
@@ -1089,6 +1214,8 @@ def run_correction_pass(
         result["correction_pass"] = pass_label
         result["correction_gain"] = correction_gain
         result["correction_round"] = correction_round
+        if result.get("reject_reason") == "trajectory_fk_error_too_large":
+            saw_trajectory_fk_error = True
         print(
             f"{pass_label}_round={correction_round} | "
             f"gain={correction_gain} | "
@@ -1120,6 +1247,7 @@ def run_correction_pass(
                 "selected_place_offset": place_offset.copy(),
                 "success": True,
                 "stopped_early": True,
+                "saw_trajectory_fk_error": saw_trajectory_fk_error,
             }
 
         if not bool(result.get("pickup_success", False)):
@@ -1129,6 +1257,7 @@ def run_correction_pass(
                 "success": False,
                 "stopped_early": True,
                 "reject_reason": "pickup_failed",
+                "saw_trajectory_fk_error": saw_trajectory_fk_error,
             }
 
         if result.get("reject_reason") is not None:
@@ -1138,6 +1267,7 @@ def run_correction_pass(
                 "success": False,
                 "stopped_early": True,
                 "reject_reason": result.get("reject_reason"),
+                "saw_trajectory_fk_error": saw_trajectory_fk_error,
             }
 
         position_error = np.array(result.get("position_error", np.full(3, np.nan)))
@@ -1148,6 +1278,7 @@ def run_correction_pass(
                 "success": False,
                 "stopped_early": True,
                 "reject_reason": "invalid_position_error",
+                "saw_trajectory_fk_error": saw_trajectory_fk_error,
             }
 
         place_offset = apply_direct_place_correction(
@@ -1165,6 +1296,7 @@ def run_correction_pass(
         "success": False,
         "stopped_early": False,
         "reject_reason": "correction_exhausted",
+        "saw_trajectory_fk_error": saw_trajectory_fk_error,
     }
 
 
@@ -1183,7 +1315,10 @@ def calibrate_with_grasp_offset(from_square, to_square, grasp_offset, pass_prefi
     )
     if (
         not calibration["success"]
-        and calibration.get("reject_reason") == "trajectory_fk_error_too_large"
+        and (
+            calibration.get("reject_reason") == "trajectory_fk_error_too_large"
+            or calibration.get("saw_trajectory_fk_error")
+        )
         and DONOR_BRIDGE_FALLBACK_ENABLED
     ):
         print(
@@ -1291,13 +1426,22 @@ def calibrate_direct_move(from_square, to_square):
         return calibration
 
     base_grasp_offset = default_grasp_offset_for_source(from_square)
+    expanded_grid = uses_expanded_grasp_grid(from_square, to_square)
     print(
         f"{from_square}->{to_square}: default grasp failed; "
-        "running fallback 3x3 XY grasp grid"
+        + (
+            "running targeted expanded XYZ grasp grid"
+            if expanded_grid
+            else "running fallback 3x3 XY grasp grid"
+        )
     )
     grid_attempts = []
     successful_attempts = []
-    for grid_candidate in fallback_grasp_grid_offsets(base_grasp_offset):
+    for grid_candidate in fallback_grasp_grid_offsets(
+        base_grasp_offset,
+        from_square=from_square,
+        to_square=to_square,
+    ):
         candidate_grasp_offset = grid_candidate["grasp_offset"]
         if np.allclose(candidate_grasp_offset, grasp_offset):
             continue
@@ -1309,6 +1453,7 @@ def calibrate_direct_move(from_square, to_square):
             pass_prefix=(
                 "grid_"
                 f"dx{grid_candidate['grid_dx']}_dy{grid_candidate['grid_dy']}"
+                f"_dz{grid_candidate.get('grid_dz', 0)}"
             ),
         )
         attempt = {
@@ -1319,15 +1464,10 @@ def calibrate_direct_move(from_square, to_square):
 
         if candidate_calibration["success"]:
             successful_attempts.append(attempt)
+            if FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS:
+                break
 
     if successful_attempts:
-        successful_attempts.sort(
-            key=lambda attempt: (
-                float(attempt["calibration"]["selected_result"].get("score", np.inf)),
-                float(attempt["calibration"]["selected_result"].get("xy_error", np.inf)),
-                float(attempt["calibration"]["selected_result"].get("final_tilt_deg", np.inf)),
-            )
-        )
         selected_attempt = successful_attempts[0]
         selected_grid_delta = selected_attempt["grid_delta"]
         selected_calibration = selected_attempt["calibration"]
@@ -1339,9 +1479,26 @@ def calibrate_direct_move(from_square, to_square):
             "selected_grasp_offset": selected_attempt["grasp_offset"].copy(),
             "selected_grid_dx": selected_attempt["grid_dx"],
             "selected_grid_dy": selected_attempt["grid_dy"],
+            "selected_grid_dz": selected_attempt.get("grid_dz", 0),
             "selected_grid_delta": selected_grid_delta.copy(),
+            "selected_grid_mode": selected_attempt.get("grid_mode", "default"),
             "grid_xy_delta": FALLBACK_GRASP_GRID_XY_DELTA,
-            "grid_xy_steps": tuple(FALLBACK_GRASP_GRID_XY_STEPS),
+            "grid_xy_steps": (
+                tuple(EXPANDED_GRASP_GRID_XY_STEPS)
+                if expanded_grid
+                else tuple(FALLBACK_GRASP_GRID_XY_STEPS)
+            ),
+            "grid_z_delta": EXPANDED_GRASP_GRID_Z_DELTA if expanded_grid else 0.0,
+            "grid_z_steps": (
+                tuple(EXPANDED_GRASP_GRID_Z_STEPS)
+                if expanded_grid
+                else (0,)
+            ),
+            "skipped_known_failed_default_3x3": (
+                expanded_grid and EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3
+            ),
+            "grid_order": FALLBACK_GRASP_GRID_ORDER,
+            "stopped_on_first_success": FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS,
             "successful_candidate_count": len(successful_attempts),
             "attempts": [
                 summarize_grid_attempt(grid_attempt)
@@ -1354,6 +1511,8 @@ def calibrate_direct_move(from_square, to_square):
         **grasp_selection,
         "fallback_grid_attempted": True,
         "fallback_grid_success": False,
+        "fallback_grid_order": FALLBACK_GRASP_GRID_ORDER,
+        "fallback_grid_stops_on_first_success": FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS,
         "attempts": [
             summarize_grid_attempt(grid_attempt)
             for grid_attempt in grid_attempts
