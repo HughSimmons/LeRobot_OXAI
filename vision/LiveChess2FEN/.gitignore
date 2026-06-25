@@ -1,0 +1,10 @@
+# PyCharm .idea folder
+.idea/
+
+# Python cache files
+*.pyc
+**/__pycache__/
+.pytest_cache/
+
+# Virtual environment
+venv/
