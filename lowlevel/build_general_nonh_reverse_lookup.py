@@ -97,9 +97,11 @@ SOURCE_SQUARES = source_squares_from_env(
 )
 TARGET_MOVES = target_moves_from_env()
 
-LOOKUP_TO_FILES = tuple("abcde")
+LOOKUP_TO_FILES = tuple("abcdef")
 LOOKUP_TO_RANKS = range(1, 9)
 
+# Previous broad default before histogram review:
+# DEFAULT_SOURCE_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002])
 DEFAULT_SOURCE_GRASP_OFFSET = np.array([-0.014, 0.002, -0.003])
 INITIAL_GRASP_DEFAULTS_PATH = (
     Path(__file__).resolve().parent

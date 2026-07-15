@@ -49,7 +49,9 @@ squares = [
 #     -0.002
 # ])
 
-SOURCE_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002])
+# Previous standalone default before non-h lookup histogram review:
+# SOURCE_GRASP_OFFSET = np.array([-0.011, 0.002, -0.002])
+SOURCE_GRASP_OFFSET = np.array([-0.014, 0.002, -0.003])
 SOURCE_GRASP_OFFSET_OVERRIDES = {
     ("f2", "e1"): np.array([-0.011, 0.002, -0.003]),
 }
@@ -73,7 +75,9 @@ GRASP_OFFSET = SOURCE_GRASP_OFFSET.copy()
 #     0
 # ])
 
+# Previous standalone/default placement candidates:
 # PLACE_OFFSET = GRASP_OFFSET.copy()
+# PLACE_OFFSET = np.array([-0.015, 0.005, 0.0])
 PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 

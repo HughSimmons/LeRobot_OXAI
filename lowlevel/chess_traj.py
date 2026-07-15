@@ -1292,6 +1292,10 @@ def pickupmove_traj(
 
         for intermediate_joints in placement_lower_path:
             intermediate_joints = intermediate_joints.copy()
+            intermediate_joints[WRIST_ROLL_IDX] = nearest_equivalent_angle_deg(
+                intermediate_joints[WRIST_ROLL_IDX],
+                current[WRIST_ROLL_IDX]
+            )
             intermediate_joints[5] = gripper_angle_closed
             jntslist.append(intermediate_joints)
             current = intermediate_joints.copy()

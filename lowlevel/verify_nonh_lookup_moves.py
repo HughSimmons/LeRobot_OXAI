@@ -10,16 +10,16 @@ import multisim_chess_fast as sim
 
 
 DEFAULT_MOVES = (
-    "d6_to_a5",
-    "d6_to_a6",
-    "d6_to_a7",
-    "e7_to_a5",
-    "e6_to_a5",
-    "e5_to_a6",
-    "f1_to_a4",
-    "f1_to_b6",
-    "f1_to_b7",
-    "f1_to_c8",
+    "c3_to_d8",
+    # "d6_to_a6",
+    # "d6_to_a7",
+    # "e7_to_a5",
+    # "e6_to_a5",
+    # "e5_to_a6",
+    # "f1_to_a4",
+    # "f1_to_b6",
+    # "f1_to_b7",
+    # "f1_to_c8",
 )
 
 
