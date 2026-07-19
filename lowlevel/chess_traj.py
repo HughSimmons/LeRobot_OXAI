@@ -487,6 +487,15 @@ home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65
 from testkinematics import kinematics
 homexyz = kinematics.forward_kinematics(home)[:3,3]
 
+DEFAULT_LIFT_HEIGHT = 0.13
+H_FILE_LIFT_HEIGHT = 0.09
+
+
+def lift_height_for_square(square, default_height=DEFAULT_LIFT_HEIGHT):
+    if isinstance(square, str) and len(square) == 2 and square[0] == "h":
+        return H_FILE_LIFT_HEIGHT
+    return default_height
+
 def pickupmove_traj_old(from_square, to_square, board_origin, GRASP_OFFSET):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
@@ -1045,6 +1054,7 @@ def pickupmove_traj(
     PLACE_OFFSET,
     traj_metrics=None,
     placement_lower_steps=10,
+    lift_height=None,
 ):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
@@ -1053,7 +1063,11 @@ def pickupmove_traj(
     global home
     # 1. Move to home
     # height = 0.23  # height to lift above squares
-    height = 0.13  # height to lift above squares
+    height = (
+        lift_height
+        if lift_height is not None
+        else lift_height_for_square(to_square)
+    )
     # height = 0.03  # height to lift above squares
     # height = 0.11  # height to lift above squares
 
@@ -1432,6 +1446,7 @@ def pickupmove_traj_with_metrics(
     GRASP_OFFSET,
     PLACE_OFFSET,
     placement_lower_steps=10,
+    lift_height=None,
 ):
     traj_metrics = {
         "max_fk_error": 0.0,
@@ -1440,7 +1455,10 @@ def pickupmove_traj_with_metrics(
         "segments": {},
         "release_target_xyz": None,
         "release_target_z": None,
+        "lift_height": lift_height_for_square(to_square),
     }
+    if lift_height is not None:
+        traj_metrics["lift_height"] = float(lift_height)
 
     jntslist, closeidx = pickupmove_traj(
         from_square,
@@ -1450,6 +1468,7 @@ def pickupmove_traj_with_metrics(
         PLACE_OFFSET,
         traj_metrics=traj_metrics,
         placement_lower_steps=placement_lower_steps,
+        lift_height=lift_height,
     )
 
     return jntslist, closeidx, traj_metrics
@@ -1458,6 +1477,7 @@ def calib_board(
     board_origin,
     GRASP_OFFSET=np.array([0,0,0]),
     PLACE_OFFSET=np.array([0,0,0]),
+    lift_height=None,
 ):
     """
     Calibrate the 4 corners of the board, returning a list of joint trajectories to each corner.
@@ -1471,7 +1491,11 @@ def calib_board(
     alljntslist = []
     for sq in sqlist:
         print(f"Calibrating square {sq}...")
-        height = 0.13  # height to lift above squares
+        height = (
+            lift_height
+            if lift_height is not None
+            else lift_height_for_square(sq)
+        )
         jntslist = []
         # far_rows = ["f","g", "h"]
         far_rows = ["e","f","g", "h"]

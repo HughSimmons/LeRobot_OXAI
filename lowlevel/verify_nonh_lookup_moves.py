@@ -45,6 +45,7 @@ def run_saved_entry(move_key, entry, output_dir):
     metrics = entry.get("metrics", {})
     grasp_offset = np.array(entry["source_grasp_offset"], dtype=float)
     place_offset = np.array(entry["selected_place_offset"], dtype=float)
+    lift_height = metrics.get("lift_height", builder.lift_height_for_square(to_square))
     move_steps = int(
         metrics.get("move_steps_per_waypoint")
         or builder.move_steps_per_waypoint_for_lookup(from_square, to_square)
@@ -57,16 +58,35 @@ def run_saved_entry(move_key, entry, output_dir):
     trajectory_override = None
     saved_donor = metrics.get("trajectory_fallback_source")
     replay_mode = "direct"
-    if saved_donor:
+    bridge_rebuild_error = None
+    saved_bridge_fallback = metrics.get("bridge_fallback")
+    if isinstance(saved_bridge_fallback, dict):
+        trajectory_override, reject_reason = builder.build_saved_bridge_override(
+            from_square,
+            to_square,
+            grasp_offset,
+            place_offset,
+            saved_bridge_fallback,
+            lift_height=lift_height,
+        )
+        if trajectory_override is None:
+            bridge_rebuild_error = reject_reason
+            replay_mode = "direct_fallback_after_saved_bridge_rebuild_failed"
+        else:
+            replay_mode = "saved_bridge"
+    elif saved_donor:
         trajectory_override, reject_reason = builder.build_bridge_override_for_move(
             from_square,
             to_square,
             grasp_offset,
             place_offset,
+            lift_height=lift_height,
         )
         if trajectory_override is None:
-            raise RuntimeError(f"{move_key}: could not rebuild donor bridge: {reject_reason}")
-        replay_mode = "donor_bridge"
+            bridge_rebuild_error = reject_reason
+            replay_mode = "direct_fallback_after_bridge_rebuild_failed"
+        else:
+            replay_mode = "donor_bridge"
 
     world = builder.setup_sim_world(
         from_square,
@@ -86,6 +106,7 @@ def run_saved_entry(move_key, entry, output_dir):
             move_steps_per_waypoint=move_steps,
             placement_lower_steps=placement_lower_steps,
             video_context=video_context,
+            lift_height=lift_height,
         )
         result["score"] = sim.score_place_result(result)
         if trajectory_override is not None:
@@ -98,6 +119,7 @@ def run_saved_entry(move_key, entry, output_dir):
         "move_key": move_key,
         "replay_mode": replay_mode,
         "saved_donor": saved_donor,
+        "bridge_rebuild_error": bridge_rebuild_error,
         "replayed_donor": result.get("trajectory_fallback_source"),
         "verified_success": builder.direct_result_is_suitable(result),
         "reject_reason": result.get("reject_reason"),

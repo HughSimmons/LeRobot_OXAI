@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pybullet as p
 
-from chess_traj import pickupmove_traj_with_metrics
+from chess_traj import lift_height_for_square, pickupmove_traj_with_metrics
 from visualize_lookup_success import default_output_path, render_svg
 
 from multisim_chess_fast import (
@@ -360,6 +360,7 @@ def summarize_result(result):
         "trajectory_fk_error",
         "move_steps_per_waypoint",
         "placement_lower_steps",
+        "lift_height",
         "relaxed_lowering_move_step_multiplier",
         "slow_waypoint_indices",
         "pickup_success",
@@ -378,6 +379,7 @@ def summarize_result(result):
         "trajectory_fallback_bridge_waypoints",
         "trajectory_fallback_donor_fk_error",
         "trajectory_fallback_donor_score",
+        "bridge_fallback",
         "critical_tilt_perturbation",
     )
     return {
@@ -775,6 +777,7 @@ def build_donor_bridge_override(
     grasp_offset,
     place_offset,
     donor,
+    lift_height=None,
 ):
     failing_movelist, failing_closeidx, failing_metrics = pickupmove_traj_with_metrics(
         from_square,
@@ -783,6 +786,7 @@ def build_donor_bridge_override(
         GRASP_OFFSET=grasp_offset,
         PLACE_OFFSET=place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
     )
     donor_movelist, _, donor_metrics = pickupmove_traj_with_metrics(
         donor["from_square"],
@@ -791,6 +795,7 @@ def build_donor_bridge_override(
         GRASP_OFFSET=donor["source_grasp_offset"],
         PLACE_OFFSET=place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
     )
 
     failing_above_bounds = segment_bounds(failing_metrics, "destination_above_place")
@@ -851,16 +856,134 @@ def build_donor_bridge_override(
             "donor_from_square": donor["from_square"],
             "donor_to_square": donor["to_square"],
             "donor_distance": donor["distance"],
+            "donor_source_grasp_offset": donor["source_grasp_offset"].copy(),
+            "donor_selected_place_offset": donor["selected_place_offset"].copy(),
             "donor_trajectory_fk_error": donor["trajectory_fk_error"],
             "donor_score": donor["score"],
             "donor_xy_error": donor["xy_error"],
             "bridge_interpolation_steps": DONOR_BRIDGE_INTERPOLATION_STEPS,
             "bridge_inserted_waypoints": len(bridge),
+            "bridge_waypoints": [joints.copy() for joints in bridge],
+            "failing_prefix_end": failing_prefix_end,
+            "donor_suffix_start": donor_suffix_start,
+            "failing_prefix_last_joints": prefix[-1].copy(),
+            "donor_suffix_first_joints": suffix[0].copy(),
             "failing_original_fk_error": finite_float(
                 failing_metrics.get("max_fk_error"),
                 0.0,
             ),
             "failing_prefix_fk_error": original_prefix_error,
+            "bridged_fk_error": bridged_fk_error,
+        },
+    }
+    return {
+        "movelist": bridged_movelist,
+        "closeidx": failing_closeidx,
+        "traj_metrics": bridged_metrics,
+    }, None
+
+
+def build_saved_bridge_override(
+    from_square,
+    to_square,
+    grasp_offset,
+    place_offset,
+    bridge_fallback,
+    lift_height=None,
+):
+    if not isinstance(bridge_fallback, dict):
+        return None, "missing_saved_bridge_fallback"
+
+    donor_from_square = bridge_fallback.get("donor_from_square")
+    donor_to_square = bridge_fallback.get("donor_to_square")
+    donor_grasp_offset = parse_vector(bridge_fallback.get("donor_source_grasp_offset"))
+    donor_place_offset = parse_vector(bridge_fallback.get("donor_selected_place_offset"))
+    bridge_waypoints = bridge_fallback.get("bridge_waypoints")
+    failing_prefix_end = bridge_fallback.get("failing_prefix_end")
+    donor_suffix_start = bridge_fallback.get("donor_suffix_start")
+
+    if (
+        not isinstance(donor_from_square, str)
+        or not isinstance(donor_to_square, str)
+        or donor_grasp_offset is None
+        or donor_place_offset is None
+    ):
+        return None, "invalid_saved_bridge_fallback"
+
+    failing_movelist, failing_closeidx, failing_metrics = pickupmove_traj_with_metrics(
+        from_square,
+        to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=grasp_offset,
+        PLACE_OFFSET=place_offset,
+        placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
+    )
+    donor_movelist, _, donor_metrics = pickupmove_traj_with_metrics(
+        donor_from_square,
+        donor_to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=donor_grasp_offset,
+        PLACE_OFFSET=donor_place_offset,
+        placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
+    )
+
+    if (
+        not isinstance(failing_prefix_end, int)
+        or not isinstance(donor_suffix_start, int)
+        or failing_prefix_end <= 0
+        or donor_suffix_start >= len(donor_movelist)
+    ):
+        return None, "invalid_saved_bridge_bounds"
+
+    prefix = [np.array(joints).copy() for joints in failing_movelist[:failing_prefix_end]]
+    suffix = [np.array(joints).copy() for joints in donor_movelist[donor_suffix_start:]]
+    if not prefix or not suffix:
+        return None, "empty_saved_bridge_segment"
+
+    if isinstance(bridge_waypoints, list) and bridge_waypoints:
+        bridge = [np.array(joints, dtype=float).copy() for joints in bridge_waypoints]
+    else:
+        bridge = make_joint_bridge(
+            prefix[-1],
+            suffix[0],
+            int(bridge_fallback.get("bridge_interpolation_steps", DONOR_BRIDGE_INTERPOLATION_STEPS)),
+        )
+    bridged_movelist = prefix + bridge + suffix
+    bridged_fk_error = max(
+        prefix_fk_error(failing_metrics),
+        finite_float(donor_metrics.get("max_fk_error"), 0.0),
+    )
+    if bridged_fk_error > MAX_TRAJECTORY_FK_ERROR:
+        return None, "bridged_fk_error_too_large"
+
+    bridged_metrics = {
+        **donor_metrics,
+        "max_fk_error": bridged_fk_error,
+        "fk_error_events": [
+            event
+            for event in failing_metrics.get("fk_error_events", [])
+            if isinstance(event, dict)
+            and not str(event.get("stage", "")).endswith("_above_place")
+            and not str(event.get("stage", "")).endswith("_lower_place")
+        ] + list(donor_metrics.get("fk_error_events", [])),
+        "slow_waypoint_indices": shifted_slow_waypoint_indices(
+            donor_metrics,
+            donor_suffix_start,
+            len(prefix) + len(bridge),
+        ),
+        "segments": {},
+        "bridge_fallback": {
+            **bridge_fallback,
+            "enabled": True,
+            "reason": bridge_fallback.get("reason", "saved_bridge_replay"),
+            "bridge_inserted_waypoints": len(bridge),
+            "failing_original_fk_error": finite_float(
+                failing_metrics.get("max_fk_error"),
+                0.0,
+            ),
+            "failing_prefix_fk_error": prefix_fk_error(failing_metrics),
             "bridged_fk_error": bridged_fk_error,
         },
     }
@@ -928,6 +1051,7 @@ def run_direct_move_once(
     record_video=True,
     video_label=None,
     trajectory_override=None,
+    lift_height=None,
 ):
     result = run_sim_move(
         world,
@@ -941,6 +1065,7 @@ def run_direct_move_once(
         trajectory_override=trajectory_override,
         move_steps_per_waypoint=move_steps_per_waypoint,
         placement_lower_steps=placement_lower_steps,
+        lift_height=lift_height,
     )
     result["score"] = score_place_result(result)
     return result
@@ -956,6 +1081,7 @@ def run_direct_move_in_fresh_world(
     record_video=True,
     video_label=None,
     trajectory_override=None,
+    lift_height=None,
 ):
     world = setup_sim_world(
         from_square,
@@ -973,6 +1099,7 @@ def run_direct_move_in_fresh_world(
             record_video=record_video,
             video_label=video_label,
             trajectory_override=trajectory_override,
+            lift_height=lift_height,
         )
     finally:
         p.removeState(world["state_id"])
@@ -996,6 +1123,8 @@ def annotate_bridge_result(result, override):
     if result is None or override is None:
         return result
     bridge_fallback = override.get("traj_metrics", {}).get("bridge_fallback", {})
+    if bridge_fallback:
+        result["bridge_fallback"] = bridge_fallback
     result["trajectory_fallback_source"] = bridge_fallback.get("donor_key")
     result["trajectory_fallback_reason"] = bridge_fallback.get("reason")
     result["trajectory_fallback_donor_distance"] = bridge_fallback.get("donor_distance")
@@ -1014,6 +1143,7 @@ def build_bridge_override_for_move(
     to_square,
     grasp_offset,
     place_offset,
+    lift_height=None,
 ):
     if not DONOR_BRIDGE_FALLBACK_ENABLED:
         return None, "donor_bridge_disabled"
@@ -1028,6 +1158,7 @@ def build_bridge_override_for_move(
         grasp_offset,
         place_offset,
         donor,
+        lift_height=lift_height,
     )
     if override is None:
         return None, reject_reason
@@ -1044,6 +1175,7 @@ def run_bridged_direct_move_in_fresh_world(
     placement_lower_steps,
     record_video=True,
     video_label=None,
+    lift_height=None,
 ):
     override, reject_reason = build_bridge_override_for_move(
         from_square,
@@ -1085,6 +1217,7 @@ def run_bridged_direct_move_in_fresh_world(
         record_video=record_video,
         video_label=video_label,
         trajectory_override=override,
+        lift_height=lift_height,
     )
     return annotate_bridge_result(result, override)
 
@@ -1097,6 +1230,7 @@ def run_bridged_correction_pass(
     placement_lower_steps,
     correction_gain,
     pass_label,
+    lift_height=None,
 ):
     donor = select_bridge_donor(from_square, to_square)
     if donor is None:
@@ -1124,6 +1258,7 @@ def run_bridged_correction_pass(
                 if correction_round == 0
                 else f"{pass_label}_bridge_corrected_round_{correction_round}"
             ),
+            lift_height=lift_height,
         )
         result["correction_pass"] = pass_label
         result["correction_gain"] = correction_gain
@@ -1150,6 +1285,7 @@ def run_bridged_correction_pass(
                 placement_lower_steps,
                 record_video=False,
                 video_label=f"{pass_label}_final_bridge_lookup",
+                lift_height=lift_height,
             )
             selected_result["correction_pass"] = pass_label
             selected_result["correction_gain"] = correction_gain
@@ -1230,6 +1366,7 @@ def run_correction_pass(
     placement_lower_steps,
     correction_gain,
     pass_label,
+    lift_height=None,
 ):
     place_offset = PLACE_OFFSET.copy()
     saw_trajectory_fk_error = False
@@ -1248,6 +1385,7 @@ def run_correction_pass(
                 if correction_round == 0
                 else f"{pass_label}_placement_corrected_round_{correction_round}"
             ),
+            lift_height=lift_height,
         )
         result["correction_pass"] = pass_label
         result["correction_gain"] = correction_gain
@@ -1276,6 +1414,7 @@ def run_correction_pass(
                 placement_lower_steps,
                 record_video=False,
                 video_label=f"{pass_label}_final_corrected_lookup",
+                lift_height=lift_height,
             )
             selected_result["correction_pass"] = pass_label
             selected_result["correction_gain"] = correction_gain
@@ -1353,6 +1492,7 @@ def calibrate_with_grasp_offset(
     to_square,
     grasp_offset,
     pass_prefix,
+    lift_height=None,
 ):
     move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(from_square, to_square)
     placement_lower_steps = placement_lower_steps_for_lookup(to_square)
@@ -1365,6 +1505,7 @@ def calibrate_with_grasp_offset(
         placement_lower_steps,
         correction_gain=1.0,
         pass_label=f"{pass_prefix}_direct",
+        lift_height=lift_height,
     )
     if (
         not calibration["success"]
@@ -1386,6 +1527,7 @@ def calibrate_with_grasp_offset(
             placement_lower_steps,
             correction_gain=1.0,
             pass_label=f"{pass_prefix}_bridge",
+            lift_height=lift_height,
         )
     # if (
     #     not calibration["success"]
@@ -1472,6 +1614,7 @@ def calibrate_direct_move(from_square, to_square):
         to_square,
         grasp_offset,
         pass_prefix="default",
+        lift_height=lift_height_for_square(to_square),
     )
     calibration["grasp_selection"] = grasp_selection
 

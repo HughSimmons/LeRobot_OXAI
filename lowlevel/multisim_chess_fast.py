@@ -590,6 +590,7 @@ def run_sim_move(
     restore_state=True,
     video_context=None,
     placement_lower_steps=10,
+    lift_height=None,
 ):
     if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
@@ -616,6 +617,7 @@ def run_sim_move(
             GRASP_OFFSET=grasp_offset,
             PLACE_OFFSET=active_place_offset,
             placement_lower_steps=placement_lower_steps,
+            lift_height=lift_height,
         )
     else:
         movelist = trajectory_override["movelist"]
