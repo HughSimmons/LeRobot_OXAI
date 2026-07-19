@@ -46,6 +46,7 @@ def run_saved_entry(move_key, entry, output_dir):
     grasp_offset = np.array(entry["source_grasp_offset"], dtype=float)
     place_offset = np.array(entry["selected_place_offset"], dtype=float)
     lift_height = metrics.get("lift_height", builder.lift_height_for_square(to_square))
+    lower_place_path_bias = metrics.get("lower_place_path_bias")
     move_steps = int(
         metrics.get("move_steps_per_waypoint")
         or builder.move_steps_per_waypoint_for_lookup(from_square, to_square)
@@ -59,7 +60,23 @@ def run_saved_entry(move_key, entry, output_dir):
     saved_donor = metrics.get("trajectory_fallback_source")
     replay_mode = "direct"
     bridge_rebuild_error = None
+    neighbor_prefix_bias_rebuild_error = None
     saved_bridge_fallback = metrics.get("bridge_fallback")
+    saved_neighbor_prefix_bias_fallback = metrics.get("neighbor_prefix_bias_fallback")
+    if isinstance(saved_neighbor_prefix_bias_fallback, dict):
+        trajectory_override, reject_reason = builder.build_saved_neighbor_prefix_bias_override(
+            from_square,
+            to_square,
+            grasp_offset,
+            place_offset,
+            saved_neighbor_prefix_bias_fallback,
+            lift_height=lift_height,
+        )
+        if trajectory_override is None:
+            neighbor_prefix_bias_rebuild_error = reject_reason
+            replay_mode = "direct_fallback_after_saved_neighbor_prefix_bias_rebuild_failed"
+        else:
+            replay_mode = "saved_neighbor_prefix_bias"
     if isinstance(saved_bridge_fallback, dict):
         trajectory_override, reject_reason = builder.build_saved_bridge_override(
             from_square,
@@ -107,6 +124,7 @@ def run_saved_entry(move_key, entry, output_dir):
             placement_lower_steps=placement_lower_steps,
             video_context=video_context,
             lift_height=lift_height,
+            lower_place_path_bias=lower_place_path_bias,
         )
         result["score"] = sim.score_place_result(result)
         if trajectory_override is not None:
@@ -120,7 +138,10 @@ def run_saved_entry(move_key, entry, output_dir):
         "replay_mode": replay_mode,
         "saved_donor": saved_donor,
         "bridge_rebuild_error": bridge_rebuild_error,
+        "neighbor_prefix_bias_rebuild_error": neighbor_prefix_bias_rebuild_error,
         "replayed_donor": result.get("trajectory_fallback_source"),
+        "neighbor_prefix_bias_fallback": result.get("neighbor_prefix_bias_fallback"),
+        "lower_place_path_bias": result.get("lower_place_path_bias"),
         "verified_success": builder.direct_result_is_suitable(result),
         "reject_reason": result.get("reject_reason"),
         "pickup_success": bool(result.get("pickup_success")),

@@ -1055,6 +1055,7 @@ def pickupmove_traj(
     traj_metrics=None,
     placement_lower_steps=10,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     """
     Move from current_joints to home, then from home to from_square, pick up piece,
@@ -1290,6 +1291,11 @@ def pickupmove_traj(
     # nsteps = 2
     downjnts = []
     stepcnt = 0
+    lower_place_path_bias = (
+        None
+        if lower_place_path_bias is None
+        else np.array(lower_place_path_bias, dtype=float)
+    )
     mark_segment_start(traj_metrics, "destination_lower_place", jntslist)
     if to_square == "f1":
         pickup_lift_path = make_square_pickup_lift_path(
@@ -1322,6 +1328,9 @@ def pickupmove_traj(
                 (1 - alpha) * start_xyz
                 + alpha * target_xyz
             )
+            if lower_place_path_bias is not None:
+                bias_scale = max(0.0, 1.0 - (stepcnt / max(nsteps - 1, 1)))
+                intermediate_xyz = intermediate_xyz + lower_place_path_bias * bias_scale
 
             intermediate_joints = solve_xyz_for_traj(
                 intermediate_xyz,
@@ -1447,6 +1456,7 @@ def pickupmove_traj_with_metrics(
     PLACE_OFFSET,
     placement_lower_steps=10,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     traj_metrics = {
         "max_fk_error": 0.0,
@@ -1459,6 +1469,11 @@ def pickupmove_traj_with_metrics(
     }
     if lift_height is not None:
         traj_metrics["lift_height"] = float(lift_height)
+    if lower_place_path_bias is not None:
+        traj_metrics["lower_place_path_bias"] = np.array(
+            lower_place_path_bias,
+            dtype=float,
+        )
 
     jntslist, closeidx = pickupmove_traj(
         from_square,
@@ -1469,6 +1484,7 @@ def pickupmove_traj_with_metrics(
         traj_metrics=traj_metrics,
         placement_lower_steps=placement_lower_steps,
         lift_height=lift_height,
+        lower_place_path_bias=lower_place_path_bias,
     )
 
     return jntslist, closeidx, traj_metrics

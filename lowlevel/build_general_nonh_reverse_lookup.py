@@ -177,6 +177,7 @@ FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS = True
 FALLBACK_GRASP_GRID_ORDER = "nearest_physical_delta"
 FALLBACK_GRASP_GRID_XY_DELTA = 0.003
 FALLBACK_GRASP_GRID_XY_STEPS = (-1, 0, 1)
+NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR = 0.4
 EXPANDED_GRASP_GRID_ALL_MOVES = True
 EXPANDED_GRASP_GRID_MOVES = {
     ("f1", "b6"),
@@ -380,6 +381,9 @@ def summarize_result(result):
         "trajectory_fallback_donor_fk_error",
         "trajectory_fallback_donor_score",
         "bridge_fallback",
+        "neighbor_bias_fallback",
+        "neighbor_prefix_bias_fallback",
+        "lower_place_path_bias",
         "critical_tilt_perturbation",
     )
     return {
@@ -545,6 +549,7 @@ def build_metadata():
         "fallback_grasp_grid_order": FALLBACK_GRASP_GRID_ORDER,
         "fallback_grasp_grid_xy_delta": FALLBACK_GRASP_GRID_XY_DELTA,
         "fallback_grasp_grid_xy_steps": list(FALLBACK_GRASP_GRID_XY_STEPS),
+        "neighbor_lower_place_path_bias_factor": NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR,
         "expanded_grasp_grid_all_moves": EXPANDED_GRASP_GRID_ALL_MOVES,
         "expanded_grasp_grid_moves": [
             move_key(from_square, to_square)
@@ -719,6 +724,63 @@ def select_bridge_donor(from_square, to_square):
     return candidates[0]
 
 
+def iter_neighbor_successful_candidates(lookup, from_square, to_square):
+    if not isinstance(lookup, dict):
+        return
+
+    moves = lookup.get("moves")
+    if not isinstance(moves, dict):
+        return
+
+    for key, move in moves.items():
+        if not isinstance(move, dict) or not move.get("success"):
+            continue
+        if move.get("from_square") != from_square:
+            continue
+        candidate_to_square = move.get("to_square")
+        if not isinstance(candidate_to_square, str) or len(candidate_to_square) != 2:
+            continue
+        if square_distance(candidate_to_square, to_square) != 1:
+            continue
+
+        metrics = move.get("metrics")
+        if not isinstance(metrics, dict):
+            continue
+
+        selected_place_offset = parse_vector(move.get("selected_place_offset"))
+        source_grasp_offset = parse_vector(move.get("source_grasp_offset"))
+        if selected_place_offset is None or source_grasp_offset is None:
+            continue
+
+        yield {
+            "move_key": key,
+            "from_square": move.get("from_square"),
+            "to_square": candidate_to_square,
+            "source_grasp_offset": source_grasp_offset,
+            "selected_place_offset": selected_place_offset,
+            "score": finite_float(metrics.get("score")),
+            "xy_error": finite_float(metrics.get("xy_error")),
+            "is_bridge_backed": bool(metrics.get("bridge_fallback")),
+            "bridge_fallback": metrics.get("bridge_fallback"),
+        }
+
+
+def select_neighbor_successful_candidate(lookup, from_square, to_square):
+    candidates = list(iter_neighbor_successful_candidates(lookup, from_square, to_square))
+    if not candidates:
+        return None
+
+    candidates.sort(
+        key=lambda candidate: (
+            candidate["is_bridge_backed"],
+            candidate["score"],
+            candidate["xy_error"],
+            candidate["move_key"],
+        )
+    )
+    return candidates[0]
+
+
 def segment_bounds(traj_metrics, name):
     segments = traj_metrics.get("segments")
     if not isinstance(segments, dict):
@@ -769,6 +831,25 @@ def prefix_fk_error(failing_metrics):
             continue
         max_prefix_error = max(max_prefix_error, finite_float(event.get("fk_error"), 0.0))
     return max_prefix_error
+
+
+def suffix_fk_error(target_metrics):
+    max_suffix_error = 0.0
+    suffix_stages = (
+        "_lower_place",
+        "release_settle",
+        "retreat",
+        "return_above_home",
+        "_far_lift_after_release",
+    )
+    for event in target_metrics.get("fk_error_events", []):
+        if not isinstance(event, dict):
+            continue
+        stage = str(event.get("stage", ""))
+        if not stage.endswith(suffix_stages):
+            continue
+        max_suffix_error = max(max_suffix_error, finite_float(event.get("fk_error"), 0.0))
+    return max_suffix_error
 
 
 def build_donor_bridge_override(
@@ -883,6 +964,130 @@ def build_donor_bridge_override(
     }, None
 
 
+def build_neighbor_prefix_bias_override(
+    from_square,
+    to_square,
+    target_grasp_offset,
+    target_place_offset,
+    donor,
+    lower_place_path_bias,
+    lift_height=None,
+):
+    donor_movelist, donor_closeidx, donor_metrics = pickupmove_traj_with_metrics(
+        donor["from_square"],
+        donor["to_square"],
+        board_origin=board_origin,
+        GRASP_OFFSET=donor["source_grasp_offset"],
+        PLACE_OFFSET=donor["selected_place_offset"],
+        placement_lower_steps=placement_lower_steps_for_lookup(donor["to_square"]),
+        lift_height=lift_height,
+    )
+    target_movelist, _, target_metrics = pickupmove_traj_with_metrics(
+        from_square,
+        to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=target_grasp_offset,
+        PLACE_OFFSET=target_place_offset,
+        placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
+        lower_place_path_bias=lower_place_path_bias,
+    )
+
+    donor_above_bounds = segment_bounds(donor_metrics, "destination_above_place")
+    target_lower_bounds = segment_bounds(target_metrics, "destination_lower_place")
+    if donor_above_bounds is None or target_lower_bounds is None:
+        return None, "missing_neighbor_prefix_or_target_lower_segment"
+
+    donor_prefix_end = donor_above_bounds[1]
+    target_suffix_start = target_lower_bounds[0]
+    if donor_prefix_end <= 0 or target_suffix_start >= len(target_movelist):
+        return None, "invalid_neighbor_prefix_or_target_suffix_bounds"
+
+    prefix = [
+        np.array(joints).copy()
+        for joints in donor_movelist[:donor_prefix_end]
+    ]
+    suffix = [
+        np.array(joints).copy()
+        for joints in target_movelist[target_suffix_start:]
+    ]
+    if not prefix or not suffix:
+        return None, "empty_neighbor_prefix_or_target_suffix"
+
+    bridge = make_joint_bridge(
+        prefix[-1],
+        suffix[0],
+        DONOR_BRIDGE_INTERPOLATION_STEPS,
+    )
+    combined_movelist = prefix + bridge + suffix
+    new_suffix_start = len(prefix) + len(bridge)
+
+    donor_prefix_error = prefix_fk_error(donor_metrics)
+    target_suffix_error = suffix_fk_error(target_metrics)
+    combined_fk_error = max(donor_prefix_error, target_suffix_error)
+    if combined_fk_error > MAX_TRAJECTORY_FK_ERROR:
+        return None, "neighbor_prefix_bias_fk_error_too_large"
+
+    combined_metrics = {
+        **target_metrics,
+        "max_fk_error": combined_fk_error,
+        "fk_error_events": [
+            event
+            for event in donor_metrics.get("fk_error_events", [])
+            if isinstance(event, dict)
+            and not str(event.get("stage", "")).endswith("_lower_place")
+        ] + [
+            event
+            for event in target_metrics.get("fk_error_events", [])
+            if isinstance(event, dict)
+            and (
+                str(event.get("stage", "")).endswith("_lower_place")
+                or str(event.get("stage", "")).endswith("release_settle")
+                or str(event.get("stage", "")).endswith("retreat")
+                or str(event.get("stage", "")).endswith("return_above_home")
+                or str(event.get("stage", "")).endswith("_far_lift_after_release")
+            )
+        ],
+        "slow_waypoint_indices": shifted_slow_waypoint_indices(
+            target_metrics,
+            target_suffix_start,
+            new_suffix_start,
+        ),
+        "segments": {},
+        "neighbor_prefix_bias_fallback": {
+            "enabled": True,
+            "reason": "neighbor_success_lower_bias",
+            "donor_key": donor["key"],
+            "donor_file": donor["path"].name,
+            "donor_from_square": donor["from_square"],
+            "donor_to_square": donor["to_square"],
+            "donor_distance": donor["distance"],
+            "donor_source_grasp_offset": donor["source_grasp_offset"].copy(),
+            "donor_selected_place_offset": donor["selected_place_offset"].copy(),
+            "target_from_square": from_square,
+            "target_to_square": to_square,
+            "target_grasp_offset": np.array(target_grasp_offset, dtype=float).copy(),
+            "target_place_offset": np.array(target_place_offset, dtype=float).copy(),
+            "target_lower_place_bias": np.array(lower_place_path_bias, dtype=float).copy(),
+            "target_lower_place_bias_factor": NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR,
+            "bridge_interpolation_steps": DONOR_BRIDGE_INTERPOLATION_STEPS,
+            "bridge_inserted_waypoints": len(bridge),
+            "bridge_waypoints": [joints.copy() for joints in bridge],
+            "donor_prefix_end": donor_prefix_end,
+            "target_suffix_start": target_suffix_start,
+            "target_suffix_new_start": new_suffix_start,
+            "donor_prefix_fk_error": donor_prefix_error,
+            "target_suffix_fk_error": target_suffix_error,
+            "combined_fk_error": combined_fk_error,
+        },
+    }
+    return {
+        "movelist": combined_movelist,
+        "closeidx": donor_closeidx,
+        "traj_metrics": combined_metrics,
+    }, None
+
+
 def build_saved_bridge_override(
     from_square,
     to_square,
@@ -994,6 +1199,143 @@ def build_saved_bridge_override(
     }, None
 
 
+def build_saved_neighbor_prefix_bias_override(
+    from_square,
+    to_square,
+    target_grasp_offset,
+    target_place_offset,
+    neighbor_prefix_bias_fallback,
+    lift_height=None,
+):
+    if not isinstance(neighbor_prefix_bias_fallback, dict):
+        return None, "missing_saved_neighbor_prefix_bias_fallback"
+
+    donor_from_square = neighbor_prefix_bias_fallback.get("donor_from_square")
+    donor_to_square = neighbor_prefix_bias_fallback.get("donor_to_square")
+    donor_grasp_offset = parse_vector(
+        neighbor_prefix_bias_fallback.get("donor_source_grasp_offset")
+    )
+    donor_place_offset = parse_vector(
+        neighbor_prefix_bias_fallback.get("donor_selected_place_offset")
+    )
+    target_lower_place_bias = parse_vector(
+        neighbor_prefix_bias_fallback.get("target_lower_place_bias")
+    )
+    bridge_waypoints = neighbor_prefix_bias_fallback.get("bridge_waypoints")
+    donor_prefix_end = neighbor_prefix_bias_fallback.get("donor_prefix_end")
+    target_suffix_start = neighbor_prefix_bias_fallback.get("target_suffix_start")
+
+    if (
+        not isinstance(donor_from_square, str)
+        or not isinstance(donor_to_square, str)
+        or donor_grasp_offset is None
+        or donor_place_offset is None
+        or target_lower_place_bias is None
+    ):
+        return None, "invalid_saved_neighbor_prefix_bias_fallback"
+
+    donor_movelist, donor_closeidx, donor_metrics = pickupmove_traj_with_metrics(
+        donor_from_square,
+        donor_to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=donor_grasp_offset,
+        PLACE_OFFSET=donor_place_offset,
+        placement_lower_steps=placement_lower_steps_for_lookup(donor_to_square),
+        lift_height=lift_height,
+    )
+    target_movelist, _, target_metrics = pickupmove_traj_with_metrics(
+        from_square,
+        to_square,
+        board_origin=board_origin,
+        GRASP_OFFSET=target_grasp_offset,
+        PLACE_OFFSET=target_place_offset,
+        placement_lower_steps=placement_lower_steps_for_lookup(to_square),
+        lift_height=lift_height,
+        lower_place_path_bias=target_lower_place_bias,
+    )
+
+    if not isinstance(donor_prefix_end, int) or not isinstance(target_suffix_start, int):
+        return None, "invalid_saved_neighbor_prefix_bounds"
+    if donor_prefix_end <= 0 or target_suffix_start >= len(target_movelist):
+        return None, "invalid_saved_neighbor_prefix_bounds"
+
+    prefix = [
+        np.array(joints).copy()
+        for joints in donor_movelist[:donor_prefix_end]
+    ]
+    suffix = [
+        np.array(joints).copy()
+        for joints in target_movelist[target_suffix_start:]
+    ]
+    if not prefix or not suffix:
+        return None, "empty_saved_neighbor_prefix_segment"
+
+    if isinstance(bridge_waypoints, list) and bridge_waypoints:
+        bridge = [np.array(joints, dtype=float).copy() for joints in bridge_waypoints]
+    else:
+        bridge = make_joint_bridge(
+            prefix[-1],
+            suffix[0],
+            int(
+                neighbor_prefix_bias_fallback.get(
+                    "bridge_interpolation_steps",
+                    DONOR_BRIDGE_INTERPOLATION_STEPS,
+                )
+            ),
+        )
+
+    combined_movelist = prefix + bridge + suffix
+    combined_fk_error = max(
+        prefix_fk_error(donor_metrics),
+        suffix_fk_error(target_metrics),
+    )
+    if combined_fk_error > MAX_TRAJECTORY_FK_ERROR:
+        return None, "saved_neighbor_prefix_bias_fk_error_too_large"
+
+    combined_metrics = {
+        **target_metrics,
+        "max_fk_error": combined_fk_error,
+        "fk_error_events": [
+            event
+            for event in donor_metrics.get("fk_error_events", [])
+            if isinstance(event, dict)
+            and not str(event.get("stage", "")).endswith("_lower_place")
+        ] + [
+            event
+            for event in target_metrics.get("fk_error_events", [])
+            if isinstance(event, dict)
+            and (
+                str(event.get("stage", "")).endswith("_lower_place")
+                or str(event.get("stage", "")).endswith("release_settle")
+                or str(event.get("stage", "")).endswith("retreat")
+                or str(event.get("stage", "")).endswith("return_above_home")
+                or str(event.get("stage", "")).endswith("_far_lift_after_release")
+            )
+        ],
+        "slow_waypoint_indices": shifted_slow_waypoint_indices(
+            target_metrics,
+            target_suffix_start,
+            len(prefix) + len(bridge),
+        ),
+        "segments": {},
+        "neighbor_prefix_bias_fallback": {
+            **neighbor_prefix_bias_fallback,
+            "enabled": True,
+            "reason": neighbor_prefix_bias_fallback.get(
+                "reason",
+                "saved_neighbor_prefix_bias_replay",
+            ),
+            "bridge_inserted_waypoints": len(bridge),
+            "combined_fk_error": combined_fk_error,
+        },
+    }
+    return {
+        "movelist": combined_movelist,
+        "closeidx": donor_closeidx,
+        "traj_metrics": combined_metrics,
+    }, None
+
+
 def apply_direct_place_correction(
     from_square,
     to_square,
@@ -1052,6 +1394,7 @@ def run_direct_move_once(
     video_label=None,
     trajectory_override=None,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     result = run_sim_move(
         world,
@@ -1066,6 +1409,7 @@ def run_direct_move_once(
         move_steps_per_waypoint=move_steps_per_waypoint,
         placement_lower_steps=placement_lower_steps,
         lift_height=lift_height,
+        lower_place_path_bias=lower_place_path_bias,
     )
     result["score"] = score_place_result(result)
     return result
@@ -1082,6 +1426,7 @@ def run_direct_move_in_fresh_world(
     video_label=None,
     trajectory_override=None,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     world = setup_sim_world(
         from_square,
@@ -1100,6 +1445,7 @@ def run_direct_move_in_fresh_world(
             video_label=video_label,
             trajectory_override=trajectory_override,
             lift_height=lift_height,
+            lower_place_path_bias=lower_place_path_bias,
         )
     finally:
         p.removeState(world["state_id"])
@@ -1135,6 +1481,65 @@ def annotate_bridge_result(result, override):
         "donor_trajectory_fk_error"
     )
     result["trajectory_fallback_donor_score"] = bridge_fallback.get("donor_score")
+    return result
+
+
+def annotate_neighbor_prefix_bias_result(result, override):
+    if result is None or override is None:
+        return result
+    fallback = override.get("traj_metrics", {}).get("neighbor_prefix_bias_fallback", {})
+    if fallback:
+        result["neighbor_prefix_bias_fallback"] = fallback
+    result["trajectory_fallback_source"] = fallback.get("donor_key")
+    result["trajectory_fallback_reason"] = fallback.get("reason")
+    result["trajectory_fallback_donor_distance"] = fallback.get("donor_distance")
+    result["trajectory_fallback_donor_score"] = fallback.get("donor_score")
+    result["lower_place_path_bias"] = fallback.get("target_lower_place_bias")
+    return result
+
+
+def annotate_lower_place_path_bias_result(
+    result,
+    lower_place_path_bias,
+    neighbor_candidate=None,
+    base_place_offset=None,
+    reason="lower_place_path_bias",
+):
+    if result is None or lower_place_path_bias is None:
+        return result
+
+    bias = np.array(lower_place_path_bias, dtype=float)
+    result["lower_place_path_bias"] = bias.copy()
+    if neighbor_candidate is None:
+        return result
+
+    fallback = {
+        "reason": reason,
+        "neighbor_key": neighbor_candidate["move_key"],
+        "neighbor_from_square": neighbor_candidate["from_square"],
+        "neighbor_to_square": neighbor_candidate["to_square"],
+        "neighbor_source_grasp_offset": neighbor_candidate[
+            "source_grasp_offset"
+        ].copy(),
+        "neighbor_selected_place_offset": neighbor_candidate[
+            "selected_place_offset"
+        ].copy(),
+        "neighbor_score": neighbor_candidate["score"],
+        "neighbor_xy_error": neighbor_candidate["xy_error"],
+        "target_lower_place_bias": bias.copy(),
+        "bias_factor": NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR,
+    }
+    if base_place_offset is not None:
+        fallback["base_place_offset"] = np.array(base_place_offset, dtype=float).copy()
+
+    result["neighbor_bias_fallback"] = fallback
+    result["trajectory_fallback_source"] = neighbor_candidate["move_key"]
+    result["trajectory_fallback_reason"] = reason
+    result["trajectory_fallback_donor_distance"] = square_distance(
+        neighbor_candidate["to_square"],
+        result["to_square"],
+    )
+    result["trajectory_fallback_donor_score"] = neighbor_candidate["score"]
     return result
 
 
@@ -1219,7 +1624,9 @@ def run_bridged_direct_move_in_fresh_world(
         trajectory_override=override,
         lift_height=lift_height,
     )
-    return annotate_bridge_result(result, override)
+    result = annotate_bridge_result(result, override)
+    result = annotate_neighbor_prefix_bias_result(result, override)
+    return result
 
 
 def run_bridged_correction_pass(
@@ -1367,6 +1774,7 @@ def run_correction_pass(
     correction_gain,
     pass_label,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     place_offset = PLACE_OFFSET.copy()
     saw_trajectory_fk_error = False
@@ -1386,6 +1794,7 @@ def run_correction_pass(
                 else f"{pass_label}_placement_corrected_round_{correction_round}"
             ),
             lift_height=lift_height,
+            lower_place_path_bias=lower_place_path_bias,
         )
         result["correction_pass"] = pass_label
         result["correction_gain"] = correction_gain
@@ -1415,6 +1824,7 @@ def run_correction_pass(
                 record_video=False,
                 video_label=f"{pass_label}_final_corrected_lookup",
                 lift_height=lift_height,
+                lower_place_path_bias=lower_place_path_bias,
             )
             selected_result["correction_pass"] = pass_label
             selected_result["correction_gain"] = correction_gain
@@ -1479,7 +1889,7 @@ def run_correction_pass(
 
     return {
         "selected_result": None,
-        "selected_place_offset": PLACE_OFFSET.copy(),
+        "selected_place_offset": place_offset.copy(),
         "success": False,
         "stopped_early": False,
         "reject_reason": "correction_exhausted",
@@ -1493,6 +1903,7 @@ def calibrate_with_grasp_offset(
     grasp_offset,
     pass_prefix,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(from_square, to_square)
     placement_lower_steps = placement_lower_steps_for_lookup(to_square)
@@ -1506,6 +1917,7 @@ def calibrate_with_grasp_offset(
         correction_gain=1.0,
         pass_label=f"{pass_prefix}_direct",
         lift_height=lift_height,
+        lower_place_path_bias=lower_place_path_bias,
     )
     if (
         not calibration["success"]
@@ -1586,6 +1998,7 @@ def calibrate_with_grasp_offset(
     #         )
 
     selected_result = calibration["selected_result"]
+    annotate_lower_place_path_bias_result(selected_result, lower_place_path_bias)
     selected_place_offset = calibration["selected_place_offset"]
     success = direct_result_is_suitable(selected_result)
     return {
@@ -1604,7 +2017,26 @@ def calibrate_with_grasp_offset(
     }
 
 
-def calibrate_direct_move(from_square, to_square):
+def select_best_failed_grid_attempt(grid_attempts):
+    if not grid_attempts:
+        return None
+
+    def attempt_sort_key(attempt):
+        calibration = attempt["calibration"]
+        return (
+            not bool(calibration.get("pickup_success", False)),
+            finite_float(calibration.get("trajectory_fk_error")),
+            finite_float(calibration.get("xy_error")),
+            finite_float(calibration.get("score")),
+            attempt["grid_dx"],
+            attempt["grid_dy"],
+            attempt.get("grid_dz", 0),
+        )
+
+    return min(grid_attempts, key=attempt_sort_key)
+
+
+def calibrate_direct_move(from_square, to_square, lookup=None):
     grasp_offset, grasp_selection = configured_grasp_offset_for_lookup(
         from_square,
         to_square
@@ -1703,12 +2135,94 @@ def calibrate_direct_move(from_square, to_square):
         }
         return selected_calibration
 
+    neighbor_candidate = select_neighbor_successful_candidate(
+        lookup,
+        from_square,
+        to_square,
+    )
+    if neighbor_candidate is not None:
+        best_failed_attempt = select_best_failed_grid_attempt(grid_attempts)
+        if best_failed_attempt is None:
+            best_failed_attempt = {
+                "grasp_offset": grasp_offset.copy(),
+                "calibration": calibration,
+                "grid_dx": 0,
+                "grid_dy": 0,
+                "grid_dz": 0,
+                "grid_delta": np.zeros(3),
+            }
+
+        base_place_offset = parse_vector(
+            best_failed_attempt["calibration"].get("selected_place_offset")
+        )
+        if base_place_offset is None:
+            base_place_offset = PLACE_OFFSET.copy()
+        lower_place_path_bias = (
+            NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR
+            * (
+                neighbor_candidate["selected_place_offset"].copy()
+                - base_place_offset
+            )
+        )
+        print(
+            f"{from_square}->{to_square}: grid exhausted; "
+            f"retrying with neighbor bias from {neighbor_candidate['move_key']} "
+            f"and bias={lower_place_path_bias}"
+        )
+        neighbor_bias_calibration = calibrate_with_grasp_offset(
+            from_square,
+            to_square,
+            best_failed_attempt["grasp_offset"],
+            pass_prefix=f"neighbor_bias_{neighbor_candidate['move_key']}",
+            lift_height=lift_height_for_square(to_square),
+            lower_place_path_bias=lower_place_path_bias,
+        )
+        if neighbor_bias_calibration["success"]:
+            annotate_lower_place_path_bias_result(
+                neighbor_bias_calibration["selected_result"],
+                lower_place_path_bias,
+                neighbor_candidate=neighbor_candidate,
+                base_place_offset=base_place_offset,
+                reason="grid_exhausted_neighbor_lower_place_path_bias",
+            )
+            neighbor_bias_calibration["grasp_selection"] = {
+                "source": "neighbor_bias_grid_override",
+                "is_override": True,
+                "reason": "grid_exhausted_neighbor_success",
+                "base_grasp_offset": base_grasp_offset.copy(),
+                "selected_grasp_offset": best_failed_attempt["grasp_offset"].copy(),
+                "selected_grid_dx": best_failed_attempt.get("grid_dx", 0),
+                "selected_grid_dy": best_failed_attempt.get("grid_dy", 0),
+                "selected_grid_dz": best_failed_attempt.get("grid_dz", 0),
+                "selected_grid_delta": json_safe(
+                    best_failed_attempt.get("grid_delta", np.zeros(3))
+                ),
+                "grid_order": FALLBACK_GRASP_GRID_ORDER,
+                "stopped_on_first_success": FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS,
+                "fallback_grid_attempted": True,
+                "fallback_grid_success": False,
+                "neighbor_success_move_key": neighbor_candidate["move_key"],
+                "neighbor_success_from_square": neighbor_candidate["from_square"],
+                "neighbor_success_to_square": neighbor_candidate["to_square"],
+                "neighbor_success_source_grasp_offset": json_safe(
+                    neighbor_candidate["source_grasp_offset"]
+                ),
+                "neighbor_success_place_offset": json_safe(
+                    neighbor_candidate["selected_place_offset"]
+                ),
+                "neighbor_lower_place_path_bias": json_safe(lower_place_path_bias),
+                "neighbor_lower_place_path_bias_factor": NEIGHBOR_LOWER_PLACE_PATH_BIAS_FACTOR,
+                "attempts": [summarize_grid_attempt(grid_attempt) for grid_attempt in grid_attempts],
+            }
+            return neighbor_bias_calibration
+
     calibration["grasp_selection"] = {
         **grasp_selection,
         "fallback_grid_attempted": True,
         "fallback_grid_success": False,
         "fallback_grid_order": FALLBACK_GRASP_GRID_ORDER,
         "fallback_grid_stops_on_first_success": FALLBACK_GRASP_GRID_STOP_ON_FIRST_SUCCESS,
+        "neighbor_bias_attempted": neighbor_candidate is not None,
         "attempts": [
             summarize_grid_attempt(grid_attempt)
             for grid_attempt in grid_attempts
@@ -1742,7 +2256,7 @@ def build_lookup():
             report[from_square]["successes"].append(key)
             continue
 
-        calibration = calibrate_direct_move(from_square, to_square)
+        calibration = calibrate_direct_move(from_square, to_square, lookup=lookup)
         if calibration["success"]:
             move = summarize_successful_calibration(
                 from_square,

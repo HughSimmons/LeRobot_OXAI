@@ -591,6 +591,7 @@ def run_sim_move(
     video_context=None,
     placement_lower_steps=10,
     lift_height=None,
+    lower_place_path_bias=None,
 ):
     if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
@@ -618,6 +619,7 @@ def run_sim_move(
             PLACE_OFFSET=active_place_offset,
             placement_lower_steps=placement_lower_steps,
             lift_height=lift_height,
+            lower_place_path_bias=lower_place_path_bias,
         )
     else:
         movelist = trajectory_override["movelist"]
@@ -653,6 +655,11 @@ def run_sim_move(
             "from_square": sq1,
             "to_square": sq2,
             "place_offset": active_place_offset.copy(),
+            "lower_place_path_bias": (
+                None
+                if traj_metrics.get("lower_place_path_bias") is None
+                else np.array(traj_metrics.get("lower_place_path_bias"), dtype=float)
+            ),
             "final_position": np.full(3, np.nan),
             "final_orientation": None,
             "expected_position": expected_piece_pos,
@@ -968,6 +975,11 @@ def run_sim_move(
             "from_square": sq1,
             "to_square": sq2,
             "place_offset": active_place_offset.copy(),
+            "lower_place_path_bias": (
+                None
+                if traj_metrics.get("lower_place_path_bias") is None
+                else np.array(traj_metrics.get("lower_place_path_bias"), dtype=float)
+            ),
             "final_position": final_piece_pos,
             "final_orientation": final_piece_orn,
             "expected_position": expected_piece_pos,
@@ -1002,7 +1014,15 @@ def run_sim_move(
     return pickup_success
 
 
-def simchess(i, j, GRASP_OFFSET, place_offset=None, return_metrics=False, record_video=None):
+def simchess(
+    i,
+    j,
+    GRASP_OFFSET,
+    place_offset=None,
+    return_metrics=False,
+    record_video=None,
+    lower_place_path_bias=None,
+):
     sq1, sq2 = squares[i], squares[j]
     world = setup_sim_world(sq1)
     try:
@@ -1013,7 +1033,8 @@ def simchess(i, j, GRASP_OFFSET, place_offset=None, return_metrics=False, record
             GRASP_OFFSET,
             place_offset=place_offset,
             return_metrics=return_metrics,
-            record_video=record_video
+            record_video=record_video,
+            lower_place_path_bias=lower_place_path_bias,
         )
     finally:
         p.removeState(world["state_id"])
