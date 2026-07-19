@@ -1454,20 +1454,24 @@ def pickupmove_traj_with_metrics(
 
     return jntslist, closeidx, traj_metrics
 
-def calib_board(board_origin, GRASP_OFFSET=np.array([0,0,0]), PLACE_OFFSET=np.array([0,0,0])):
+def calib_board(
+    board_origin,
+    GRASP_OFFSET=np.array([0,0,0]),
+    PLACE_OFFSET=np.array([0,0,0]),
+):
     """
     Calibrate the 4 corners of the board, returning a list of joint trajectories to each corner.
     """
     global home
     # 1. Move to home
     # height = 0.23  # height to lift above squares
-    height = 0.13  # height to lift above squares
     # height = 0.11  # height to lift above squares
 
     sqlist = ["a1", "a8", "h1", "h8"]
     alljntslist = []
     for sq in sqlist:
         print(f"Calibrating square {sq}...")
+        height = 0.13  # height to lift above squares
         jntslist = []
         # far_rows = ["f","g", "h"]
         far_rows = ["e","f","g", "h"]

@@ -97,7 +97,7 @@ SOURCE_SQUARES = source_squares_from_env(
 )
 TARGET_MOVES = target_moves_from_env()
 
-LOOKUP_TO_FILES = tuple("abcdef")
+LOOKUP_TO_FILES = tuple("abcdefgh")
 LOOKUP_TO_RANKS = range(1, 9)
 
 # Previous broad default before histogram review:
@@ -191,6 +191,9 @@ EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3 = True
 REUSE_EXISTING_SUCCESSFUL_MOVES = True
 DONOR_BRIDGE_FALLBACK_ENABLED = True
 DONOR_BRIDGE_INTERPOLATION_STEPS = 5
+BOARD_SQUARE_SIZE_M = 0.04
+MAX_PLACE_OFFSET_SQUARES_XY = 2
+MAX_PLACE_OFFSET_XY_ABS = BOARD_SQUARE_SIZE_M * MAX_PLACE_OFFSET_SQUARES_XY
 USE_LONG_MOVE_STEPS_FOR_AB_DESTINATIONS = True
 LONG_MOVE_STEP_DESTINATION_FILES = ("a", "b")
 USE_LONG_MOVE_STEPS_FOR_DISTANT_DESTINATIONS = True
@@ -462,6 +465,8 @@ def move_meets_current_targets(move):
     metrics = move.get("metrics")
     if not isinstance(metrics, dict):
         return False
+    if not place_offset_within_limits(move.get("selected_place_offset")):
+        return False
 
     xy_error = metrics.get("xy_error", np.inf)
     final_tilt_deg = metrics.get("final_tilt_deg", np.inf)
@@ -552,6 +557,8 @@ def build_metadata():
         "reuse_existing_successful_moves": REUSE_EXISTING_SUCCESSFUL_MOVES,
         "donor_bridge_fallback_enabled": DONOR_BRIDGE_FALLBACK_ENABLED,
         "donor_bridge_interpolation_steps": DONOR_BRIDGE_INTERPOLATION_STEPS,
+        "max_place_offset_squares_xy": MAX_PLACE_OFFSET_SQUARES_XY,
+        "max_place_offset_xy_abs": MAX_PLACE_OFFSET_XY_ABS,
         "fallback_correction_gain": FALLBACK_CORRECTION_GAIN,
         "lookup_edge_support_margin": LOOKUP_EDGE_SUPPORT_MARGIN,
         "default_placement_lower_steps": 10,
@@ -617,6 +624,19 @@ def parse_vector(value, shape=(3,)):
     if vector.shape != shape or not np.all(np.isfinite(vector)):
         return None
     return vector
+
+
+def place_offset_within_limits(place_offset):
+    place_offset = parse_vector(place_offset)
+    if place_offset is None:
+        return False
+    return bool(np.all(np.abs(place_offset[:2]) <= MAX_PLACE_OFFSET_XY_ABS))
+
+
+def place_offset_limit_reject_reason(place_offset):
+    if place_offset_within_limits(place_offset):
+        return None
+    return "place_offset_xy_limit_exceeded"
 
 
 def donor_lookup_paths():
@@ -964,6 +984,7 @@ def direct_result_is_suitable(result):
     return (
         result.get("reject_reason") is None
         and bool(result.get("pickup_success", False))
+        and place_offset_within_limits(result.get("place_offset"))
         and np.isfinite(float(result.get("xy_error", np.inf)))
         and np.isfinite(float(result.get("final_tilt_deg", np.inf)))
         and float(result["xy_error"]) < XY_SUCCESS_THRESHOLD
@@ -988,7 +1009,12 @@ def annotate_bridge_result(result, override):
     return result
 
 
-def build_bridge_override_for_move(from_square, to_square, grasp_offset, place_offset):
+def build_bridge_override_for_move(
+    from_square,
+    to_square,
+    grasp_offset,
+    place_offset,
+):
     if not DONOR_BRIDGE_FALLBACK_ENABLED:
         return None, "donor_bridge_disabled"
 
@@ -1175,6 +1201,16 @@ def run_bridged_correction_pass(
             place_offset,
             correction_gain=correction_gain,
         )
+        reject_reason = place_offset_limit_reject_reason(place_offset)
+        if reject_reason is not None:
+            return {
+                "selected_result": result,
+                "selected_place_offset": place_offset.copy(),
+                "success": False,
+                "stopped_early": True,
+                "reject_reason": reject_reason,
+                "bridge_donor": donor,
+            }
 
     return {
         "selected_result": None,
@@ -1291,6 +1327,16 @@ def run_correction_pass(
             place_offset,
             correction_gain=correction_gain,
         )
+        reject_reason = place_offset_limit_reject_reason(place_offset)
+        if reject_reason is not None:
+            return {
+                "selected_result": result,
+                "selected_place_offset": place_offset.copy(),
+                "success": False,
+                "stopped_early": True,
+                "reject_reason": reject_reason,
+                "saw_trajectory_fk_error": saw_trajectory_fk_error,
+            }
 
     return {
         "selected_result": None,
@@ -1302,7 +1348,12 @@ def run_correction_pass(
     }
 
 
-def calibrate_with_grasp_offset(from_square, to_square, grasp_offset, pass_prefix):
+def calibrate_with_grasp_offset(
+    from_square,
+    to_square,
+    grasp_offset,
+    pass_prefix,
+):
     move_steps_per_waypoint = move_steps_per_waypoint_for_lookup(from_square, to_square)
     placement_lower_steps = placement_lower_steps_for_lookup(to_square)
 
