@@ -7,7 +7,13 @@ from pathlib import Path
 import numpy as np
 import pybullet as p
 
-from chess_traj import lift_height_for_square, pickupmove_traj_with_metrics
+from chess_traj import (
+    DEFAULT_HOME,
+    lift_height_for_square,
+    normalized_home_joints,
+    pickupmove_traj_with_metrics,
+    temporary_home_joints,
+)
 from visualize_lookup_success import default_output_path, render_svg
 
 from multisim_chess_fast import (
@@ -108,6 +114,20 @@ SOURCE_SQUARES = source_squares_from_env(
 )
 TARGET_MOVES = target_moves_from_env()
 LOOKUP_LIFT_HEIGHT_OVERRIDE = optional_float_from_env("LOOKUP_LIFT_HEIGHT_OVERRIDE")
+LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG = optional_float_from_env(
+    "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"
+)
+LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG = optional_float_from_env(
+    "LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"
+)
+if (
+    LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG is not None
+    and LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is not None
+):
+    raise ValueError(
+        "Set only one of LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG "
+        "or LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"
+    )
 
 LOOKUP_TO_FILES = tuple("abcdefgh")
 LOOKUP_TO_RANKS = range(1, 9)
@@ -374,6 +394,7 @@ def summarize_result(result):
         "final_tilt_deg",
         "final_euler_deg",
         "trajectory_fk_error",
+        "trajectory_home_joints_deg",
         "move_steps_per_waypoint",
         "placement_lower_steps",
         "lift_height",
@@ -489,6 +510,17 @@ def move_meets_current_targets(move):
     if not place_offset_within_limits(move.get("selected_place_offset")):
         return False
 
+    expected_home = recorded_lookup_home_joints_for_source(from_square)
+    saved_home = metrics.get("trajectory_home_joints_deg")
+    if saved_home is None:
+        saved_home = DEFAULT_HOME
+    try:
+        saved_home = normalized_home_joints(saved_home)
+    except (TypeError, ValueError):
+        return False
+    if not np.allclose(saved_home, expected_home):
+        return False
+
     xy_error = metrics.get("xy_error", np.inf)
     final_tilt_deg = metrics.get("final_tilt_deg", np.inf)
     try:
@@ -540,6 +572,21 @@ def build_metadata():
         "donor_lookup_dir": str(DONOR_LOOKUP_DIR),
         "lookup_lift_height_override_env": os.environ.get("LOOKUP_LIFT_HEIGHT_OVERRIDE"),
         "lookup_lift_height_override": LOOKUP_LIFT_HEIGHT_OVERRIDE,
+        "lookup_home_shoulder_pan_override_deg_env": os.environ.get(
+            "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"
+        ),
+        "lookup_home_shoulder_pan_override_deg": (
+            LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG
+        ),
+        "lookup_home_shoulder_pan_delta_deg_env": os.environ.get(
+            "LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"
+        ),
+        "lookup_home_shoulder_pan_delta_deg": LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG,
+        "default_trajectory_home_joints_deg": json_safe(DEFAULT_HOME),
+        "trajectory_home_joints_by_source": {
+            source_square: json_safe(recorded_lookup_home_joints_for_source(source_square))
+            for source_square in SOURCE_SQUARES
+        },
         "python_executable": sys.executable,
         "builder_script_mtime_utc": datetime.fromtimestamp(
             script_path.stat().st_mtime,
@@ -681,6 +728,55 @@ def lookup_lift_height_for_square(square):
     if LOOKUP_LIFT_HEIGHT_OVERRIDE is not None:
         return LOOKUP_LIFT_HEIGHT_OVERRIDE
     return lift_height_for_square(square)
+
+
+def lookup_home_joints_for_source(from_square):
+    if (
+        LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG is None
+        and LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is None
+    ) or from_square not in SOURCE_SQUARES:
+        return None
+
+    home_joints = DEFAULT_HOME.copy()
+    if LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is not None:
+        home_joints[0] += LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG
+    else:
+        home_joints[0] = LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG
+    return home_joints
+
+
+def recorded_lookup_home_joints_for_source(from_square):
+    home_joints = lookup_home_joints_for_source(from_square)
+    return DEFAULT_HOME.copy() if home_joints is None else home_joints.copy()
+
+
+def generate_lookup_trajectory(
+    from_square,
+    to_square,
+    grasp_offset,
+    place_offset,
+    *,
+    placement_lower_steps,
+    lift_height,
+    lower_place_path_bias=None,
+    home_joints=None,
+    donor=False,
+):
+    active_home = DEFAULT_HOME if donor else home_joints
+    if not donor and active_home is None:
+        active_home = lookup_home_joints_for_source(from_square)
+
+    with temporary_home_joints(active_home):
+        return pickupmove_traj_with_metrics(
+            from_square,
+            to_square,
+            board_origin=board_origin,
+            GRASP_OFFSET=grasp_offset,
+            PLACE_OFFSET=place_offset,
+            placement_lower_steps=placement_lower_steps,
+            lift_height=lift_height,
+            lower_place_path_bias=lower_place_path_bias,
+        )
 
 
 def iter_bridge_donor_candidates(from_square, to_square):
@@ -901,24 +997,25 @@ def build_donor_bridge_override(
     place_offset,
     donor,
     lift_height=None,
+    target_home_joints=None,
 ):
-    failing_movelist, failing_closeidx, failing_metrics = pickupmove_traj_with_metrics(
+    failing_movelist, failing_closeidx, failing_metrics = generate_lookup_trajectory(
         from_square,
         to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=grasp_offset,
-        PLACE_OFFSET=place_offset,
+        grasp_offset,
+        place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
+        home_joints=target_home_joints,
     )
-    donor_movelist, _, donor_metrics = pickupmove_traj_with_metrics(
+    donor_movelist, _, donor_metrics = generate_lookup_trajectory(
         donor["from_square"],
         donor["to_square"],
-        board_origin=board_origin,
-        GRASP_OFFSET=donor["source_grasp_offset"],
-        PLACE_OFFSET=place_offset,
+        donor["source_grasp_offset"],
+        place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
+        donor=True,
     )
 
     failing_above_bounds = segment_bounds(failing_metrics, "destination_above_place")
@@ -1014,25 +1111,26 @@ def build_neighbor_prefix_bias_override(
     donor,
     lower_place_path_bias,
     lift_height=None,
+    target_home_joints=None,
 ):
-    donor_movelist, donor_closeidx, donor_metrics = pickupmove_traj_with_metrics(
+    donor_movelist, donor_closeidx, donor_metrics = generate_lookup_trajectory(
         donor["from_square"],
         donor["to_square"],
-        board_origin=board_origin,
-        GRASP_OFFSET=donor["source_grasp_offset"],
-        PLACE_OFFSET=donor["selected_place_offset"],
+        donor["source_grasp_offset"],
+        donor["selected_place_offset"],
         placement_lower_steps=placement_lower_steps_for_lookup(donor["to_square"]),
         lift_height=lift_height,
+        donor=True,
     )
-    target_movelist, _, target_metrics = pickupmove_traj_with_metrics(
+    target_movelist, _, target_metrics = generate_lookup_trajectory(
         from_square,
         to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=target_grasp_offset,
-        PLACE_OFFSET=target_place_offset,
+        target_grasp_offset,
+        target_place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
         lower_place_path_bias=lower_place_path_bias,
+        home_joints=target_home_joints,
     )
 
     donor_above_bounds = segment_bounds(donor_metrics, "destination_above_place")
@@ -1137,6 +1235,7 @@ def build_saved_bridge_override(
     place_offset,
     bridge_fallback,
     lift_height=None,
+    target_home_joints=None,
 ):
     if not isinstance(bridge_fallback, dict):
         return None, "missing_saved_bridge_fallback"
@@ -1157,23 +1256,23 @@ def build_saved_bridge_override(
     ):
         return None, "invalid_saved_bridge_fallback"
 
-    failing_movelist, failing_closeidx, failing_metrics = pickupmove_traj_with_metrics(
+    failing_movelist, failing_closeidx, failing_metrics = generate_lookup_trajectory(
         from_square,
         to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=grasp_offset,
-        PLACE_OFFSET=place_offset,
+        grasp_offset,
+        place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
+        home_joints=target_home_joints,
     )
-    donor_movelist, _, donor_metrics = pickupmove_traj_with_metrics(
+    donor_movelist, _, donor_metrics = generate_lookup_trajectory(
         donor_from_square,
         donor_to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=donor_grasp_offset,
-        PLACE_OFFSET=donor_place_offset,
+        donor_grasp_offset,
+        donor_place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
+        donor=True,
     )
 
     if (
@@ -1248,6 +1347,7 @@ def build_saved_neighbor_prefix_bias_override(
     target_place_offset,
     neighbor_prefix_bias_fallback,
     lift_height=None,
+    target_home_joints=None,
 ):
     if not isinstance(neighbor_prefix_bias_fallback, dict):
         return None, "missing_saved_neighbor_prefix_bias_fallback"
@@ -1276,24 +1376,24 @@ def build_saved_neighbor_prefix_bias_override(
     ):
         return None, "invalid_saved_neighbor_prefix_bias_fallback"
 
-    donor_movelist, donor_closeidx, donor_metrics = pickupmove_traj_with_metrics(
+    donor_movelist, donor_closeidx, donor_metrics = generate_lookup_trajectory(
         donor_from_square,
         donor_to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=donor_grasp_offset,
-        PLACE_OFFSET=donor_place_offset,
+        donor_grasp_offset,
+        donor_place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(donor_to_square),
         lift_height=lift_height,
+        donor=True,
     )
-    target_movelist, _, target_metrics = pickupmove_traj_with_metrics(
+    target_movelist, _, target_metrics = generate_lookup_trajectory(
         from_square,
         to_square,
-        board_origin=board_origin,
-        GRASP_OFFSET=target_grasp_offset,
-        PLACE_OFFSET=target_place_offset,
+        target_grasp_offset,
+        target_place_offset,
         placement_lower_steps=placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
         lower_place_path_bias=target_lower_place_bias,
+        home_joints=target_home_joints,
     )
 
     if not isinstance(donor_prefix_end, int) or not isinstance(target_suffix_start, int):
@@ -1437,7 +1537,10 @@ def run_direct_move_once(
     trajectory_override=None,
     lift_height=None,
     lower_place_path_bias=None,
+    trajectory_home_joints=None,
 ):
+    if trajectory_home_joints is None:
+        trajectory_home_joints = lookup_home_joints_for_source(from_square)
     result = run_sim_move(
         world,
         from_square,
@@ -1452,6 +1555,7 @@ def run_direct_move_once(
         placement_lower_steps=placement_lower_steps,
         lift_height=lift_height,
         lower_place_path_bias=lower_place_path_bias,
+        trajectory_home_joints=trajectory_home_joints,
     )
     result["score"] = score_place_result(result)
     result["lift_height"] = lift_height
@@ -1470,10 +1574,14 @@ def run_direct_move_in_fresh_world(
     trajectory_override=None,
     lift_height=None,
     lower_place_path_bias=None,
+    trajectory_home_joints=None,
 ):
+    if trajectory_home_joints is None:
+        trajectory_home_joints = lookup_home_joints_for_source(from_square)
     world = setup_sim_world(
         from_square,
         edge_support_margin=LOOKUP_EDGE_SUPPORT_MARGIN,
+        home_joints=trajectory_home_joints,
     )
     try:
         return run_direct_move_once(
@@ -1489,6 +1597,7 @@ def run_direct_move_in_fresh_world(
             trajectory_override=trajectory_override,
             lift_height=lift_height,
             lower_place_path_bias=lower_place_path_bias,
+            trajectory_home_joints=trajectory_home_joints,
         )
     finally:
         p.removeState(world["state_id"])
@@ -1592,6 +1701,7 @@ def build_bridge_override_for_move(
     grasp_offset,
     place_offset,
     lift_height=None,
+    target_home_joints=None,
 ):
     if not DONOR_BRIDGE_FALLBACK_ENABLED:
         return None, "donor_bridge_disabled"
@@ -1607,6 +1717,7 @@ def build_bridge_override_for_move(
         place_offset,
         donor,
         lift_height=lift_height,
+        target_home_joints=target_home_joints,
     )
     if override is None:
         return None, reject_reason
@@ -1624,13 +1735,17 @@ def run_bridged_direct_move_in_fresh_world(
     record_video=True,
     video_label=None,
     lift_height=None,
+    trajectory_home_joints=None,
 ):
+    if trajectory_home_joints is None:
+        trajectory_home_joints = lookup_home_joints_for_source(from_square)
     override, reject_reason = build_bridge_override_for_move(
         from_square,
         to_square,
         grasp_offset,
         place_offset,
         lift_height=lift_height,
+        target_home_joints=trajectory_home_joints,
     )
     if override is None:
         return {
@@ -1649,6 +1764,11 @@ def run_bridged_direct_move_in_fresh_world(
             "move_steps_per_waypoint": move_steps_per_waypoint,
             "placement_lower_steps": placement_lower_steps,
             "trajectory_fk_error": np.inf,
+            "trajectory_home_joints_deg": (
+                DEFAULT_HOME.copy()
+                if trajectory_home_joints is None
+                else normalized_home_joints(trajectory_home_joints).copy()
+            ),
             "trajectory_valid": False,
             "reject_reason": reject_reason,
             "premature_drop": False,
@@ -1667,6 +1787,7 @@ def run_bridged_direct_move_in_fresh_world(
         video_label=video_label,
         trajectory_override=override,
         lift_height=lift_height,
+        trajectory_home_joints=trajectory_home_joints,
     )
     result = annotate_bridge_result(result, override)
     result = annotate_neighbor_prefix_bias_result(result, override)

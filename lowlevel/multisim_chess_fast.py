@@ -5,7 +5,18 @@ import numpy as np
 import sys
 import time
 from pathlib import Path
-from chess_traj import pickupmove_traj, pickupmove_traj_with_metrics, chess_to_xy, gripper_angle_closed, gripper_angle_open, solve_xyz_for_traj, xyz_homeref_with_error
+from chess_traj import (
+    DEFAULT_HOME,
+    chess_to_xy,
+    gripper_angle_closed,
+    gripper_angle_open,
+    normalized_home_joints,
+    pickupmove_traj,
+    pickupmove_traj_with_metrics,
+    solve_xyz_for_traj,
+    temporary_home_joints,
+    xyz_homeref_with_error,
+)
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 video_on = False
@@ -401,7 +412,7 @@ def create_board_edge_support(board_origin=board_origin, square_size=0.04, margi
     return support_ids
 
 
-def setup_sim_world(from_square, edge_support_margin=0.0):
+def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
     ensure_physics_connected()
     p.resetSimulation()
     p.setPhysicsEngineParameter(
@@ -416,6 +427,11 @@ def setup_sim_world(from_square, edge_support_margin=0.0):
 
     plane_id = p.loadURDF("plane.urdf", [0, 0, 0])
 
+    active_home = home.copy()
+    if home_joints is not None:
+        active_home = normalized_home_joints(home_joints).copy()
+    active_home_rad = np.deg2rad(active_home)
+
     robot_id = None
     try:
         urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
@@ -424,14 +440,14 @@ def setup_sim_world(from_square, edge_support_margin=0.0):
             p.resetJointState(
                 robot_id,
                 sim_idx,
-                home_rad[traj_idx],
+                active_home_rad[traj_idx],
                 targetVelocity=0.0,
             )
             p.setJointMotorControl2(
                 robot_id,
                 sim_idx,
                 p.POSITION_CONTROL,
-                targetPosition=home_rad[traj_idx],
+                targetPosition=active_home_rad[traj_idx],
                 force=50,
             )
 
@@ -498,6 +514,10 @@ def setup_sim_world(from_square, edge_support_margin=0.0):
         "board_base_id": board_base_id,
         "edge_support_ids": edge_support_ids,
         "piece_ids": piece_ids,
+        "home_joints_deg": active_home,
+        "trajectory_home_joints_deg": (
+            None if home_joints is None else active_home.copy()
+        ),
     }
 
 
@@ -592,6 +612,7 @@ def run_sim_move(
     placement_lower_steps=10,
     lift_height=None,
     lower_place_path_bias=None,
+    trajectory_home_joints=None,
 ):
     if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
@@ -610,17 +631,27 @@ def run_sim_move(
     robot_id = world["robot_id"]
     piece_ids = world["piece_ids"]
 
+    active_trajectory_home = trajectory_home_joints
+    if active_trajectory_home is None:
+        active_trajectory_home = world.get("trajectory_home_joints_deg")
+    recorded_trajectory_home = (
+        DEFAULT_HOME.copy()
+        if active_trajectory_home is None
+        else normalized_home_joints(active_trajectory_home).copy()
+    )
+
     if trajectory_override is None:
-        movelist, closeidx, traj_metrics = pickupmove_traj_with_metrics(
-            sq1,
-            sq2,
-            board_origin=board_origin,
-            GRASP_OFFSET=grasp_offset,
-            PLACE_OFFSET=active_place_offset,
-            placement_lower_steps=placement_lower_steps,
-            lift_height=lift_height,
-            lower_place_path_bias=lower_place_path_bias,
-        )
+        with temporary_home_joints(active_trajectory_home):
+            movelist, closeidx, traj_metrics = pickupmove_traj_with_metrics(
+                sq1,
+                sq2,
+                board_origin=board_origin,
+                GRASP_OFFSET=grasp_offset,
+                PLACE_OFFSET=active_place_offset,
+                placement_lower_steps=placement_lower_steps,
+                lift_height=lift_height,
+                lower_place_path_bias=lower_place_path_bias,
+            )
     else:
         movelist = trajectory_override["movelist"]
         closeidx = trajectory_override["closeidx"]
@@ -677,6 +708,7 @@ def run_sim_move(
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
+            "trajectory_home_joints_deg": recorded_trajectory_home,
             "trajectory_valid": False,
             "reject_reason": reject_reason,
             "release_move_idx": None,
@@ -997,6 +1029,7 @@ def run_sim_move(
             "post_move_settle_steps": post_move_settle_steps,
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
+            "trajectory_home_joints_deg": recorded_trajectory_home,
             "trajectory_valid": True,
             "release_move_idx": release_move_idx,
             "release_target_z": release_target_z,

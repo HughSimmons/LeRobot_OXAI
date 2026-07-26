@@ -69,15 +69,31 @@ def saved_lift_height_for_entry(move_key, lookup, entry, to_square):
     return builder.lift_height_for_square(to_square)
 
 
-def regenerate_saved_trajectory(entry, to_square, lift_height):
-    return builder.pickupmove_traj_with_metrics(
+def saved_home_joints_for_entry(move_key, lookup, entry):
+    metrics = entry.get("metrics", {})
+    metric_home = metrics.get("trajectory_home_joints_deg")
+    if metric_home is not None:
+        return builder.normalized_home_joints(metric_home).copy()
+
+    metadata = lookup.get("metadata", {})
+    homes_by_source = metadata.get("trajectory_home_joints_by_source")
+    from_square, _ = parse_move_key(move_key)
+    if isinstance(homes_by_source, dict) and homes_by_source.get(from_square) is not None:
+        return builder.normalized_home_joints(homes_by_source[from_square]).copy()
+
+    # Old lookup entries predate explicit home persistence and retain legacy behavior.
+    return None
+
+
+def regenerate_saved_trajectory(entry, to_square, lift_height, home_joints=None):
+    return builder.generate_lookup_trajectory(
         entry["from_square"],
         entry["to_square"],
-        board_origin=builder.board_origin,
-        GRASP_OFFSET=np.array(entry["source_grasp_offset"], dtype=float),
-        PLACE_OFFSET=np.array(entry["selected_place_offset"], dtype=float),
+        np.array(entry["source_grasp_offset"], dtype=float),
+        np.array(entry["selected_place_offset"], dtype=float),
         placement_lower_steps=builder.placement_lower_steps_for_lookup(to_square),
         lift_height=lift_height,
+        home_joints=home_joints,
     )
 
 
@@ -421,6 +437,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
     grasp_offset = np.array(entry["source_grasp_offset"], dtype=float)
     place_offset = np.array(entry["selected_place_offset"], dtype=float)
     lift_height = saved_lift_height_for_entry(move_key, lookup, entry, to_square)
+    trajectory_home_joints = saved_home_joints_for_entry(move_key, lookup, entry)
     lower_place_path_bias = metrics.get("lower_place_path_bias")
     move_steps = int(
         metrics.get("move_steps_per_waypoint")
@@ -461,6 +478,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
             place_offset,
             saved_neighbor_prefix_bias_fallback,
             lift_height=lift_height,
+            target_home_joints=trajectory_home_joints,
         )
         if trajectory_override is None:
             neighbor_prefix_bias_rebuild_error = reject_reason
@@ -475,6 +493,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
             place_offset,
             saved_bridge_fallback,
             lift_height=lift_height,
+            target_home_joints=trajectory_home_joints,
         )
         if trajectory_override is None:
             bridge_rebuild_error = reject_reason
@@ -488,6 +507,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
             grasp_offset,
             place_offset,
             lift_height=lift_height,
+            target_home_joints=trajectory_home_joints,
         )
         if trajectory_override is None:
             bridge_rebuild_error = reject_reason
@@ -498,6 +518,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
     world = builder.setup_sim_world(
         from_square,
         edge_support_margin=builder.LOOKUP_EDGE_SUPPORT_MARGIN,
+        home_joints=trajectory_home_joints,
     )
     video_context = sim.create_video_context(output_dir / move_key)
     try:
@@ -515,6 +536,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
             video_context=video_context,
             lift_height=lift_height,
             lower_place_path_bias=lower_place_path_bias,
+            trajectory_home_joints=trajectory_home_joints,
         )
         result["score"] = sim.score_place_result(result)
         if test_mode == DONOR_CARRY_SPLICE_TEST_MODE:
@@ -543,6 +565,9 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
         "pickup_success": bool(result.get("pickup_success")),
         "premature_drop": bool(result.get("premature_drop")),
         "trajectory_fk_error": float(result.get("trajectory_fk_error", np.nan)),
+        "trajectory_home_joints_deg": builder.json_safe(
+            result.get("trajectory_home_joints_deg")
+        ),
         "xy_error": float(result.get("xy_error", np.nan)),
         "z_error": float(result.get("z_error", np.nan)),
         "final_tilt_deg": float(result.get("final_tilt_deg", np.nan)),

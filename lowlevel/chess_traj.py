@@ -3,6 +3,7 @@ from pinocchio.visualize import MeshcatVisualizer
 import numpy as np
 import time
 import numpy as np
+from contextlib import contextmanager
 
 from testkinematics import relativexyz, relativexyz_with_error, vectodic
 
@@ -147,9 +148,34 @@ def xyz_homeref(xyzcoords, refjnts, GRASP_OFFSET, downflag=True):
         )
 
 
-def record_fk_error(traj_metrics, stage, target_xyz, fk_error):
+def record_fk_error(
+    traj_metrics,
+    stage,
+    target_xyz,
+    fk_error,
+    achieved_xyz=None,
+    joints=None,
+):
     if traj_metrics is None:
         return
+
+    if achieved_xyz is not None:
+        target_xyz = np.array(target_xyz, dtype=float)
+        achieved_xyz = np.array(achieved_xyz, dtype=float)
+        traj_metrics.setdefault("fk_trace_samples", []).append(
+            {
+                "stage": stage,
+                "target_xyz": target_xyz.copy(),
+                "achieved_xyz": achieved_xyz.copy(),
+                "endpoint_error": float(np.linalg.norm(target_xyz - achieved_xyz)),
+                "max_step_error": float(fk_error),
+                "joints": (
+                    None
+                    if joints is None
+                    else np.array(joints, dtype=float).copy()
+                ),
+            }
+        )
 
     traj_metrics["max_fk_error"] = max(
         traj_metrics["max_fk_error"],
@@ -207,7 +233,15 @@ def xyz_homeref_with_error(
             )
             max_fk_error = max(max_fk_error, fk_error)
 
-        record_fk_error(traj_metrics, stage, xyzcoords, max_fk_error)
+        achieved_xyz = kinematics.forward_kinematics(current)[:3, 3]
+        record_fk_error(
+            traj_metrics,
+            stage,
+            xyzcoords,
+            max_fk_error,
+            achieved_xyz=achieved_xyz,
+            joints=current,
+        )
         return current, max_fk_error
 
     current, fk_error = relativexyz_with_error(
@@ -217,7 +251,15 @@ def xyz_homeref_with_error(
         downflag
     )
     max_fk_error = max(max_fk_error, fk_error)
-    record_fk_error(traj_metrics, stage, xyzcoords, max_fk_error)
+    achieved_xyz = kinematics.forward_kinematics(current)[:3, 3]
+    record_fk_error(
+        traj_metrics,
+        stage,
+        xyzcoords,
+        max_fk_error,
+        achieved_xyz=achieved_xyz,
+        joints=current,
+    )
     return current, max_fk_error
 
 
@@ -566,10 +608,44 @@ gripper_angle_closed = 5
 RELEASE_SETTLE_WAYPOINTS = 5
 
 
-home = np.array([96.92307692307692,  -107.86813186813187,  97.36263736263736, 65.18681318681318,  -29.846153846153847,  4.62962962962963])
+DEFAULT_HOME = np.array([
+    96.92307692307692,
+    -107.86813186813187,
+    97.36263736263736,
+    65.18681318681318,
+    -29.846153846153847,
+    4.62962962962963,
+])
+home = DEFAULT_HOME.copy()
 
 from testkinematics import kinematics
 homexyz = kinematics.forward_kinematics(home)[:3,3]
+
+
+def normalized_home_joints(home_joints):
+    joints = np.array(home_joints, dtype=float)
+    if joints.shape != DEFAULT_HOME.shape or not np.all(np.isfinite(joints)):
+        raise ValueError(
+            f"home_joints must contain {DEFAULT_HOME.size} finite joint angles"
+        )
+    return joints
+
+
+@contextmanager
+def temporary_home_joints(home_joints):
+    """Temporarily select a trajectory home without changing module defaults."""
+    global home, homexyz
+
+    previous_home = home.copy()
+    previous_homexyz = homexyz.copy()
+    if home_joints is not None:
+        home = normalized_home_joints(home_joints).copy()
+        homexyz = kinematics.forward_kinematics(home)[:3, 3]
+    try:
+        yield home
+    finally:
+        home = previous_home
+        homexyz = previous_homexyz
 
 DEFAULT_LIFT_HEIGHT = 0.13
 H_FILE_LIFT_HEIGHT = 0.09
@@ -1481,6 +1557,7 @@ def pickupmove_traj_with_metrics(
         "max_fk_error": 0.0,
         "event_threshold": 0.025,
         "fk_error_events": [],
+        "fk_trace_samples": [],
         "segments": {},
         "release_target_xyz": None,
         "release_target_z": None,
