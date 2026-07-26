@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="white"/>
 <text x="32" y="38" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2933">Lookup success map</text>
 <text x="32" y="66" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">/Users/zhg603/Documents/OXAI/lowlevel/f7_non_h_reverse_move_lookup.json</text>
-<text x="32" y="86" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">from=f7 | expected=40 | successful=40 | missing_or_failed=0</text>
+<text x="32" y="86" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">from=f7 | expected=63 | successful=61 | missing_or_failed=2</text>
 <text x="96.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">a</text>
 <text x="160.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">b</text>
 <text x="224.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">c</text>
@@ -39,16 +39,16 @@
 <title>e8 | success | xy_error=0.0004720522807286135 | tilt=0.00030864478223231474 | reject=None</title>
 </rect>
 <text x="352.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e8</text>
-<rect x="384" y="100" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f8 | excluded</title>
+<rect x="384" y="100" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f8 | success | xy_error=0.004692774348196314 | tilt=0.0011894436651450303 | reject=None</title>
 </rect>
 <text x="416.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f8</text>
-<rect x="448" y="100" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g8 | excluded</title>
+<rect x="448" y="100" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g8 | success | xy_error=0.0008533784327539596 | tilt=0.0006570746483716551 | reject=None</title>
 </rect>
 <text x="480.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g8</text>
-<rect x="512" y="100" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h8 | excluded</title>
+<rect x="512" y="100" width="64" height="64" fill="#e57373" stroke="#263238" stroke-width="1">
+<title>h8 | missing</title>
 </rect>
 <text x="544.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h8</text>
 <rect x="64" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -75,12 +75,12 @@
 <title>f7 | source</title>
 </rect>
 <text x="416.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">F7</text>
-<rect x="448" y="164" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g7 | excluded</title>
+<rect x="448" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g7 | success | xy_error=0.0047522830251529365 | tilt=0.0009256532605626093 | reject=None</title>
 </rect>
 <text x="480.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g7</text>
-<rect x="512" y="164" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h7 | excluded</title>
+<rect x="512" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h7 | success | xy_error=0.004756242965906883 | tilt=0.0007489084209240222 | reject=None</title>
 </rect>
 <text x="544.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h7</text>
 <rect x="64" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -103,16 +103,16 @@
 <title>e6 | success | xy_error=0.0002891729427715792 | tilt=0.000778063274735273 | reject=None</title>
 </rect>
 <text x="352.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e6</text>
-<rect x="384" y="228" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f6 | excluded</title>
+<rect x="384" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f6 | success | xy_error=0.00462575824388648 | tilt=0.0011888742076669933 | reject=None</title>
 </rect>
 <text x="416.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f6</text>
-<rect x="448" y="228" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g6 | excluded</title>
+<rect x="448" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g6 | success | xy_error=0.006575713258504383 | tilt=0.0005702965112004407 | reject=None</title>
 </rect>
 <text x="480.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g6</text>
-<rect x="512" y="228" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h6 | excluded</title>
+<rect x="512" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h6 | success | xy_error=0.005423835817909257 | tilt=0.0006247243268302879 | reject=None</title>
 </rect>
 <text x="544.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h6</text>
 <rect x="64" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -135,16 +135,16 @@
 <title>e5 | success | xy_error=0.0002221131615003368 | tilt=0.0008068901763758617 | reject=None</title>
 </rect>
 <text x="352.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e5</text>
-<rect x="384" y="292" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f5 | excluded</title>
+<rect x="384" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f5 | success | xy_error=0.00482396881658617 | tilt=0.0007182104069209404 | reject=None</title>
 </rect>
 <text x="416.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f5</text>
-<rect x="448" y="292" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g5 | excluded</title>
+<rect x="448" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g5 | success | xy_error=0.00671852276996287 | tilt=0.0005138064848423563 | reject=None</title>
 </rect>
 <text x="480.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g5</text>
-<rect x="512" y="292" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h5 | excluded</title>
+<rect x="512" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h5 | success | xy_error=0.004998737579960605 | tilt=0.0005875501262819139 | reject=None</title>
 </rect>
 <text x="544.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h5</text>
 <rect x="64" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -167,16 +167,16 @@
 <title>e4 | success | xy_error=0.00023430231376708602 | tilt=0.0006624128159254415 | reject=None</title>
 </rect>
 <text x="352.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e4</text>
-<rect x="384" y="356" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f4 | excluded</title>
+<rect x="384" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f4 | success | xy_error=0.004909581923304937 | tilt=0.00016037996481855344 | reject=None</title>
 </rect>
 <text x="416.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f4</text>
-<rect x="448" y="356" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g4 | excluded</title>
+<rect x="448" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g4 | success | xy_error=0.006821324638647625 | tilt=0.0012888976538178655 | reject=None</title>
 </rect>
 <text x="480.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g4</text>
-<rect x="512" y="356" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h4 | excluded</title>
+<rect x="512" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h4 | success | xy_error=0.005720332046816335 | tilt=0.0004726097931368579 | reject=None</title>
 </rect>
 <text x="544.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h4</text>
 <rect x="64" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -199,16 +199,16 @@
 <title>e3 | success | xy_error=0.0002944547138766029 | tilt=0.000558911426051524 | reject=None</title>
 </rect>
 <text x="352.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e3</text>
-<rect x="384" y="420" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f3 | excluded</title>
+<rect x="384" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f3 | success | xy_error=0.004875157046853097 | tilt=0.000497152914717874 | reject=None</title>
 </rect>
 <text x="416.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f3</text>
-<rect x="448" y="420" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g3 | excluded</title>
+<rect x="448" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g3 | success | xy_error=0.005539017652197522 | tilt=0.00047953890032158383 | reject=None</title>
 </rect>
 <text x="480.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g3</text>
-<rect x="512" y="420" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h3 | excluded</title>
+<rect x="512" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h3 | success | xy_error=0.0063334799261338835 | tilt=0.0009510114858134335 | reject=None</title>
 </rect>
 <text x="544.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h3</text>
 <rect x="64" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -231,16 +231,16 @@
 <title>e2 | success | xy_error=0.0011322864799058424 | tilt=0.0016541284371272304 | reject=None</title>
 </rect>
 <text x="352.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e2</text>
-<rect x="384" y="484" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f2 | excluded</title>
+<rect x="384" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f2 | success | xy_error=0.00472391294197279 | tilt=0.00031293803264472115 | reject=None</title>
 </rect>
 <text x="416.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f2</text>
-<rect x="448" y="484" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g2 | excluded</title>
+<rect x="448" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g2 | success | xy_error=0.0052313047034872615 | tilt=0.0009387546986797394 | reject=None</title>
 </rect>
 <text x="480.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g2</text>
-<rect x="512" y="484" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h2 | excluded</title>
+<rect x="512" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>h2 | success | xy_error=0.0023441270726259913 | tilt=0.0002720645877118527 | reject=None</title>
 </rect>
 <text x="544.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h2</text>
 <rect x="64" y="548" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -263,16 +263,16 @@
 <title>e1 | success | xy_error=0.0007525812106591354 | tilt=0.0007332181033204039 | reject=None</title>
 </rect>
 <text x="352.0" y="585.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e1</text>
-<rect x="384" y="548" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>f1 | excluded</title>
+<rect x="384" y="548" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f1 | success | xy_error=0.00801137184840677 | tilt=0.0008485539400563064 | reject=None</title>
 </rect>
 <text x="416.0" y="585.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f1</text>
-<rect x="448" y="548" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>g1 | excluded</title>
+<rect x="448" y="548" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>g1 | success | xy_error=0.0058887812641084305 | tilt=0.0002874314920468137 | reject=None</title>
 </rect>
 <text x="480.0" y="585.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g1</text>
-<rect x="512" y="548" width="64" height="64" fill="#eeeeee" stroke="#263238" stroke-width="1">
-<title>h1 | excluded</title>
+<rect x="512" y="548" width="64" height="64" fill="#e57373" stroke="#263238" stroke-width="1">
+<title>h1 | missing</title>
 </rect>
 <text x="544.0" y="585.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h1</text>
 <text x="618" y="108" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">Legend</text>

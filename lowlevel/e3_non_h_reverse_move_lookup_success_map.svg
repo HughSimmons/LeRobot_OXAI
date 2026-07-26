@@ -48,7 +48,7 @@
 </rect>
 <text x="480.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g8</text>
 <rect x="512" y="100" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h8 | success | xy_error=0.0028713558857085823 | tilt=0.0007873598514926566 | reject=None</title>
+<title>h8 | success | xy_error=0.008594942273740845 | tilt=0.0010096890443625232 | reject=None</title>
 </rect>
 <text x="544.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h8</text>
 <rect x="64" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -80,7 +80,7 @@
 </rect>
 <text x="480.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g7</text>
 <rect x="512" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h7 | success | xy_error=0.004272234453110127 | tilt=0.0007382664200342362 | reject=None</title>
+<title>h7 | success | xy_error=0.008961719721429734 | tilt=0.0007109125587549972 | reject=None</title>
 </rect>
 <text x="544.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h7</text>
 <rect x="64" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -112,7 +112,7 @@
 </rect>
 <text x="480.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g6</text>
 <rect x="512" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h6 | success | xy_error=0.004869562343458629 | tilt=0.0005648846726324918 | reject=None</title>
+<title>h6 | success | xy_error=0.0036506384391673933 | tilt=0.00024093819040428961 | reject=None</title>
 </rect>
 <text x="544.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h6</text>
 <rect x="64" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -144,7 +144,7 @@
 </rect>
 <text x="480.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g5</text>
 <rect x="512" y="292" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h5 | success | xy_error=0.007511593326537913 | tilt=0.0009294881979430776 | reject=None</title>
+<title>h5 | success | xy_error=0.007895146740372207 | tilt=0.00093724749506155 | reject=None</title>
 </rect>
 <text x="544.0" y="329.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h5</text>
 <rect x="64" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -176,7 +176,7 @@
 </rect>
 <text x="480.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g4</text>
 <rect x="512" y="356" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h4 | success | xy_error=0.00024274694955355358 | tilt=0.0010863191894730764 | reject=None</title>
+<title>h4 | success | xy_error=0.005029980013252434 | tilt=0.0009020578176518442 | reject=None</title>
 </rect>
 <text x="544.0" y="393.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h4</text>
 <rect x="64" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -208,7 +208,7 @@
 </rect>
 <text x="480.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g3</text>
 <rect x="512" y="420" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h3 | success | xy_error=0.002659580985212232 | tilt=0.0008856834812976159 | reject=None</title>
+<title>h3 | success | xy_error=0.009270326365802248 | tilt=0.001739859561970976 | reject=None</title>
 </rect>
 <text x="544.0" y="457.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h3</text>
 <rect x="64" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -240,7 +240,7 @@
 </rect>
 <text x="480.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">g2</text>
 <rect x="512" y="484" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
-<title>h2 | success | xy_error=0.0046290163406855185 | tilt=0.0003927126762203732 | reject=None</title>
+<title>h2 | success | xy_error=0.00442748462274557 | tilt=0.0009465666398144558 | reject=None</title>
 </rect>
 <text x="544.0" y="521.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">h2</text>
 <rect x="64" y="548" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">

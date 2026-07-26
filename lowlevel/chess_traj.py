@@ -250,6 +250,90 @@ def append_joint_interpolation(jntslist, start, end, gripper_angle, nsteps=10):
     return final_joints
 
 
+def append_post_place_tail(
+    jntslist,
+    current,
+    *,
+    to_square,
+    board_origin,
+    height,
+    GRASP_OFFSET,
+    downflag,
+    downjnts,
+    traj_metrics=None,
+):
+    far_rows = ["f", "g", "h"]
+
+    # Open gripper and hold briefly to let the piece settle.
+    mark_segment_start(traj_metrics, "release_settle", jntslist)
+    grip_open = current.copy()
+    grip_open[5] = gripper_angle_open
+    jntslist.append(grip_open)
+    for _ in range(RELEASE_SETTLE_WAYPOINTS):
+        jntslist.append(grip_open.copy())
+    mark_segment_end(traj_metrics, "release_settle", jntslist)
+    current = grip_open.copy()
+
+    # Retreat either by reversing the first lowering waypoint (near squares)
+    # or by lifting away while holding the exact post-release wrist-roll value.
+    mark_segment_start(traj_metrics, "retreat", jntslist)
+    if to_square[0] not in far_rows:
+        for j in downjnts[::-1]:
+            j = j.copy()
+            j[5] = gripper_angle_open
+            jntslist.append(j)
+            current = j.copy()
+    else:
+        to_xyz = chess_to_xy(to_square, board_origin=board_origin)
+        target_xyz = to_xyz + np.array([0, 0, height])
+        retreat_seed = current.copy()
+        retreat_roll_deg = float(current[WRIST_ROLL_IDX])
+        if traj_metrics is not None:
+            traj_metrics["far_lift_after_release_seed_roll_deg"] = retreat_roll_deg
+        above_to_open = solve_seeded_target_xyz(
+            target_xyz,
+            retreat_seed,
+            GRASP_OFFSET,
+            gripper_angle_open,
+            downflag,
+            traj_metrics=traj_metrics,
+            stage=f"{to_square}_far_lift_after_release"
+        )
+        above_to_open[WRIST_ROLL_IDX] = retreat_roll_deg
+        if traj_metrics is not None:
+            traj_metrics["far_lift_after_release_target_roll_deg"] = retreat_roll_deg
+        current = append_joint_interpolation(
+            jntslist,
+            current,
+            above_to_open,
+            gripper_angle_open,
+            nsteps=10
+        )
+    mark_segment_end(traj_metrics, "retreat", jntslist)
+
+    home_xyz = kinematics.forward_kinematics(home)[:3,3]
+
+    mark_segment_start(traj_metrics, "return_home", jntslist)
+    above_home = solve_xyz_for_traj(
+        home_xyz + np.array([0, 0, 0.10]),
+        current,
+        GRASP_OFFSET,
+        True,
+        traj_metrics=traj_metrics,
+        stage="return_above_home"
+    )
+    above_home[5] = current[5]
+    jntslist.append(above_home)
+    current = above_home.copy()
+    jntslist.append(home)
+    current = home.copy()
+    jntslist.append(home)
+    current = home.copy()
+    mark_segment_end(traj_metrics, "return_home", jntslist)
+
+    return current
+
+
 def solve_xyz_for_traj(target_xyz, refjnts, frame_offset, downflag, traj_metrics=None, stage="xyz_homeref"):
     if traj_metrics is None:
         return xyz_homeref(
@@ -1368,82 +1452,17 @@ def pickupmove_traj(
         traj_metrics["release_target_xyz"] = target_xyz.copy()
         traj_metrics["release_target_z"] = float(target_xyz[2])
 
-    # Open gripper
-    mark_segment_start(traj_metrics, "release_settle", jntslist)
-    grip_open = current.copy()
-    grip_open[5] = gripper_angle_open  # adjust as needed
-    # smoothmove(current, grip_open)
-    jntslist.append(grip_open)
-    for _ in range(RELEASE_SETTLE_WAYPOINTS):
-        jntslist.append(grip_open.copy())
-    mark_segment_end(traj_metrics, "release_settle", jntslist)
-
-    current = grip_open.copy()
-
-
-    # causing problems with far squares for some reason, so skipping for now
-    mark_segment_start(traj_metrics, "retreat", jntslist)
-    if to_square[0] not in far_rows:
-        for j in downjnts[::-1]:
-            # Keep the gripper open while retreating from a placed piece.
-            j[5] = gripper_angle_open
-            jntslist.append(j)
-            # jntslist.extend(smoothjnts(current, j))
-            current = j.copy()
-    else:
-        target_xyz = to_xyz + np.array([0, 0, height])
-        above_to_open = solve_seeded_target_xyz(
-            target_xyz,
-            reach_pose,
-            GRASP_OFFSET,
-            gripper_angle_open,
-            downflag,
-            traj_metrics=traj_metrics,
-            stage=f"{to_square}_far_lift_after_release"
-        )
-        current = append_joint_interpolation(
-            jntslist,
-            current,
-            above_to_open,
-            gripper_angle_open,
-            nsteps=10
-        )
-    mark_segment_end(traj_metrics, "retreat", jntslist)
-
-    # above_to = xyz_homeref(
-    #     to_xyz + np.array([0, 0, 0.10]),
-    #     current,
-    #     GRASP_OFFSET
-    # )
-    # above_to[5] = current[5]
-    # jntslist.append(above_to)
-    # current = above_to.copy()
-    ###
-    home_xyz = kinematics.forward_kinematics(home)[:3,3]
-
-    mark_segment_start(traj_metrics, "return_home", jntslist)
-    above_home = solve_xyz_for_traj(
-        home_xyz + np.array([0, 0, 0.10]),
+    current = append_post_place_tail(
+        jntslist,
         current,
-        GRASP_OFFSET,
-        True,
+        to_square=to_square,
+        board_origin=board_origin,
+        height=height,
+        GRASP_OFFSET=GRASP_OFFSET,
+        downflag=downflag,
+        downjnts=downjnts,
         traj_metrics=traj_metrics,
-        stage="return_above_home"
     )
-
-    above_home[5] = current[5]
-
-    jntslist.append(above_home)
-
-    current = above_home.copy()
-
-    jntslist.append(home)
-
-    current = home.copy()
-    ##
-    jntslist.append(home)
-    current = home.copy()
-    mark_segment_end(traj_metrics, "return_home", jntslist)
 
     return jntslist, closeidx
 

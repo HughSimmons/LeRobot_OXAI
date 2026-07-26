@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -88,6 +89,16 @@ def target_moves_from_env():
     return tuple(moves)
 
 
+def optional_float_from_env(config_name):
+    raw_value = os.environ.get(config_name)
+    if raw_value is None or not raw_value.strip():
+        return None
+    try:
+        return float(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{config_name} must be a float, got {raw_value!r}") from exc
+
+
 # SOURCE_SQUARES = normalize_square_sequence(
 #     "SOURCE_SQUARES",
 #     ("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8"),
@@ -96,6 +107,7 @@ SOURCE_SQUARES = source_squares_from_env(
     ("e2"),
 )
 TARGET_MOVES = target_moves_from_env()
+LOOKUP_LIFT_HEIGHT_OVERRIDE = optional_float_from_env("LOOKUP_LIFT_HEIGHT_OVERRIDE")
 
 LOOKUP_TO_FILES = tuple("abcdefgh")
 LOOKUP_TO_RANKS = range(1, 9)
@@ -220,6 +232,9 @@ def output_filename():
 
 OUTPUT_PATH = Path(__file__).resolve().parent / output_filename()
 SUCCESS_MAP_PATH = default_output_path(OUTPUT_PATH)
+DONOR_LOOKUP_DIR = Path(
+    os.environ.get("DONOR_LOOKUP_DIR", OUTPUT_PATH.parent)
+).expanduser().resolve()
 
 
 def move_key(from_square, to_square):
@@ -515,9 +530,21 @@ def compact_existing_move(move):
 
 def build_metadata():
     single_source_square = SOURCE_SQUARES[0] if len(SOURCE_SQUARES) == 1 else None
+    script_path = Path(__file__).resolve()
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "lowlevel/build_general_nonh_reverse_lookup.py",
+        "source_squares_env": os.environ.get("SOURCE_SQUARES"),
+        "target_moves_env": os.environ.get("TARGET_MOVES"),
+        "donor_lookup_dir_env": os.environ.get("DONOR_LOOKUP_DIR"),
+        "donor_lookup_dir": str(DONOR_LOOKUP_DIR),
+        "lookup_lift_height_override_env": os.environ.get("LOOKUP_LIFT_HEIGHT_OVERRIDE"),
+        "lookup_lift_height_override": LOOKUP_LIFT_HEIGHT_OVERRIDE,
+        "python_executable": sys.executable,
+        "builder_script_mtime_utc": datetime.fromtimestamp(
+            script_path.stat().st_mtime,
+            tz=timezone.utc,
+        ).isoformat(),
         "trajectory_mode": "direct",
         "from_square": single_source_square,
         "source_squares": list(SOURCE_SQUARES),
@@ -647,7 +674,13 @@ def place_offset_limit_reject_reason(place_offset):
 
 
 def donor_lookup_paths():
-    return tuple(sorted(OUTPUT_PATH.parent.glob("*non_h_reverse_move_lookup.json")))
+    return tuple(sorted(DONOR_LOOKUP_DIR.glob("*non_h_reverse_move_lookup.json")))
+
+
+def lookup_lift_height_for_square(square):
+    if LOOKUP_LIFT_HEIGHT_OVERRIDE is not None:
+        return LOOKUP_LIFT_HEIGHT_OVERRIDE
+    return lift_height_for_square(square)
 
 
 def iter_bridge_donor_candidates(from_square, to_square):
@@ -823,11 +856,20 @@ def shifted_slow_waypoint_indices(source_metrics, suffix_start, new_suffix_start
 
 def prefix_fk_error(failing_metrics):
     max_prefix_error = 0.0
+    discarded_suffix_stages = (
+        "_above_place",
+        "_lower_place",
+        "release_settle",
+        "retreat",
+        "return_above_home",
+        "return_home",
+        "_far_lift_after_release",
+    )
     for event in failing_metrics.get("fk_error_events", []):
         if not isinstance(event, dict):
             continue
         stage = str(event.get("stage", ""))
-        if stage.endswith("_above_place") or stage.endswith("_lower_place"):
+        if stage.endswith(discarded_suffix_stages):
             continue
         max_prefix_error = max(max_prefix_error, finite_float(event.get("fk_error"), 0.0))
     return max_prefix_error
@@ -1412,6 +1454,7 @@ def run_direct_move_once(
         lower_place_path_bias=lower_place_path_bias,
     )
     result["score"] = score_place_result(result)
+    result["lift_height"] = lift_height
     return result
 
 
@@ -1587,6 +1630,7 @@ def run_bridged_direct_move_in_fresh_world(
         to_square,
         grasp_offset,
         place_offset,
+        lift_height=lift_height,
     )
     if override is None:
         return {
@@ -2037,6 +2081,7 @@ def select_best_failed_grid_attempt(grid_attempts):
 
 
 def calibrate_direct_move(from_square, to_square, lookup=None):
+    lift_height = lookup_lift_height_for_square(to_square)
     grasp_offset, grasp_selection = configured_grasp_offset_for_lookup(
         from_square,
         to_square
@@ -2046,7 +2091,7 @@ def calibrate_direct_move(from_square, to_square, lookup=None):
         to_square,
         grasp_offset,
         pass_prefix="default",
-        lift_height=lift_height_for_square(to_square),
+        lift_height=lift_height,
     )
     calibration["grasp_selection"] = grasp_selection
 
@@ -2083,6 +2128,7 @@ def calibrate_direct_move(from_square, to_square, lookup=None):
                 f"dx{grid_candidate['grid_dx']}_dy{grid_candidate['grid_dy']}"
                 f"_dz{grid_candidate.get('grid_dz', 0)}"
             ),
+            lift_height=lift_height,
         )
         attempt = {
             **grid_candidate,
@@ -2174,7 +2220,7 @@ def calibrate_direct_move(from_square, to_square, lookup=None):
             to_square,
             best_failed_attempt["grasp_offset"],
             pass_prefix=f"neighbor_bias_{neighbor_candidate['move_key']}",
-            lift_height=lift_height_for_square(to_square),
+            lift_height=lift_height,
             lower_place_path_bias=lower_place_path_bias,
         )
         if neighbor_bias_calibration["success"]:
