@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="white"/>
 <text x="32" y="38" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2933">Lookup success map</text>
 <text x="32" y="66" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">/Users/zhg603/Documents/OXAI/lowlevel/b3_non_h_reverse_move_lookup.json</text>
-<text x="32" y="86" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">from=b3 | expected=63 | successful=59 | missing_or_failed=4</text>
+<text x="32" y="86" font-family="Arial, sans-serif" font-size="13" fill="#607d8b">from=b3 | expected=63 | successful=62 | missing_or_failed=1</text>
 <text x="96.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">a</text>
 <text x="160.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">b</text>
 <text x="224.0" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#1f2933">c</text>
@@ -39,8 +39,8 @@
 <title>e8 | success | xy_error=0.0031697807277573735 | tilt=0.0009898694512723927 | reject=None</title>
 </rect>
 <text x="352.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e8</text>
-<rect x="384" y="100" width="64" height="64" fill="#e57373" stroke="#263238" stroke-width="1">
-<title>f8 | missing</title>
+<rect x="384" y="100" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f8 | success | xy_error=0.0028149118633524523 | tilt=0.0008696341553104883 | reject=None</title>
 </rect>
 <text x="416.0" y="137.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f8</text>
 <rect x="448" y="100" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -71,8 +71,8 @@
 <title>e7 | success | xy_error=0.003958101815831839 | tilt=0.0010622642648932348 | reject=None</title>
 </rect>
 <text x="352.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e7</text>
-<rect x="384" y="164" width="64" height="64" fill="#e57373" stroke="#263238" stroke-width="1">
-<title>f7 | missing</title>
+<rect x="384" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f7 | success | xy_error=0.0008192678147708773 | tilt=0.0010761771937996514 | reject=None</title>
 </rect>
 <text x="416.0" y="201.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f7</text>
 <rect x="448" y="164" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
@@ -103,8 +103,8 @@
 <title>e6 | success | xy_error=0.004835558252115524 | tilt=0.0010980840212486346 | reject=None</title>
 </rect>
 <text x="352.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">e6</text>
-<rect x="384" y="228" width="64" height="64" fill="#e57373" stroke="#263238" stroke-width="1">
-<title>f6 | missing</title>
+<rect x="384" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">
+<title>f6 | success | xy_error=0.0011446857238337016 | tilt=0.0013600391762658706 | reject=None</title>
 </rect>
 <text x="416.0" y="265.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2933">f6</text>
 <rect x="448" y="228" width="64" height="64" fill="#4caf50" stroke="#263238" stroke-width="1">

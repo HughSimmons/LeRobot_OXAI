@@ -105,6 +105,33 @@ def optional_float_from_env(config_name):
         raise ValueError(f"{config_name} must be a float, got {raw_value!r}") from exc
 
 
+def optional_bool_from_env(config_name, default):
+    raw_value = os.environ.get(config_name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(
+        f"{config_name} must be a boolean-like value, got {raw_value!r}"
+    )
+
+
+def optional_json_object_from_env(config_name):
+    raw_value = os.environ.get(config_name)
+    if raw_value is None or not raw_value.strip():
+        return {}
+    try:
+        value = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{config_name} must be a JSON object") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"{config_name} must be a JSON object")
+    return value
+
+
 # SOURCE_SQUARES = normalize_square_sequence(
 #     "SOURCE_SQUARES",
 #     ("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8"),
@@ -113,6 +140,9 @@ SOURCE_SQUARES = source_squares_from_env(
     ("e2"),
 )
 TARGET_MOVES = target_moves_from_env()
+MIRROR_LOOKUP_METADATA_BY_MOVE = optional_json_object_from_env(
+    "MIRROR_LOOKUP_METADATA_BY_MOVE"
+)
 LOOKUP_LIFT_HEIGHT_OVERRIDE = optional_float_from_env("LOOKUP_LIFT_HEIGHT_OVERRIDE")
 LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG = optional_float_from_env(
     "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"
@@ -221,7 +251,10 @@ EXPANDED_GRASP_GRID_XY_STEPS = (-2, -1, 0, 1, 2)
 EXPANDED_GRASP_GRID_Z_DELTA = 0.002
 EXPANDED_GRASP_GRID_Z_STEPS = (-1, 0, 1)
 EXPANDED_GRASP_GRID_SKIP_DEFAULT_3X3 = True
-REUSE_EXISTING_SUCCESSFUL_MOVES = True
+REUSE_EXISTING_SUCCESSFUL_MOVES = optional_bool_from_env(
+    "REUSE_EXISTING_SUCCESSFUL_MOVES",
+    True,
+)
 DONOR_BRIDGE_FALLBACK_ENABLED = True
 DONOR_BRIDGE_INTERPOLATION_STEPS = 5
 BOARD_SQUARE_SIZE_M = 0.04
@@ -250,10 +283,22 @@ def output_filename():
     return f"{source_label}_non_h_reverse_move_lookup.json"
 
 
-OUTPUT_PATH = Path(__file__).resolve().parent / output_filename()
+def output_path_from_env():
+    output_path = os.environ.get("LOOKUP_OUTPUT_PATH")
+    output_dir = os.environ.get("LOOKUP_OUTPUT_DIR")
+    if output_path is not None and output_path.strip() and output_dir is not None and output_dir.strip():
+        raise ValueError("Set only one of LOOKUP_OUTPUT_PATH or LOOKUP_OUTPUT_DIR")
+    if output_path is not None and output_path.strip():
+        return Path(output_path).expanduser().resolve()
+    if output_dir is not None and output_dir.strip():
+        return Path(output_dir).expanduser().resolve() / output_filename()
+    return Path(__file__).resolve().parent / output_filename()
+
+
+OUTPUT_PATH = output_path_from_env()
 SUCCESS_MAP_PATH = default_output_path(OUTPUT_PATH)
 DONOR_LOOKUP_DIR = Path(
-    os.environ.get("DONOR_LOOKUP_DIR", OUTPUT_PATH.parent)
+    os.environ.get("DONOR_LOOKUP_DIR", Path(__file__).resolve().parent)
 ).expanduser().resolve()
 
 
@@ -447,6 +492,12 @@ def summarize_successful_calibration(from_square, to_square, calibration):
     selected_result = calibration["selected_result"]
     metrics = summarize_result(selected_result)
     grasp_selection = calibration["grasp_selection"]
+    mirror_metadata = MIRROR_LOOKUP_METADATA_BY_MOVE.get(
+        move_key(from_square, to_square),
+        {},
+    )
+    if mirror_metadata:
+        metrics.update(json_safe(mirror_metadata))
 
     return {
         "from_square": from_square,
@@ -568,8 +619,15 @@ def build_metadata():
         "source": "lowlevel/build_general_nonh_reverse_lookup.py",
         "source_squares_env": os.environ.get("SOURCE_SQUARES"),
         "target_moves_env": os.environ.get("TARGET_MOVES"),
+        "lookup_output_path_env": os.environ.get("LOOKUP_OUTPUT_PATH"),
+        "lookup_output_dir_env": os.environ.get("LOOKUP_OUTPUT_DIR"),
+        "lookup_output_path": str(OUTPUT_PATH),
         "donor_lookup_dir_env": os.environ.get("DONOR_LOOKUP_DIR"),
         "donor_lookup_dir": str(DONOR_LOOKUP_DIR),
+        "mirror_lookup_metadata_by_move_env": os.environ.get(
+            "MIRROR_LOOKUP_METADATA_BY_MOVE"
+        ),
+        "mirror_lookup_metadata_move_count": len(MIRROR_LOOKUP_METADATA_BY_MOVE),
         "lookup_lift_height_override_env": os.environ.get("LOOKUP_LIFT_HEIGHT_OVERRIDE"),
         "lookup_lift_height_override": LOOKUP_LIFT_HEIGHT_OVERRIDE,
         "lookup_home_shoulder_pan_override_deg_env": os.environ.get(
@@ -2475,6 +2533,7 @@ def write_success_map(lookup):
     moves = lookup.get("moves", {})
     if not isinstance(moves, dict):
         moves = {}
+    SUCCESS_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUCCESS_MAP_PATH.write_text(
         render_svg(OUTPUT_PATH, lookup, moves),
         encoding="utf-8"
@@ -2485,6 +2544,7 @@ def write_success_map(lookup):
 def main():
     try:
         lookup, report = build_lookup()
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
         OUTPUT_PATH.write_text(
             json.dumps(json_safe(lookup), indent=2, sort_keys=True) + "\n",
             encoding="utf-8"
