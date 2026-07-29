@@ -10,6 +10,12 @@ parser.add_argument("--target-moves", default=None)
 parser.add_argument("--lift-height", type=float, default=0.07)
 home_group = parser.add_mutually_exclusive_group()
 home_group.add_argument(
+    "--home-preset",
+    choices=("mirrored_compromise",),
+    default=None,
+    help="Use a named full-joint home preset.",
+)
+home_group.add_argument(
     "--home-shoulder-pan-delta-deg",
     type=float,
     default=None,
@@ -38,6 +44,8 @@ if args.home_shoulder_pan_deg is not None:
     env["LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"] = str(
         args.home_shoulder_pan_deg
     )
+if args.home_preset is not None:
+    env["LOOKUP_HOME_PRESET"] = args.home_preset
 if args.home_shoulder_pan_delta_deg is not None:
     env["LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"] = str(
         args.home_shoulder_pan_delta_deg
@@ -46,7 +54,8 @@ if args.home_shoulder_pan_delta_deg is not None:
 print(
     f"Running {source} for {target_moves} "
     f"with lift={args.lift_height} "
-    f"and home shoulder pan absolute={args.home_shoulder_pan_deg}, "
+    f"and home preset={args.home_preset}, "
+    f"shoulder pan absolute={args.home_shoulder_pan_deg}, "
     f"delta={args.home_shoulder_pan_delta_deg}..."
 )
 subprocess.run(

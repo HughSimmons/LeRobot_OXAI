@@ -144,19 +144,43 @@ MIRROR_LOOKUP_METADATA_BY_MOVE = optional_json_object_from_env(
     "MIRROR_LOOKUP_METADATA_BY_MOVE"
 )
 LOOKUP_LIFT_HEIGHT_OVERRIDE = optional_float_from_env("LOOKUP_LIFT_HEIGHT_OVERRIDE")
+LOOKUP_HOME_PRESET = os.environ.get("LOOKUP_HOME_PRESET")
+if LOOKUP_HOME_PRESET is not None:
+    LOOKUP_HOME_PRESET = LOOKUP_HOME_PRESET.strip() or None
 LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG = optional_float_from_env(
     "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"
 )
 LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG = optional_float_from_env(
     "LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"
 )
-if (
-    LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG is not None
-    and LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is not None
-):
+LOOKUP_HOME_PRESETS = {
+    "mirrored_compromise": np.array([
+        -96.937906118107,
+        -108.574743187855,
+        97.506932803653,
+        65.749431985183,
+        35.411444525975,
+        4.62962962962963,
+    ]),
+}
+home_override_count = sum(
+    value is not None
+    for value in (
+        LOOKUP_HOME_PRESET,
+        LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG,
+        LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG,
+    )
+)
+if home_override_count > 1:
     raise ValueError(
-        "Set only one of LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG "
+        "Set only one of LOOKUP_HOME_PRESET, "
+        "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG, "
         "or LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"
+    )
+if LOOKUP_HOME_PRESET is not None and LOOKUP_HOME_PRESET not in LOOKUP_HOME_PRESETS:
+    raise ValueError(
+        "LOOKUP_HOME_PRESET must be one of "
+        f"{', '.join(sorted(LOOKUP_HOME_PRESETS))}, got {LOOKUP_HOME_PRESET!r}"
     )
 
 LOOKUP_TO_FILES = tuple("abcdefgh")
@@ -630,6 +654,9 @@ def build_metadata():
         "mirror_lookup_metadata_move_count": len(MIRROR_LOOKUP_METADATA_BY_MOVE),
         "lookup_lift_height_override_env": os.environ.get("LOOKUP_LIFT_HEIGHT_OVERRIDE"),
         "lookup_lift_height_override": LOOKUP_LIFT_HEIGHT_OVERRIDE,
+        "lookup_home_preset_env": os.environ.get("LOOKUP_HOME_PRESET"),
+        "lookup_home_preset": LOOKUP_HOME_PRESET,
+        "lookup_home_presets": json_safe(LOOKUP_HOME_PRESETS),
         "lookup_home_shoulder_pan_override_deg_env": os.environ.get(
             "LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG"
         ),
@@ -790,10 +817,14 @@ def lookup_lift_height_for_square(square):
 
 def lookup_home_joints_for_source(from_square):
     if (
-        LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG is None
+        LOOKUP_HOME_PRESET is None
+        and LOOKUP_HOME_SHOULDER_PAN_OVERRIDE_DEG is None
         and LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is None
     ) or from_square not in SOURCE_SQUARES:
         return None
+
+    if LOOKUP_HOME_PRESET is not None:
+        return LOOKUP_HOME_PRESETS[LOOKUP_HOME_PRESET].copy()
 
     home_joints = DEFAULT_HOME.copy()
     if LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG is not None:

@@ -26,6 +26,15 @@ TARGET_SQUARES = tuple(f"{file}{rank}" for file in FILES for rank in RANKS)
 DEFAULT_HOME0_DEG = 96.92307692307692
 MIRRORED_HOME0_DEG = -83.07692307692308
 MIRRORED_HOME_DELTA_DEG = -180.0
+MIRRORED_COMPROMISE_HOME = [
+    -96.937906118107,
+    -108.574743187855,
+    97.506932803653,
+    65.749431985183,
+    35.411444525975,
+    4.62962962962963,
+]
+HOME_PRESETS = ("m180_shoulder_pan", "mirrored_compromise")
 
 
 @dataclass(frozen=True)
@@ -143,6 +152,8 @@ def home_policy_for_move(move: dict | None) -> str:
         return "default_home_explicit"
     if abs(home0 - MIRRORED_HOME0_DEG) < 1e-3:
         return "alternate_home_m180"
+    if abs(home0 - MIRRORED_COMPROMISE_HOME[0]) < 1e-3:
+        return "alternate_home_mirrored_compromise"
     return f"other_home_{home0:.6f}"
 
 
@@ -154,7 +165,7 @@ def move_is_default_home_success(move: dict | None) -> bool:
 
 
 def move_is_mirrored_home_success(move: dict | None) -> bool:
-    return home_policy_for_move(move) == "alternate_home_m180"
+    return home_policy_for_move(move).startswith("alternate_home_")
 
 
 def lift_override_for_counterpart(move: dict | None) -> float | None:
@@ -273,12 +284,19 @@ def grouped_planned_moves(items: list[PlannedMove]):
     return dict(sorted(grouped.items(), key=lambda group: (group[0][0], lift_group_key(group[0][1]))))
 
 
-def mirror_metadata_for_moves(items: list[PlannedMove]) -> dict:
+def mirror_home_policy(home_preset: str) -> str:
+    if home_preset == "mirrored_compromise":
+        return "alternate_home_mirrored_compromise_rank_reflection"
+    return "alternate_home_m180_rank_reflection"
+
+
+def mirror_metadata_for_moves(items: list[PlannedMove], home_preset: str) -> dict:
     return {
         item.move_key: {
-            "trajectory_home_policy": "alternate_home_m180_rank_reflection",
+            "trajectory_home_policy": mirror_home_policy(home_preset),
             "mirror_rank_reflection": True,
             "mirror_reflection_rule": "rank_9_minus_rank",
+            "mirror_home_preset": home_preset,
             "mirror_counterpart_key": item.mirror_move_key,
             "mirror_counterpart_from_square": item.mirror_from_square,
             "mirror_counterpart_to_square": item.mirror_to_square,
@@ -319,6 +337,7 @@ def run_builder_group(
     source_square: str,
     lift_override: float | None,
     items: list[PlannedMove],
+    home_preset: str,
 ) -> tuple[int, Path, Path]:
     group_label = lift_group_key(lift_override).replace(".", "p")
     group_output_dir = output_dir / "supplements" / source_square / f"lift_{group_label}"
@@ -326,10 +345,17 @@ def run_builder_group(
     env = os.environ.copy()
     env["SOURCE_SQUARES"] = source_square
     env["TARGET_MOVES"] = " ".join(item.move_key for item in items)
-    env["LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"] = str(MIRRORED_HOME_DELTA_DEG)
+    if home_preset == "mirrored_compromise":
+        env["LOOKUP_HOME_PRESET"] = "mirrored_compromise"
+        env.pop("LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG", None)
+    else:
+        env["LOOKUP_HOME_SHOULDER_PAN_DELTA_DEG"] = str(MIRRORED_HOME_DELTA_DEG)
+        env.pop("LOOKUP_HOME_PRESET", None)
     env["LOOKUP_OUTPUT_DIR"] = str(group_output_dir)
     env["DONOR_LOOKUP_DIR"] = str(live_lookup_dir)
-    env["MIRROR_LOOKUP_METADATA_BY_MOVE"] = json.dumps(mirror_metadata_for_moves(items))
+    env["MIRROR_LOOKUP_METADATA_BY_MOVE"] = json.dumps(
+        mirror_metadata_for_moves(items, home_preset)
+    )
     if lift_override is None:
         env.pop("LOOKUP_LIFT_HEIGHT_OVERRIDE", None)
     else:
@@ -349,7 +375,11 @@ def run_builder_group(
         log_file.write(f"source_square={source_square}\n")
         log_file.write(f"target_moves={env['TARGET_MOVES']}\n")
         log_file.write(f"lift_override={lift_override}\n")
-        log_file.write(f"home_shoulder_pan_delta_deg={MIRRORED_HOME_DELTA_DEG}\n")
+        log_file.write(f"home_preset={home_preset}\n")
+        log_file.write(
+            "home_shoulder_pan_delta_deg="
+            f"{MIRRORED_HOME_DELTA_DEG if home_preset == 'm180_shoulder_pan' else ''}\n"
+        )
         log_file.write(f"lookup_output_dir={group_output_dir}\n")
         log_file.write(f"donor_lookup_dir={live_lookup_dir}\n")
         log_file.write(f"command={shlex.join(command)}\n\n")
@@ -452,10 +482,17 @@ def write_run_summary(
     unsupported: list[PlannedMove],
     group_results: list[dict],
     merge_results: list[dict],
+    home_preset: str,
 ) -> None:
     summary = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "mirrored_home_delta_deg": MIRRORED_HOME_DELTA_DEG,
+        "mirrored_home_preset": home_preset,
+        "mirrored_home_delta_deg": (
+            MIRRORED_HOME_DELTA_DEG if home_preset == "m180_shoulder_pan" else None
+        ),
+        "mirrored_compromise_home_joints_deg": (
+            MIRRORED_COMPROMISE_HOME if home_preset == "mirrored_compromise" else None
+        ),
         "reflection_rule": "rank_9_minus_rank",
         "planned": [item.__dict__ for item in planned],
         "unsupported": [item.__dict__ for item in unsupported],
@@ -481,6 +518,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--lookup-dir", type=Path, default=LOWLEVEL_DIR)
     parser.add_argument("--python", default=sys.executable)
+    parser.add_argument(
+        "--home-preset",
+        choices=HOME_PRESETS,
+        default="m180_shoulder_pan",
+        help=(
+            "Home setting for mirrored retries. Defaults to the historical "
+            "shoulder-pan -180 option."
+        ),
+    )
     parser.add_argument("--include-unsupported", action="store_true")
     parser.add_argument("--continue-on-failure", action="store_true")
     parser.add_argument("--no-backup", action="store_true")
@@ -515,6 +561,7 @@ def main() -> int:
             unsupported=unsupported,
             group_results=[],
             merge_results=[],
+            home_preset=args.home_preset,
         )
         print(f"\nSummary: {output_dir / 'summary.json'}")
         return 0
@@ -536,6 +583,7 @@ def main() -> int:
             source_square=source_square,
             lift_override=lift_override,
             items=items,
+            home_preset=args.home_preset,
         )
         group_result = {
             "source_square": source_square,
@@ -580,6 +628,7 @@ def main() -> int:
         unsupported=unsupported,
         group_results=group_results,
         merge_results=merge_results,
+        home_preset=args.home_preset,
     )
     print(f"\nSummary: {output_dir / 'summary.json'}")
 
