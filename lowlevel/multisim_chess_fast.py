@@ -2,6 +2,8 @@ import pybullet as p
 import pybullet_data
 import imageio
 import numpy as np
+import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -19,8 +21,8 @@ from chess_traj import (
 )
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
-video_on = False
-# video_on = True
+# video_on = False
+video_on = True
 runid = "multisim_place_lookup"
 RECORDINGS_DIR = Path(__file__).resolve().parent / "recordings"
 MOVE_FROM_SQUARE = "e4"
@@ -94,15 +96,122 @@ PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 renderfreq = 50
 WIDTH, HEIGHT = 640, 360
-PIECE_LIFTED_Z_THRESHOLD = 0.05
-PIECE_DROPPED_Z_THRESHOLD = 0.035
-PIECE_DYNAMICS = {
+PIECE_MODEL = os.environ.get("LOOKUP_PIECE_MODEL", "cylinder").strip() or "cylinder"
+if PIECE_MODEL not in {"cylinder", "rook_kiri"}:
+    raise ValueError(
+        "LOOKUP_PIECE_MODEL must be one of cylinder or rook_kiri, "
+        f"got {PIECE_MODEL!r}"
+    )
+
+CYLINDER_PIECE_HEIGHT = 0.04
+CYLINDER_PIECE_RADIUS = 0.012
+CYLINDER_PIECE_MASS = 0.05
+CYLINDER_PIECE_BASE_Z = 0.04
+CYLINDER_PIECE_LIFTED_Z_THRESHOLD = 0.05
+CYLINDER_PIECE_DROPPED_Z_THRESHOLD = 0.035
+CYLINDER_PIECE_DYNAMICS = {
     "lateralFriction": 1.0,
     "rollingFriction": 0.001,
     "spinningFriction": 0.001,
     "linearDamping": 0.02,
     "angularDamping": 0.01,
 }
+ROOK_KIRI_MESH_PATH = Path(
+    os.environ.get(
+        "ROOK_KIRI_MESH_PATH",
+        Path(__file__).resolve().parents[1] / "rook_kiri" / "Rook_cleaned.obj",
+    )
+).expanduser().resolve()
+ROOK_KIRI_TARGET_HEIGHT = 0.04
+ROOK_KIRI_MASS = 0.05
+ROOK_KIRI_BOARD_TOP_Z = 0.005
+ROOK_KIRI_LIFTED_Z_THRESHOLD = 0.045
+ROOK_KIRI_DROPPED_Z_THRESHOLD = 0.025
+ROOK_KIRI_DYNAMICS = {
+    "lateralFriction": 1.0,
+    "rollingFriction": 0.001,
+    "spinningFriction": 0.001,
+    "linearDamping": 0.02,
+    "angularDamping": 0.01,
+}
+
+
+def obj_vertex_bounds(mesh_path):
+    vertices = []
+    with Path(mesh_path).open("r", encoding="utf-8", errors="ignore") as mesh_file:
+        for line in mesh_file:
+            if not line.startswith("v "):
+                continue
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            vertices.append([float(parts[1]), float(parts[2]), float(parts[3])])
+    if not vertices:
+        raise ValueError(f"No OBJ vertices found in {mesh_path}")
+    vertices = np.array(vertices, dtype=float)
+    return vertices.min(axis=0), vertices.max(axis=0)
+
+
+def rook_kiri_piece_config():
+    raw_min, raw_max = obj_vertex_bounds(ROOK_KIRI_MESH_PATH)
+    raw_dims = raw_max - raw_min
+    mesh_up_axis = 1
+    scale = ROOK_KIRI_TARGET_HEIGHT / raw_dims[mesh_up_axis]
+    raw_center = (raw_min + raw_max) / 2.0
+    visual_frame_position = np.array([
+        -scale * raw_center[0],
+        scale * raw_center[2],
+        -ROOK_KIRI_TARGET_HEIGHT / 2.0 - scale * raw_min[1],
+    ])
+    visual_frame_euler = np.array([math.pi / 2.0, 0.0, 0.0])
+    scaled_x_dim = scale * raw_dims[0]
+    scaled_y_dim = scale * raw_dims[2]
+    collision_radius = 0.5 * max(scaled_x_dim, scaled_y_dim) + 0.001
+    return {
+        "piece_model": "rook_kiri",
+        "mesh_path": str(ROOK_KIRI_MESH_PATH),
+        "mesh_raw_min": raw_min,
+        "mesh_raw_max": raw_max,
+        "mesh_raw_dims": raw_dims,
+        "mesh_scale": scale,
+        "target_height": ROOK_KIRI_TARGET_HEIGHT,
+        "collision_height": ROOK_KIRI_TARGET_HEIGHT,
+        "collision_radius": collision_radius,
+        "mass": ROOK_KIRI_MASS,
+        "base_z": ROOK_KIRI_BOARD_TOP_Z + ROOK_KIRI_TARGET_HEIGHT / 2.0,
+        "visual_frame_position": visual_frame_position,
+        "visual_frame_euler": visual_frame_euler,
+        "dynamics": ROOK_KIRI_DYNAMICS,
+        "lifted_z_threshold": ROOK_KIRI_LIFTED_Z_THRESHOLD,
+        "dropped_z_threshold": ROOK_KIRI_DROPPED_Z_THRESHOLD,
+        "collision_model": "single_cylinder_proxy_with_rook_mesh_visual",
+    }
+
+
+def cylinder_piece_config():
+    return {
+        "piece_model": "cylinder",
+        "height": CYLINDER_PIECE_HEIGHT,
+        "radius": CYLINDER_PIECE_RADIUS,
+        "mass": CYLINDER_PIECE_MASS,
+        "base_z": CYLINDER_PIECE_BASE_Z,
+        "dynamics": CYLINDER_PIECE_DYNAMICS,
+        "lifted_z_threshold": CYLINDER_PIECE_LIFTED_Z_THRESHOLD,
+        "dropped_z_threshold": CYLINDER_PIECE_DROPPED_Z_THRESHOLD,
+        "collision_model": "cylinder",
+    }
+
+
+def active_piece_config():
+    if PIECE_MODEL == "rook_kiri":
+        return rook_kiri_piece_config()
+    return cylinder_piece_config()
+
+
+PIECE_CONFIG = active_piece_config()
+PIECE_LIFTED_Z_THRESHOLD = PIECE_CONFIG["lifted_z_threshold"]
+PIECE_DROPPED_Z_THRESHOLD = PIECE_CONFIG["dropped_z_threshold"]
+PIECE_DYNAMICS = PIECE_CONFIG["dynamics"]
 SOLVER_ITERATIONS = 200
 SOLVER_SUBSTEPS = 4
 POST_MOVE_SETTLE_STEPS = 1000
@@ -294,13 +403,38 @@ def apply_critical_tilt_perturbation(piece_id, video_context=None):
 ##fn to generate pices 
 def create_piece(sq="a1"):
     world_x, world_y, _ = chess_to_xy(sq, board_origin=board_origin)
-    world_z = 0.04
+    config = active_piece_config()
+    world_z = config["base_z"]
 
-    # Larger pieces: radius 0.024 (2x), height 0.04 (2x)
-    piece_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.012, height=0.04)
-    piece_visual = p.createVisualShape(p.GEOM_CYLINDER, radius=0.012, length=0.04, 
-                                    rgbaColor=[1, 0, 0, 1])
-    piece_id = p.createMultiBody(baseMass=0.05, baseCollisionShapeIndex=piece_shape,
+    if config["piece_model"] == "rook_kiri":
+        piece_shape = p.createCollisionShape(
+            p.GEOM_CYLINDER,
+            radius=config["collision_radius"],
+            height=config["collision_height"],
+        )
+        piece_visual = p.createVisualShape(
+            p.GEOM_MESH,
+            fileName=config["mesh_path"],
+            meshScale=[config["mesh_scale"]] * 3,
+            visualFramePosition=config["visual_frame_position"].tolist(),
+            visualFrameOrientation=p.getQuaternionFromEuler(
+                config["visual_frame_euler"].tolist()
+            ),
+            rgbaColor=[0.8, 0.8, 0.85, 1.0],
+        )
+    else:
+        piece_shape = p.createCollisionShape(
+            p.GEOM_CYLINDER,
+            radius=config["radius"],
+            height=config["height"],
+        )
+        piece_visual = p.createVisualShape(
+            p.GEOM_CYLINDER,
+            radius=config["radius"],
+            length=config["height"],
+            rgbaColor=[1, 0, 0, 1],
+        )
+    piece_id = p.createMultiBody(baseMass=config["mass"], baseCollisionShapeIndex=piece_shape,
                                 baseVisualShapeIndex=piece_visual,
                                 basePosition=[world_x, world_y, world_z])
     # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
@@ -325,7 +459,7 @@ def create_piece(sq="a1"):
     p.changeDynamics(
         piece_id,
         -1,
-        **PIECE_DYNAMICS
+        **config["dynamics"]
     )
     return(piece_id)
 
@@ -501,7 +635,7 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
     piece_id = create_piece(from_square)
     piece_ids = [piece_id]
 
-    print(f"✓ Created {len(piece_ids)} large chess pieces")
+    print(f"✓ Created {len(piece_ids)} {PIECE_MODEL} chess pieces")
     print("Piece IDs:", piece_ids)
     print("✓ All objects loaded and ready!")
 
@@ -518,6 +652,8 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
         "trajectory_home_joints_deg": (
             None if home_joints is None else active_home.copy()
         ),
+        "piece_model": PIECE_MODEL,
+        "piece_config": active_piece_config(),
     }
 
 
@@ -709,6 +845,8 @@ def run_sim_move(
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
             "trajectory_home_joints_deg": recorded_trajectory_home,
+            "piece_model": PIECE_MODEL,
+            "piece_config": active_piece_config(),
             "trajectory_valid": False,
             "reject_reason": reject_reason,
             "release_move_idx": None,
@@ -1030,6 +1168,8 @@ def run_sim_move(
             "trajectory_fk_error": trajectory_fk_error,
             "trajectory_fk_error_events": traj_metrics["fk_error_events"],
             "trajectory_home_joints_deg": recorded_trajectory_home,
+            "piece_model": PIECE_MODEL,
+            "piece_config": active_piece_config(),
             "trajectory_valid": True,
             "release_move_idx": release_move_idx,
             "release_target_z": release_target_z,

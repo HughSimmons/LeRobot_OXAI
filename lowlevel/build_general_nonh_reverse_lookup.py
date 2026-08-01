@@ -21,7 +21,9 @@ from multisim_chess_fast import (
     FINAL_TILT_TARGET_DEG,
     LONG_TRANSPORT_MOVE_STEPS_PER_WAYPOINT,
     MAX_TRAJECTORY_FK_ERROR,
+    PIECE_CONFIG,
     PIECE_DYNAMICS,
+    PIECE_MODEL,
     PLACE_OFFSET,
     XY_CORRECTION_TARGET_ERROR,
     CRITICAL_TILT_ANGULAR_VELOCITY,
@@ -316,6 +318,11 @@ def output_path_from_env():
         return Path(output_path).expanduser().resolve()
     if output_dir is not None and output_dir.strip():
         return Path(output_dir).expanduser().resolve() / output_filename()
+    if PIECE_MODEL != "cylinder":
+        raise ValueError(
+            "Non-cylinder lookup runs must set LOOKUP_OUTPUT_DIR or "
+            "LOOKUP_OUTPUT_PATH so rook outputs do not reuse cylinder lookup paths."
+        )
     return Path(__file__).resolve().parent / output_filename()
 
 
@@ -729,6 +736,9 @@ def build_metadata():
         "lookup_edge_support_margin": LOOKUP_EDGE_SUPPORT_MARGIN,
         "default_placement_lower_steps": 10,
         "relaxed_placement_lower_steps_by_to_square": RELAXED_PLACEMENT_LOWER_STEPS_BY_TO_SQUARE,
+        "piece_model_env": os.environ.get("LOOKUP_PIECE_MODEL"),
+        "piece_model": PIECE_MODEL,
+        "piece_config": json_safe(PIECE_CONFIG),
         "piece_dynamics": json_safe(PIECE_DYNAMICS),
         "critical_tilt_perturb_enabled": CRITICAL_TILT_PERTURB_ENABLED,
         "critical_tilt_range_deg": list(CRITICAL_TILT_RANGE_DEG),
