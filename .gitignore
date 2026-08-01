@@ -26,3 +26,12 @@ __pycache__/
 *.yaml
 *.log
 *.json
+
+# Archived cylinder lookup reproducibility bundle
+!lowlevel/archivejson/cylinder_lookups_*/[a-f][1-8]_non_h_reverse_move_lookup.json
+!lowlevel/recordings/archive_verify_*_live/summary.json
+!lowlevel/recordings/archive_verify_*_archived/summary.json
+
+# Cylinder-era cleanup bundle
+!lowlevel/cleanup_cylinder/
+!lowlevel/cleanup_cylinder/**

@@ -1,0 +1,210 @@
+{
+  "generated_at": "2026-06-21T07:25:50.196067+00:00",
+  "initial_grasp_offset": [
+    -0.014,
+    0.002,
+    -0.003
+  ],
+  "local_search_xy_delta": 0.001,
+  "local_search_xy_steps": [
+    -3,
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3
+  ],
+  "local_search_z_delta": 0.002,
+  "local_search_z_steps": [
+    0,
+    -1,
+    1
+  ],
+  "results": [
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.000990411565745026
+      },
+      "carried_pickup_success": true,
+      "from_square": "f4",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "e4"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.002530973822634424
+      },
+      "carried_pickup_success": true,
+      "from_square": "e4",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "d4"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.004120224465210992
+      },
+      "carried_pickup_success": true,
+      "from_square": "d4",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "c4"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.0036786042023512107
+      },
+      "carried_pickup_success": true,
+      "from_square": "c4",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "b4"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.008988455986470014
+      },
+      "carried_pickup_success": true,
+      "from_square": "b4",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "a4"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": false,
+        "premature_drop": false,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.01300005964893446
+      },
+      "carried_pickup_success": false,
+      "from_square": "a4",
+      "local_search_attempts": [
+        {
+          "delta": [
+            -0.003,
+            -0.003,
+            0.0
+          ],
+          "grasp_offset": [
+            -0.017,
+            -0.001,
+            -0.003
+          ],
+          "pickup_success": true,
+          "premature_drop": true,
+          "reject_reason": null,
+          "score": [
+            0,
+            0,
+            1,
+            0.012217820093613146,
+            0.004242640687119285
+          ],
+          "trajectory_fk_error": 0.012217820093613146
+        }
+      ],
+      "selected_grasp_offset": [
+        -0.017,
+        -0.001,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "local_search",
+      "to_square": "b4"
+    }
+  ],
+  "source_squares": [
+    "f4",
+    "e4",
+    "d4",
+    "c4",
+    "b4",
+    "a4"
+  ],
+  "test_to_square_by_source": {
+    "a4": "b4",
+    "b4": "a4",
+    "c4": "b4",
+    "d4": "c4",
+    "e4": "d4",
+    "f4": "e4"
+  }
+}

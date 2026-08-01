@@ -1,0 +1,157 @@
+Cylinder lookup archive manifest
+archive_timestamp_local: 20260801_101937
+archive_path: /Users/zhg603/Documents/OXAI/lowlevel/archivejson/cylinder_lookups_20260801_101937
+archive_action: moved active cylinder lookup JSONs and matching success maps out of live lowlevel paths
+piece_model: cylinder
+next_piece_model: rook_kiri
+rook_transition_policy: archived cylinder lookups are historical reference only and must not be used as donors
+source_file_count: 48
+success_map_count: 48
+possible_moves: 3024
+successful_moves: 2991
+missing_moves_count: 33
+home_policies:
+  alternate_home_m180: 44
+  alternate_home_m180_rank_reflection: 110
+  alternate_home_mirrored_compromise_rank_reflection: 20
+  default_home_or_unspecified: 2781
+  default_home_restored_from_backup: 36
+lift_height_policies:
+  explicit_0.07: 114
+  explicit_0.09: 91
+  explicit_0.13: 90
+  implicit_h_file: 304
+  implicit_standard: 2392
+missing_moves:
+  a1_to_h1
+  a2_to_g5
+  a4_to_f5
+  a4_to_f8
+  a8_to_f3
+  a8_to_f5
+  b2_to_h7
+  b5_to_h1
+  b6_to_h1
+  b7_to_h2
+  c2_to_h8
+  c3_to_h1
+  c5_to_h1
+  c6_to_h1
+  c7_to_h1
+  d6_to_h1
+  d7_to_h1
+  d7_to_h2
+  e7_to_h1
+  f1_to_h1
+  f2_to_h1
+  f2_to_h8
+  f3_to_h1
+  f3_to_h8
+  f4_to_h1
+  f4_to_h8
+  f5_to_h1
+  f5_to_h8
+  f6_to_h1
+  f6_to_h8
+  f7_to_h1
+  f7_to_h8
+  f8_to_h8
+pre_archive_verification_summary: lowlevel/recordings/archive_verify_20260801_101700_live/summary.json
+checksums_sha256:
+  7a093f3d57522f2eefdd4abbde2a4e9681039337c0dad6703631151de43f6b68      424312  a1_non_h_reverse_move_lookup.json
+  f92453126b9342ee32c593ab8244a8c52942251434d9a70d1c429005aa07dc0a      522849  a2_non_h_reverse_move_lookup.json
+  7c6f5dfdad968dd4a914c9d6a3a360a975f02e794634177235a92b18c4f382c9      977213  a3_non_h_reverse_move_lookup.json
+  d4ad80535349d587fb794d255e5397c3c516ec5d7144e2b5ce6f871f7d34015b     1266762  a4_non_h_reverse_move_lookup.json
+  f6c1be39f76612afc8e37a1d90869cff9f4dc8233db50c98664a849002d596ca      815819  a5_non_h_reverse_move_lookup.json
+  67a401df53cad10d9c61b23e461e25812a66d2fc59a6a0225c888d7500b3105d     1286848  a6_non_h_reverse_move_lookup.json
+  626139a51ed2d66f6c5cc1f12638b66724ad9b053ae294c19973efd96cbfb889     1220239  a7_non_h_reverse_move_lookup.json
+  d1927c91b61655effc829827c4f15aa8567f8f83cedbb6faa58a82f0053b9f2e     1224947  a8_non_h_reverse_move_lookup.json
+  22b16e99837f3dd70d3b02067fb958c4af54bb79842781b28e31868155a06f71      880096  b1_non_h_reverse_move_lookup.json
+  c1615ce8beb242464b61387f7f7a7daac580f68a2fead2e36a383766a5e0cf76     1070974  b2_non_h_reverse_move_lookup.json
+  1f570ede600d31afac2c90fa80fe495a007ee33a8dbd886792a174a95af8b6aa      824638  b3_non_h_reverse_move_lookup.json
+  7f856ff9e48d4f1f0cea65715c9f66af7d5ebbe060e5f6c9f3bf19c68f89c4c5     1440553  b4_non_h_reverse_move_lookup.json
+  03517a1bb6aa5fbf1b7f404424aeac7ad136dbc6538fac2ece95fad6da57da07      948597  b5_non_h_reverse_move_lookup.json
+  fed8d8a50421199cc10a59d37aaa02ce3324a8958720421bcdc5cf1e3a66fc14     1006161  b6_non_h_reverse_move_lookup.json
+  43d5927d406cd56f07740f9b3ff97a8b784072b397ca68a68898c7939c223024     1131615  b7_non_h_reverse_move_lookup.json
+  4fb34c4c0fd3b1ab638ece1bbb21c695228e5ef01d288c21a760922fc96ae26d      718652  b8_non_h_reverse_move_lookup.json
+  b6a35f238c63019c4cc5f6d3b1046cd3347cf3f68827250050de2ccf056da649      887795  c1_non_h_reverse_move_lookup.json
+  b8ab3bf53bbe197ceee89c51f19f28fc5bf6967c9041210924ffd5ed1f658617     1067596  c2_non_h_reverse_move_lookup.json
+  4e097ea342d9c8da59b158ce3009dc2c43b0a2e1035f1a7b4290b3a093a53d71      815880  c3_non_h_reverse_move_lookup.json
+  101dc44345a147fea209fd37e8d0936e96db7a49ac8c1eadd44505a4cd28edbb     1089470  c4_non_h_reverse_move_lookup.json
+  a0644db9e690d15dc54b713d6c7824852ba49fd5538f3a247efb30114065ff1a     1251996  c5_non_h_reverse_move_lookup.json
+  94e817e2c2fc07d47b50ec1a21e9676bfac4a229f6bad4f04e07b8ecc1e1eca8      788064  c6_non_h_reverse_move_lookup.json
+  3482838babe6ec40c515338ae4f480d24f7800f347641658eb86b0df9095824a      719611  c7_non_h_reverse_move_lookup.json
+  35d96906094147d6a6246432e6e12ff53b3efe81120747e73bd2d7f31bc15723      931528  c8_non_h_reverse_move_lookup.json
+  31e461b28c7bbf292f7b52b1a67a41906f791c971a8e3268bf5e250dce45e3d6      547120  d1_non_h_reverse_move_lookup.json
+  347d392f1a23f34181d0f475a5015b7bbbee99ed65928b1f9e816ae85d5b95ee      788567  d2_non_h_reverse_move_lookup.json
+  fbaceefbe64b61619f5ea8c59e870342f2313c464c30a1e7b89cd613c6fdd4c3     1100336  d3_non_h_reverse_move_lookup.json
+  73bbc5f51a8c05de62ba8953e6b0209d4065c96489c406befe0e2500627f13c1      747834  d4_non_h_reverse_move_lookup.json
+  db1ef0b9ca894121ea7ce813472ac28533b451be7de970486df26b9159a5a733      837290  d5_non_h_reverse_move_lookup.json
+  226b3c8a694be254675aacfb28f7bb2c2f256ebee739d041e8be1e3d8882da4e     1114823  d6_non_h_reverse_move_lookup.json
+  c87053474ed63fa5a553b0d14918a6c42cea61f49e47e1aa0058bbb105e814df      928733  d7_non_h_reverse_move_lookup.json
+  b940a3b3212ad7062303d2e309fa1d9408b59cd16884d5585719fbc6f53c4be4      839490  d8_non_h_reverse_move_lookup.json
+  d52f7a914f8cf3632abebe5da1897c978f5aed6edb2aa48f93d5f041e9abe0e3      416840  e1_non_h_reverse_move_lookup.json
+  ef7568b0f8152e3167589b0647494c699bf318de5ad56d2c4742973e59ce9a94      723155  e2_non_h_reverse_move_lookup.json
+  26fd2c3ebcf6207bed5f15063db7b8d884a5bbaec965d045b25fe1f1b207b6a2      728754  e3_non_h_reverse_move_lookup.json
+  8d9bb374e7e55838db47686aedfd4320b1b884520390b2437832207fbb8e57ac      919589  e4_non_h_reverse_move_lookup.json
+  5f7700e4172d92f3587da0ba0333a8ab6d339eecc192fcb5b86f2dc16e884053      746583  e5_non_h_reverse_move_lookup.json
+  99498d20dbd69249d3e5e072692e59b66b40ac5e9d4888bc4ade16bfe59e98ad      860464  e6_non_h_reverse_move_lookup.json
+  9379675aec999299710ef12f2f9844df995cf6aae4e8c5219a0341029f480717      844061  e7_non_h_reverse_move_lookup.json
+  c995b8cc8d4ee73306cebe6cfe1a572b9ffb2c2c8275b60632f152933822df5d      354389  e8_non_h_reverse_move_lookup.json
+  22ab1a53fa8171d14a5f192aa6982015cb11117ec996ca32a9897ca942c15b2c      336082  f1_non_h_reverse_move_lookup.json
+  5fe451fc621ae6e14aaffd05238bf44f94f29fc2af48295a4deb7256a65b7e02      178580  f2_non_h_reverse_move_lookup.json
+  137cd0dd529b4d45953ac249cf2b5e0837539a84270be664f90d6f09c9d46daa      170844  f3_non_h_reverse_move_lookup.json
+  d688743c28a1faf38b54379cb630a8791268f9dcdb0af534ac5966444e0daa3f      182412  f4_non_h_reverse_move_lookup.json
+  c37c4baaf946de24a03907c8bd8acd30143ec9887096c838c9de3da88e47e53a      178427  f5_non_h_reverse_move_lookup.json
+  f0f51b716beac321c1d9ebda0551c9b561042b582cc570d55d368c2242e1deed      158164  f6_non_h_reverse_move_lookup.json
+  6d7db2e9cdb4df225aef0f267526c90f5361ba9d44f46b19307527d4fa9d5387      163519  f7_non_h_reverse_move_lookup.json
+  2b39e09a23c2bf9a2ee4f096e91d31442ae21476478f7d2b7d1de0151199228c      187638  f8_non_h_reverse_move_lookup.json
+  51b8454930e2ef79b74f23933f98b83aa48bc53cf9522cd762fff0eed2bfd7ac       25207  a1_non_h_reverse_move_lookup_success_map.svg
+  1b80b484f3973b63f731987e3e180895480923e2354de1b033695c9d24a264d5       25152  a2_non_h_reverse_move_lookup_success_map.svg
+  9933dc98d805866f74acd0fe1f6f5f3d5ac4311ec54cbfb6b2aa9620249c47df       25238  a3_non_h_reverse_move_lookup_success_map.svg
+  da756a16a9418d8cde3f322558e1ff05177f2a43771879d6f800474f35c6c675       25097  a4_non_h_reverse_move_lookup_success_map.svg
+  bcfdae700dea8f23f216dcb96794d61a5e1cedd8c81694ace2446ba868be5b6d       25260  a5_non_h_reverse_move_lookup_success_map.svg
+  755a6393ca5fff50b969f3ce88b53f3c40b4b5aff6195091a9ea49cd02510f8a       25228  a6_non_h_reverse_move_lookup_success_map.svg
+  a9665fdc82b5770284bdadbc4fac90e9f8cbd92b8e0a7bfa1f7cb01537aa7dcf       25234  a7_non_h_reverse_move_lookup_success_map.svg
+  1ceab2168f1d7fd0aea9caadaedafbe47c1e33a4cbcdc6d02557b606663f9c0f       25072  a8_non_h_reverse_move_lookup_success_map.svg
+  710d0bc0b31684a67bb756b40626877a074547ab50fe8feb71f3d87f41f16ad7       25232  b1_non_h_reverse_move_lookup_success_map.svg
+  33cd2837339a8aa90dfcd4a06471f6593305065375fd44dcfe8317df3dbd6f25       25159  b2_non_h_reverse_move_lookup_success_map.svg
+  920f4e9afd4e7e516d9a63c71c1a858fa5d6e1ec727326ca17d0497724922c3e       25222  b3_non_h_reverse_move_lookup_success_map.svg
+  f7b8cd03a3f8a79ee5b6a517f296055efb16a0d83d9d15e5375f6d78ede7230f       25234  b4_non_h_reverse_move_lookup_success_map.svg
+  c0670dc9a6a81a49ce8ff92334e91f3528c43128439ee62ec71f52e220d5488a       25158  b5_non_h_reverse_move_lookup_success_map.svg
+  7fef0e37336fc33d7f22c98196d3d5b202997e3f230635720938706afa8ce4da       25152  b6_non_h_reverse_move_lookup_success_map.svg
+  fe0326e052a59f28d6cfbc9fbe79316d3ac82b3fd6a48576051d3b13d3e5825c       25152  b7_non_h_reverse_move_lookup_success_map.svg
+  83707acada26a06a86e452c90cead3db0026bc9b8feae425a205c4008e12472e       25206  b8_non_h_reverse_move_lookup_success_map.svg
+  8f7c903c645cc095e7fb25e2ce2fa0cf9d1f2e8ffbbb4e442b8aeba993625287       25237  c1_non_h_reverse_move_lookup_success_map.svg
+  1cb9df2b99602aefeb1ec1a98df8cfc1cd177d18b9e83b86ff256502c6c0cedd       25160  c2_non_h_reverse_move_lookup_success_map.svg
+  40729f7f4520b6bc45247faaa41cff4ec416613c60ad1881ce5e658fb7971f26       25149  c3_non_h_reverse_move_lookup_success_map.svg
+  42afffa3aaebb9be9b74181c76f64b4542616961e4f65ec82b0de04e6e175313       25234  c4_non_h_reverse_move_lookup_success_map.svg
+  47fa6511c0823d110aa7ba2fc9660ca14cf92681ff4a5ba55f62373651970fc5       25160  c5_non_h_reverse_move_lookup_success_map.svg
+  2dd928d5ee4ab82712bbee95724ae6dfc226065d5f5db5f948a3a53189bb284c       25166  c6_non_h_reverse_move_lookup_success_map.svg
+  6628f4a8edfd2b06906914b0a5fa9bd881d0acaaf2eba627c727f77d86cbe171       25154  c7_non_h_reverse_move_lookup_success_map.svg
+  ad20691a136a8e319f99d0f10146fc1e9c441440a35ae1e571429e871562ccbb       25241  c8_non_h_reverse_move_lookup_success_map.svg
+  a0aa9c53c22454cedf1965c584706505083f17a77f8764fda7b7c3b9f41a88f4       25250  d1_non_h_reverse_move_lookup_success_map.svg
+  d6cdaf908853baed348873cf3b7a755ae8184a4f825e55e9472f5bf8d836fd3a       25241  d2_non_h_reverse_move_lookup_success_map.svg
+  9e9da93cddf2d4e531c8535b1948c802f233759228367c9390a7dc217cd9d12c       25240  d3_non_h_reverse_move_lookup_success_map.svg
+  7d27ed526487ca7c6f5c6b99806d5fe78e7443741230e6069a369ac7673e61ca       25237  d4_non_h_reverse_move_lookup_success_map.svg
+  9fe353a1c3964bd7d33937739d414bec6b43034f827973d899c9203149af18a2       25216  d5_non_h_reverse_move_lookup_success_map.svg
+  c5aa24659db36b15081a6eb6a4a39dbe4efcf401eef87ba3a9f2b3c4daa99b51       25160  d6_non_h_reverse_move_lookup_success_map.svg
+  333ad9e4c904e37bee3de672f4949617521a15f214855243380a698eeaafd8a0       25076  d7_non_h_reverse_move_lookup_success_map.svg
+  6facfa8e695eef8fef69aa8a1ae73ac95d66d4bb56a4cd7ad4f52a858d8802f9       25244  d8_non_h_reverse_move_lookup_success_map.svg
+  58b664b1ff2da4965202541a48424bde8650112b94253018cf656d83d8ba743c       25239  e1_non_h_reverse_move_lookup_success_map.svg
+  b277ebd6581822c585edca4c23a8e1f26d9579ff70eaec5c24fc842ce7d2c2de       25236  e2_non_h_reverse_move_lookup_success_map.svg
+  ba954955035578764cc63e4d02258e7788fab64dc3f79b6f04e9e21b2e3fa0c2       25232  e3_non_h_reverse_move_lookup_success_map.svg
+  362379680679931ed194c8d150a3c256dcf7a120a4ca079bbca04b89db81b7be       25232  e4_non_h_reverse_move_lookup_success_map.svg
+  cc1e8fcd891f52fe07907d9a739d4768bd5b6adcd0b0b11a5edd0d2083a5e785       25229  e5_non_h_reverse_move_lookup_success_map.svg
+  46465ea76232251d675e9d397c51d25bca9f7855e6e7967ec483b5d41d2cedeb       25236  e6_non_h_reverse_move_lookup_success_map.svg
+  9e3f575409478e499e860e65e80bb7d467ce2f337fe1433acfd5448cea582a19       25164  e7_non_h_reverse_move_lookup_success_map.svg
+  94c7389209d8e0b87c5de1b171f2bad23d21441b343d60bbd0618bfc2cb5e7f5       25241  e8_non_h_reverse_move_lookup_success_map.svg
+  aa1620c439b11b0b1cd7d952b1fd53af17af385a5b1c8ed4e82d93c65b7a8561       25162  f1_non_h_reverse_move_lookup_success_map.svg
+  5586bdcfd251d894ddd7ddfe16468009508fa00d20483b2b845186a284a6f4e9       25084  f2_non_h_reverse_move_lookup_success_map.svg
+  f0e0f528604af66e3f0fb504701fc66a592b118f6c4ac7409fbe25c72a9c6ac2       25077  f3_non_h_reverse_move_lookup_success_map.svg
+  ffc38c93e9eb5efe838d69697cd61a15a2b05404277b9c9695e7c856eebe29dc       25064  f4_non_h_reverse_move_lookup_success_map.svg
+  19cc7445bf670ba4daebea0e2c6ee1721bb1374b80fa319d7e8d0e59b5818c27       25065  f5_non_h_reverse_move_lookup_success_map.svg
+  3cfcdcc611f3b4f2cf08628c307be4aacf676f6348f02df986656308742a6d3f       25064  f6_non_h_reverse_move_lookup_success_map.svg
+  3e300b93854b4f0cfd53c4c39a193002d25273aa9c0e7c2282541c71f67a55ad       25110  f7_non_h_reverse_move_lookup_success_map.svg
+  e520e9ae1a198e50567b769890faa9bfb3ab9f31b8312e3add508328ae60459d       25180  f8_non_h_reverse_move_lookup_success_map.svg
+post_archive_verification_summary: lowlevel/recordings/archive_verify_20260801_101937_archived/summary.json

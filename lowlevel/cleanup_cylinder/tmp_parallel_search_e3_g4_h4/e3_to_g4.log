@@ -1,0 +1,529 @@
+pybullet build time: Oct 21 2025 16:30:45
+WARNING: Robot has the following self collisions in neutral position:
+  -base_link_2 collides with shoulder_link_2
+  -shoulder_link_0 collides with upper_arm_link_1
+  -upper_arm_link_0 collides with lower_arm_link_0
+  -lower_arm_link_2 collides with wrist_link_1
+  -wrist_link_0 collides with gripper_link_1
+  -gripper_link_0 collides with moving_jaw_so101_v1_link_0
+
+Joint solution:
+Coords 1:
+[ 0.0161635  -0.17142037  0.0092703 ]
+Coords 2:
+[ 0.23368138 -0.15625217 -0.01038265]
+Coords 3:
+[ 0.19905625  0.20644482 -0.00507496]
+Coords 4:
+[-0.01889707  0.17418389 -0.00491548]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+default_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.002 -0.003] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004552636555067079 | xy=0.12209722354915384 | tilt=89.99963589691086 | reject=None
+e3->g4: default grasp failed; running targeted expanded XYZ grasp grid
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy0_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.002 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.008364684291472921 | xy=0.2074899931418545 | tilt=89.9999283309863 | reject=None
+Position Error: 0.026720398992364846
+Target Position: [ 0.36938694 -0.03066824  0.15133404]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy0_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.002 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005146723916002057 | xy=0.395909456070204 | tilt=89.99985295932223 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005645522984404069 | xy=0.27153998637615506 | tilt=89.99995283660799 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.006770684741552561 | xy=0.012014056515093524 | tilt=89.9998987512782 | reject=None
+Position Error: 0.025341924264199997
+Target Position: [ 0.36917183 -0.0306929   0.15124328]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz1_direct_round=1 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.001] | place_offset=[-0.02619182 -0.00488245 -0.01192901] | fk=0.012803381832436098 | xy=0.004666335171458491 | tilt=89.9999614362885 | reject=None
+Position Error: 0.029313606398755607
+Target Position: [ 0.35169182 -0.0463585   0.15756944]
+Position Error: 0.030231162196115678
+Target Position: [ 0.3521862  -0.05826594  0.14679336]
+Position Error: 0.029185150913629283
+Target Position: [ 0.351311   -0.07468547  0.13570272]
+Position Error: 0.02976942918156483
+Target Position: [ 0.36102131 -0.06407414  0.13817386]
+Position Error: 0.03645939010727566
+Target Position: [ 0.37020644 -0.05343489  0.14025807]
+Position Error: 0.04106659634730181
+Target Position: [ 0.37356446 -0.0418943   0.13801168]
+Position Error: 0.039765007551735246
+Target Position: [ 0.38021241 -0.03789233  0.13363494]
+Position Error: 0.032377996612949815
+Target Position: [ 0.37999016 -0.03484438  0.12384674]
+Position Error: 0.02919528053878133
+Target Position: [ 0.37976925 -0.03195466  0.11405843]
+Position Error: 0.029109410846358076
+Target Position: [ 0.37954685 -0.02907868  0.10427003]
+Position Error: 0.029010704995686098
+Target Position: [ 0.37939315 -0.02620995  0.09407058]
+Position Error: 0.029012984643859815
+Target Position: [ 0.37929867 -0.02334481  0.08339611]
+Position Error: 0.029024814228200253
+Target Position: [ 0.3791735  -0.02047484  0.07273118]
+Position Error: 0.029037812393802098
+Target Position: [ 0.37901523 -0.01760052  0.06212381]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz1_direct_round=2 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.001] | place_offset=[-0.02418348 -0.00100558 -0.01028247] | fk=0.004518540400746361 | xy=0.00056880836908688 | tilt=89.9999450846836 | reject=None
+Position Error: 0.026335506682311764
+Target Position: [ 0.3536344  -0.04459463  0.16142818]
+Position Error: 0.027894845027768116
+Target Position: [ 0.35518333 -0.05570519  0.15225179]
+Position Error: 0.02628722053307045
+Target Position: [ 0.35556263 -0.07124224  0.1428669 ]
+Position Error: 0.028560402970120875
+Target Position: [ 0.36333755 -0.05998836  0.14400759]
+Position Error: 0.030302330613829885
+Target Position: [ 0.36909153 -0.04843253  0.14359362]
+Position Error: 0.029791090057718184
+Target Position: [ 0.37330248 -0.03677484  0.14207927]
+Position Error: 0.02762042916904934
+Target Position: [ 0.37801484 -0.03283408  0.13695843]
+Position Error: 0.026301534657706373
+Target Position: [ 0.37756211 -0.03003834  0.12679483]
+Position Error: 0.026098703629774445
+Target Position: [ 0.37713409 -0.02737539  0.11661821]
+Position Error: 0.026092134508977193
+Target Position: [ 0.3768949  -0.02473927  0.10556869]
+Position Error: 0.026102733702128796
+Target Position: [ 0.37662744 -0.02209859  0.09448341]
+Position Error: 0.026115064665981146
+Target Position: [ 0.3763186  -0.01945207  0.08343949]
+Position Error: 0.026127850882077586
+Target Position: [ 0.37597224 -0.01680083  0.07244744]
+Position Error: 0.026140999008287827
+Target Position: [ 0.3755935  -0.01414603  0.06151162]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz1_direct_round=3 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.001] | place_offset=[-0.02418606 -0.00156655 -0.01037654] | fk=0.006596988988133719 | xy=0.0023056293546939023 | tilt=89.99994868518952 | reject=None
+Position Error: 0.02641189161753529
+Target Position: [ 0.35328665 -0.04455457  0.16097984]
+Position Error: 0.027881037438500556
+Target Position: [ 0.35466885 -0.05564597  0.15161411]
+Position Error: 0.026354663080332602
+Target Position: [ 0.35485636 -0.0711816   0.14202344]
+Position Error: 0.027754243370516594
+Target Position: [ 0.36281857 -0.06012688  0.14331419]
+Position Error: 0.032328489133231934
+Target Position: [ 0.36954326 -0.04891957  0.14361793]
+Position Error: 0.030615381674742544
+Target Position: [ 0.37222278 -0.03718571  0.14101129]
+Position Error: 0.03188696892547582
+Target Position: [ 0.37811786 -0.03341709  0.13587936]
+Position Error: 0.026370741210835904
+Target Position: [ 0.3777063  -0.03062262  0.125759  ]
+Position Error: 0.026370452527583854
+Target Position: [ 0.37731288 -0.02796035  0.11563853]
+Position Error: 0.026370458752543617
+Target Position: [ 0.37691958 -0.0253084   0.10551805]
+Position Error: 0.02637048832330507
+Target Position: [ 0.37652479 -0.02265685  0.09539757]
+Position Error: 0.02637051906679654
+Target Position: [ 0.37612838 -0.02000494  0.08527709]
+Position Error: 0.026370549147719514
+Target Position: [ 0.37573032 -0.01735262  0.07515662]
+Position Error: 0.02637057839294147
+Target Position: [ 0.37533059 -0.01469993  0.06503614]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy0_dz1_direct_round=4 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.002 -0.001] | place_offset=[-0.02398187  0.00062974 -0.00970532] | fk=0.005088947664903715 | xy=0.02578054481587686 | tilt=0.000630968761912505 | reject=None
+Position Error: 0.02589536611425974
+Target Position: [ 0.35446479 -0.04449975  0.16296098]
+Position Error: 0.027714078696038084
+Target Position: [ 0.35641324 -0.05556613  0.15444576]
+Position Error: 0.0258140616337979
+Target Position: [ 0.35727001 -0.07101367  0.14576978]
+Position Error: 0.028749284397013613
+Target Position: [ 0.36449978 -0.05925872  0.14638672]
+Position Error: 0.028582558064247685
+Target Position: [ 0.36910396 -0.04709463  0.14498003]
+Position Error: 0.030413077669012935
+Target Position: [ 0.37384524 -0.03511227  0.14377505]
+Position Error: 0.027867017340481224
+Target Position: [ 0.37777811 -0.03107219  0.13791369]
+Position Error: 0.025886983186968554
+Target Position: [ 0.37722606 -0.02829714  0.12760158]
+Position Error: 0.02569785462217487
+Target Position: [ 0.37670497 -0.02565218  0.11728941]
+Position Error: 0.025674527879566658
+Target Position: [ 0.37636341 -0.02303184  0.10617904]
+Position Error: 0.025683771453416257
+Target Position: [ 0.37601092 -0.02040857  0.09496222]
+Position Error: 0.025695977306798932
+Target Position: [ 0.37561758 -0.0177797   0.08377952]
+Position Error: 0.025708743074315896
+Target Position: [ 0.37518605 -0.01514621  0.07264665]
+Position Error: 0.02572188575905707
+Target Position: [ 0.37472141 -0.01250924  0.06156851]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy-1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014 -0.001 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004555952977662219 | xy=0.3462456651596589 | tilt=89.99995964117139 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.23090981214123987
+Target Position: [ 0.36912937 -0.03065003  0.15102782]
+Skipping simulation because trajectory FK error is too large: 0.23091
+grid_dx0_dy-1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014 -0.001 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.23090981214123987 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx0_dy-1_dz1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.005 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005793653176158396 | xy=0.1374553299376087 | tilt=89.99933957513184 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.005 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004548948686021189 | xy=0.12434669341827743 | tilt=89.99996251381731 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx1_dy0_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011  0.002 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005510304762849485 | xy=0.2671736540449788 | tilt=89.99986151036812 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx1_dy0_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011  0.002 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004567917248077965 | xy=0.21189935370420018 | tilt=89.99979554329595 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.11822891480911629
+Target Position: [ 0.36917618 -0.03068916  0.15122424]
+Skipping simulation because trajectory FK error is too large: 0.11823
+grid_dx-1_dy-1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017 -0.001 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.11822891480911629 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx-1_dy-1_dz-1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy-1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017 -0.001 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.0046076463033822785 | xy=0.8476528788557675 | tilt=89.9999631182768 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.23095886925999753
+Target Position: [ 0.36953513 -0.03072738  0.15162288]
+Skipping simulation because trajectory FK error is too large: 0.23096
+grid_dx-1_dy1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.005 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.23095886925999753 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx-1_dy1_dz-1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-1_dy1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.017  0.005 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005723106763877011 | xy=0.1229572078115837 | tilt=89.99933735787238 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx1_dy-1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011 -0.001 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004551650475484755 | xy=0.015062792202306457 | tilt=0.00031538356890148763 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.12439324220568987
+Target Position: [ 0.35821864 -0.03526055  0.18017413]
+Skipping simulation because trajectory FK error is too large: 0.12439
+grid_dx1_dy-1_dz-1_direct_round=1 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011 -0.001 -0.005] | place_offset=[-0.01419806  0.01416834  0.00127149] | fk=0.12439324220568987 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx1_dy-1_dz-1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.12254615319248748
+Target Position: [ 0.36902641 -0.0305905   0.15081607]
+Skipping simulation because trajectory FK error is too large: 0.12255
+grid_dx1_dy-1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011 -0.001 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.12254615319248748 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx1_dy-1_dz1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx1_dy1_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011  0.005 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.0045379826643875834 | xy=0.1652444543952113 | tilt=89.99811576644935 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx1_dy1_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.011  0.005 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005660043361582949 | xy=0.1188862495445508 | tilt=89.99998706896253 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-2_dy0_dz0_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.003] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.004563215378992065 | xy=0.17827691594752557 | tilt=89.9999049606287 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.06981905431086734
+Target Position: [ 0.36146786 -0.04533344  0.15204949]
+Skipping simulation because trajectory FK error is too large: 0.06982
+grid_dx0_dy-2_dz0_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014 -0.004 -0.003] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.06981905431086734 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx0_dy-2_dz0 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy2_dz0_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014  0.008 -0.003] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005605034978290155 | xy=0.19746968291917488 | tilt=89.99994450210941 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: False
+grid_dx2_dy0_dz0_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.008  0.002 -0.003] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.0045418587496648295 | xy=0.22307042012957237 | tilt=89.99971652395715 | reject=pickup_failed
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-2_dy0_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005997726105860538 | xy=0.014840450452586555 | tilt=0.00022588404740828854 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.14473558119994145
+Target Position: [ 0.36221257 -0.04883664  0.176346  ]
+Skipping simulation because trajectory FK error is too large: 0.14474
+grid_dx-2_dy0_dz-1_direct_round=1 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.005] | place_offset=[-0.01423145  0.01395332  0.00120627] | fk=0.14473558119994145 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx-2_dy0_dz-1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-2_dy0_dz1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.001] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.005090235768908859 | xy=0.009852254405770098 | tilt=89.99993288750134 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx-2_dy0_dz1_direct_round=1 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.001] | place_offset=[-0.02446963 -0.00430094 -0.01057837] | fk=0.02088979765828612 | xy=0.030450494782619967 | tilt=0.0012530788426032996 | reject=None
+Position Error: 0.027105660427598266
+Target Position: [ 0.35126619 -0.04466197  0.15907541]
+Position Error: 0.028123262321434975
+Target Position: [ 0.35170862 -0.05577416  0.14889243]
+Position Error: 0.026996532581895168
+Target Position: [ 0.35082916 -0.07141107  0.13840091]
+Position Error: 0.027009854160472784
+Target Position: [ 0.35983845 -0.06122324  0.14044256]
+Position Error: 0.04581094137020497
+Target Position: [ 0.36883131 -0.05111113  0.14248421]
+Position Error: 0.02702031939931797
+Target Position: [ 0.36302814 -0.0386695   0.12996631]
+Position Error: 0.03639992089662836
+Target Position: [ 0.37766927 -0.03631413  0.13465418]
+Position Error: 0.02941128347353151
+Target Position: [ 0.37748831 -0.03351357  0.12471598]
+Position Error: 0.027006705492092817
+Target Position: [ 0.37731008 -0.03082876  0.11477766]
+Position Error: 0.027006704156303244
+Target Position: [ 0.37713072 -0.02815333  0.10483927]
+Position Error: 0.02700671650807571
+Target Position: [ 0.37694977 -0.02547833  0.09490087]
+Position Error: 0.027006729478260234
+Target Position: [ 0.37676718 -0.02280299  0.08496248]
+Position Error: 0.027006741944691392
+Target Position: [ 0.37658293 -0.0201273   0.07502408]
+Position Error: 0.027006753801757495
+Target Position: [ 0.37639702 -0.01745127  0.06508569]
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Position Error: 0.039858575758392495
+Target Position: [ 0.36092685 -0.03317234  0.18556866]
+Skipping simulation because trajectory FK error is too large: 0.03986
+grid_dx-2_dy0_dz1_direct_round=2 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.02   0.002 -0.001] | place_offset=[-0.01173995  0.01967506  0.00321798] | fk=0.039858575758392495 | xy=inf | tilt=nan | reject=trajectory_fk_error_too_large
+e3->g4: grid_dx-2_dy0_dz1 FK rejected; trying local donor bridge fallback
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+grid_dx0_dy-2_dz-1_direct_round=0 | gain=1.0 | lower_steps=10 | grasp_offset=[-0.014 -0.004 -0.005] | place_offset=[-0.01845  0.00115 -0.005  ] | fk=0.00513523943184268 | xy=0.004881934821197466 | tilt=0.0008878597357822361 | reject=None
+Setting up physics environment...
+✓ Loaded SO101 from URDF
+✓ Number of joints: 7
+✓ Chessboard created
+✓ Created 1 large chess pieces
+Piece IDs: [71]
+✓ All objects loaded and ready!
+Starting robot movement simulation...
+Pick up success: True
+e3_to_g4 success= True reject= None

@@ -1,0 +1,26 @@
+{
+  "lookup_dir": "/Users/zhg603/Documents/OXAI/lowlevel",
+  "moves": [
+    {
+      "final_tilt_deg": 0.000758776648106318,
+      "lookup_path": "/Users/zhg603/Documents/OXAI/lowlevel/c3_non_h_reverse_move_lookup.json",
+      "move_key": "c3_to_d8",
+      "move_steps_per_waypoint": 100,
+      "pickup_success": true,
+      "placement_lower_steps": 10,
+      "premature_drop": true,
+      "reject_reason": null,
+      "replay_mode": "direct",
+      "replayed_donor": null,
+      "saved_donor": null,
+      "trajectory_fk_error": 0.011248264100496338,
+      "verified_success": true,
+      "video_output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/test1/c3_to_d8",
+      "xy_error": 0.0034461720193163887,
+      "z_error": 0.015010085207800648
+    }
+  ],
+  "output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/test1",
+  "total_count": 1,
+  "verified_count": 1
+}

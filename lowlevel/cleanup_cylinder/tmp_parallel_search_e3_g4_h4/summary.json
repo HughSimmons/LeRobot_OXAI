@@ -1,0 +1,45 @@
+{
+  "moves": [
+    {
+      "final_tilt_deg": 0.0008878597357822361,
+      "grasp_offset_source": "fallback_grid_override",
+      "move_key": "e3_to_g4",
+      "reject_reason": null,
+      "selected_place_offset": [
+        -0.01845,
+        0.00115,
+        -0.005
+      ],
+      "source_grasp_offset": [
+        -0.014,
+        -0.004,
+        -0.005
+      ],
+      "success": true,
+      "trajectory_fallback_source": null,
+      "trajectory_fk_error": 0.00513523943184268,
+      "xy_error": 0.004881934821197466
+    },
+    {
+      "final_tilt_deg": 0.0010863191894730764,
+      "grasp_offset_source": "fallback_grid_override",
+      "move_key": "e3_to_h4",
+      "reject_reason": null,
+      "selected_place_offset": [
+        -0.012756031281957932,
+        0.0072828699350143454,
+        0.0033853753845665925
+      ],
+      "source_grasp_offset": [
+        -0.011,
+        -0.004,
+        -0.001
+      ],
+      "success": true,
+      "trajectory_fallback_source": null,
+      "trajectory_fk_error": 0.012454393266390067,
+      "xy_error": 0.00024274694955355358
+    }
+  ],
+  "started": "2026-07-15T15:51:32"
+}

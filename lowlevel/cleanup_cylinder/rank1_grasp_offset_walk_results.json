@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-06-21T07:24:20.478157+00:00",
+  "initial_grasp_offset": [
+    -0.014,
+    0.002,
+    -0.003
+  ],
+  "local_search_xy_delta": 0.001,
+  "local_search_xy_steps": [
+    -3,
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3
+  ],
+  "local_search_z_delta": 0.002,
+  "local_search_z_steps": [
+    0,
+    -1,
+    1
+  ],
+  "results": [
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.005544459099143679
+      },
+      "carried_pickup_success": true,
+      "from_square": "f8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "e8"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.012616408574893545
+      },
+      "carried_pickup_success": true,
+      "from_square": "e8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "d8"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.014189201297445452
+      },
+      "carried_pickup_success": true,
+      "from_square": "d8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "c8"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.016777664972067622
+      },
+      "carried_pickup_success": true,
+      "from_square": "c8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "b8"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.021807185879946372
+      },
+      "carried_pickup_success": true,
+      "from_square": "b8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "a8"
+    },
+    {
+      "carried_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "carried_metrics": {
+        "pickup_success": true,
+        "premature_drop": true,
+        "reject_reason": null,
+        "trajectory_fk_error": 0.01568964088538047
+      },
+      "carried_pickup_success": true,
+      "from_square": "a8",
+      "local_search_attempts": [],
+      "selected_grasp_offset": [
+        -0.014,
+        0.002,
+        -0.003
+      ],
+      "selected_pickup_success": true,
+      "selected_source": "carried",
+      "to_square": "b8"
+    }
+  ],
+  "source_squares": [
+    "f8",
+    "e8",
+    "d8",
+    "c8",
+    "b8",
+    "a8"
+  ],
+  "test_to_square_by_source": {
+    "a8": "b8",
+    "b8": "a8",
+    "c8": "b8",
+    "d8": "c8",
+    "e8": "d8",
+    "f8": "e8"
+  }
+}

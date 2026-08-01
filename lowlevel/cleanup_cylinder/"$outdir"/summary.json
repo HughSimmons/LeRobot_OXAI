@@ -1,0 +1,60 @@
+{
+  "lookup_path": "/Users/zhg603/Documents/OXAI/lowlevel/a1_non_h_reverse_move_lookup.json",
+  "seed_move": "a1_to_a2",
+  "seed_grasp_offset": [
+    -0.016,
+    -0.001,
+    -0.003
+  ],
+  "place_offset": [
+    -0.01845,
+    0.00115,
+    -0.005
+  ],
+  "moves": [
+    {
+      "move_key": "a1_to_f1",
+      "pickup_success": true,
+      "premature_drop": true,
+      "reject_reason": null,
+      "trajectory_fk_error": 0.0007317114768175027,
+      "xy_error": 0.4631111686112751,
+      "z_error": 0.028010115664605012,
+      "final_tilt_deg": 89.99990239434273,
+      "video_output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/\"$outdir\"/a1_to_f1"
+    },
+    {
+      "move_key": "a1_to_g1",
+      "pickup_success": false,
+      "premature_drop": false,
+      "reject_reason": "trajectory_fk_error_too_large",
+      "trajectory_fk_error": 0.060777108033674344,
+      "xy_error": Infinity,
+      "z_error": Infinity,
+      "final_tilt_deg": NaN,
+      "video_output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/\"$outdir\"/a1_to_g1"
+    },
+    {
+      "move_key": "a1_to_h1",
+      "pickup_success": false,
+      "premature_drop": false,
+      "reject_reason": "trajectory_fk_error_too_large",
+      "trajectory_fk_error": 0.07843066022237677,
+      "xy_error": Infinity,
+      "z_error": Infinity,
+      "final_tilt_deg": NaN,
+      "video_output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/\"$outdir\"/a1_to_h1"
+    },
+    {
+      "move_key": "a1_to_h8",
+      "pickup_success": false,
+      "premature_drop": false,
+      "reject_reason": "trajectory_fk_error_too_large",
+      "trajectory_fk_error": 0.056759005601924886,
+      "xy_error": Infinity,
+      "z_error": Infinity,
+      "final_tilt_deg": NaN,
+      "video_output_dir": "/Users/zhg603/Documents/OXAI/lowlevel/\"$outdir\"/a1_to_h8"
+    }
+  ]
+}
