@@ -1,0 +1,7 @@
+LOOKUP_PIECE_MODEL=rook_kiri \
+ROOK_KIRI_MESH_PATH="/Users/zhg603/Documents/OXAI/rook_kiri/corrected_candidates/base_angle_hillclimb/20260801_113012/fine_x+3.00_z-0.75.obj" \
+SOURCE_SQUARES=d4 \
+TARGET_MOVES=d4_to_d6 \
+LOOKUP_OUTPUT_DIR="/Users/zhg603/Documents/OXAI/lowlevel/rook_kiri_lookup/d4_to_d6_initial/20260801_120447" \
+DONOR_LOOKUP_DIR="/Users/zhg603/Documents/OXAI/lowlevel/rook_kiri_lookup/d4_to_d6_initial/20260801_120447/empty_donor_lookup" \
+/opt/miniconda3/envs/IKsim_mj/bin/python -B /Users/zhg603/Documents/OXAI/lowlevel/build_general_nonh_reverse_lookup.py

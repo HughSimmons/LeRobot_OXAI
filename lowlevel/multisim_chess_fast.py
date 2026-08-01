@@ -119,7 +119,34 @@ CYLINDER_PIECE_DYNAMICS = {
 ROOK_KIRI_MESH_PATH = Path(
     os.environ.get(
         "ROOK_KIRI_MESH_PATH",
-        Path(__file__).resolve().parents[1] / "rook_kiri" / "Rook_cleaned.obj",
+        Path(__file__).resolve().parents[1] / "rook_kiri2" / "rook2.obj",
+    )
+).expanduser().resolve()
+ROOK_KIRI_VISUAL_MESH_PATH = Path(
+    os.environ.get("ROOK_KIRI_VISUAL_MESH_PATH", ROOK_KIRI_MESH_PATH)
+).expanduser().resolve()
+ROOK_KIRI_MESH_UP_AXIS = os.environ.get("ROOK_KIRI_MESH_UP_AXIS", "y").strip().lower() or "y"
+if ROOK_KIRI_MESH_UP_AXIS not in {"y", "z"}:
+    raise ValueError(
+        "ROOK_KIRI_MESH_UP_AXIS must be one of y or z, "
+        f"got {ROOK_KIRI_MESH_UP_AXIS!r}"
+    )
+ROOK_KIRI_COLLISION_MODEL = (
+    os.environ.get("ROOK_KIRI_COLLISION_MODEL", "cylinder_proxy").strip().lower()
+    or "cylinder_proxy"
+)
+if ROOK_KIRI_COLLISION_MODEL not in {"cylinder_proxy", "mesh_convex", "banded_hulls"}:
+    raise ValueError(
+        "ROOK_KIRI_COLLISION_MODEL must be one of cylinder_proxy, mesh_convex, "
+        "or banded_hulls, "
+        f"got {ROOK_KIRI_COLLISION_MODEL!r}"
+    )
+ROOK_KIRI_BAND_COLLISION_MESH_DIR = Path(
+    os.environ.get(
+        "ROOK_KIRI_BAND_COLLISION_MESH_DIR",
+        Path(__file__).resolve().parent
+        / "rook_kiri_lookup"
+        / "collision_geometry_preview_20260801_163534",
     )
 ).expanduser().resolve()
 ROOK_KIRI_TARGET_HEIGHT = 0.04
@@ -134,6 +161,18 @@ ROOK_KIRI_DYNAMICS = {
     "linearDamping": 0.02,
     "angularDamping": 0.01,
 }
+ROOK_KIRI_VISUAL_RGBA = np.array(
+    [
+        float(value)
+        for value in os.environ.get("ROOK_KIRI_VISUAL_RGBA", "1.0,0.62,0.0,1.0").split(",")
+    ],
+    dtype=float,
+)
+if ROOK_KIRI_VISUAL_RGBA.shape != (4,):
+    raise ValueError(
+        "ROOK_KIRI_VISUAL_RGBA must contain four comma-separated values, "
+        f"got {ROOK_KIRI_VISUAL_RGBA!r}"
+    )
 
 
 def obj_vertex_bounds(mesh_path):
@@ -152,24 +191,63 @@ def obj_vertex_bounds(mesh_path):
     return vertices.min(axis=0), vertices.max(axis=0)
 
 
+def rook_kiri_band_collision_mesh_paths():
+    env_paths = os.environ.get("ROOK_KIRI_BAND_COLLISION_MESH_PATHS", "").strip()
+    if env_paths:
+        paths = [
+            Path(value).expanduser().resolve()
+            for value in env_paths.split(os.pathsep)
+            if value.strip()
+        ]
+    else:
+        paths = sorted(ROOK_KIRI_BAND_COLLISION_MESH_DIR.glob("collision_band_hull_*.obj"))
+    if ROOK_KIRI_COLLISION_MODEL == "banded_hulls":
+        if not paths:
+            raise FileNotFoundError(
+                "ROOK_KIRI_COLLISION_MODEL=banded_hulls but no "
+                f"collision_band_hull_*.obj files were found in "
+                f"{ROOK_KIRI_BAND_COLLISION_MESH_DIR}"
+            )
+        missing = [str(path) for path in paths if not path.exists()]
+        if missing:
+            raise FileNotFoundError(
+                "ROOK_KIRI_COLLISION_MODEL=banded_hulls but these hull meshes "
+                f"are missing: {missing}"
+            )
+    return tuple(paths)
+
+
 def rook_kiri_piece_config():
     raw_min, raw_max = obj_vertex_bounds(ROOK_KIRI_MESH_PATH)
     raw_dims = raw_max - raw_min
-    mesh_up_axis = 1
+    mesh_up_axis = 1 if ROOK_KIRI_MESH_UP_AXIS == "y" else 2
     scale = ROOK_KIRI_TARGET_HEIGHT / raw_dims[mesh_up_axis]
     raw_center = (raw_min + raw_max) / 2.0
-    visual_frame_position = np.array([
-        -scale * raw_center[0],
-        scale * raw_center[2],
-        -ROOK_KIRI_TARGET_HEIGHT / 2.0 - scale * raw_min[1],
-    ])
-    visual_frame_euler = np.array([math.pi / 2.0, 0.0, 0.0])
-    scaled_x_dim = scale * raw_dims[0]
-    scaled_y_dim = scale * raw_dims[2]
+    if ROOK_KIRI_MESH_UP_AXIS == "y":
+        visual_frame_position = np.array([
+            -scale * raw_center[0],
+            scale * raw_center[2],
+            -ROOK_KIRI_TARGET_HEIGHT / 2.0 - scale * raw_min[1],
+        ])
+        visual_frame_euler = np.array([math.pi / 2.0, 0.0, 0.0])
+        scaled_x_dim = scale * raw_dims[0]
+        scaled_y_dim = scale * raw_dims[2]
+    else:
+        visual_frame_position = np.array([
+            -scale * raw_center[0],
+            -scale * raw_center[1],
+            -ROOK_KIRI_TARGET_HEIGHT / 2.0 - scale * raw_min[2],
+        ])
+        visual_frame_euler = np.array([0.0, 0.0, 0.0])
+        scaled_x_dim = scale * raw_dims[0]
+        scaled_y_dim = scale * raw_dims[1]
     collision_radius = 0.5 * max(scaled_x_dim, scaled_y_dim) + 0.001
+    band_collision_mesh_paths = rook_kiri_band_collision_mesh_paths()
     return {
         "piece_model": "rook_kiri",
         "mesh_path": str(ROOK_KIRI_MESH_PATH),
+        "visual_mesh_path": str(ROOK_KIRI_VISUAL_MESH_PATH),
+        "mesh_up_axis": ROOK_KIRI_MESH_UP_AXIS,
         "mesh_raw_min": raw_min,
         "mesh_raw_max": raw_max,
         "mesh_raw_dims": raw_dims,
@@ -181,10 +259,15 @@ def rook_kiri_piece_config():
         "base_z": ROOK_KIRI_BOARD_TOP_Z + ROOK_KIRI_TARGET_HEIGHT / 2.0,
         "visual_frame_position": visual_frame_position,
         "visual_frame_euler": visual_frame_euler,
+        "visual_rgba": ROOK_KIRI_VISUAL_RGBA,
+        "band_collision_mesh_dir": str(ROOK_KIRI_BAND_COLLISION_MESH_DIR),
+        "band_collision_mesh_paths": [str(path) for path in band_collision_mesh_paths],
+        "band_collision_frame_position": np.array([0.0, 0.0, -ROOK_KIRI_TARGET_HEIGHT / 2.0]),
+        "band_collision_frame_euler": np.array([0.0, 0.0, 0.0]),
         "dynamics": ROOK_KIRI_DYNAMICS,
         "lifted_z_threshold": ROOK_KIRI_LIFTED_Z_THRESHOLD,
         "dropped_z_threshold": ROOK_KIRI_DROPPED_Z_THRESHOLD,
-        "collision_model": "single_cylinder_proxy_with_rook_mesh_visual",
+        "collision_model": ROOK_KIRI_COLLISION_MODEL,
     }
 
 
@@ -407,20 +490,48 @@ def create_piece(sq="a1"):
     world_z = config["base_z"]
 
     if config["piece_model"] == "rook_kiri":
-        piece_shape = p.createCollisionShape(
-            p.GEOM_CYLINDER,
-            radius=config["collision_radius"],
-            height=config["collision_height"],
-        )
+        if config["collision_model"] == "banded_hulls":
+            band_paths = config["band_collision_mesh_paths"]
+            piece_shape = p.createCollisionShapeArray(
+                shapeTypes=[p.GEOM_MESH] * len(band_paths),
+                fileNames=band_paths,
+                meshScales=[[config["mesh_scale"]] * 3 for _ in band_paths],
+                collisionFramePositions=[
+                    config["band_collision_frame_position"].tolist()
+                    for _ in band_paths
+                ],
+                collisionFrameOrientations=[
+                    p.getQuaternionFromEuler(
+                        config["band_collision_frame_euler"].tolist()
+                    )
+                    for _ in band_paths
+                ],
+            )
+        elif config["collision_model"] == "mesh_convex":
+            piece_shape = p.createCollisionShape(
+                p.GEOM_MESH,
+                fileName=config["mesh_path"],
+                meshScale=[config["mesh_scale"]] * 3,
+                collisionFramePosition=config["visual_frame_position"].tolist(),
+                collisionFrameOrientation=p.getQuaternionFromEuler(
+                    config["visual_frame_euler"].tolist()
+                ),
+            )
+        else:
+            piece_shape = p.createCollisionShape(
+                p.GEOM_CYLINDER,
+                radius=config["collision_radius"],
+                height=config["collision_height"],
+            )
         piece_visual = p.createVisualShape(
             p.GEOM_MESH,
-            fileName=config["mesh_path"],
+            fileName=config["visual_mesh_path"],
             meshScale=[config["mesh_scale"]] * 3,
             visualFramePosition=config["visual_frame_position"].tolist(),
             visualFrameOrientation=p.getQuaternionFromEuler(
                 config["visual_frame_euler"].tolist()
             ),
-            rgbaColor=[0.8, 0.8, 0.85, 1.0],
+            rgbaColor=config["visual_rgba"].tolist(),
         )
     else:
         piece_shape = p.createCollisionShape(
@@ -437,6 +548,13 @@ def create_piece(sq="a1"):
     piece_id = p.createMultiBody(baseMass=config["mass"], baseCollisionShapeIndex=piece_shape,
                                 baseVisualShapeIndex=piece_visual,
                                 basePosition=[world_x, world_y, world_z])
+    if config["piece_model"] == "rook_kiri":
+        p.changeVisualShape(
+            piece_id,
+            -1,
+            rgbaColor=config["visual_rgba"].tolist(),
+            specularColor=[0.0, 0.0, 0.0],
+        )
     # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=2)
     # p.changeDynamics(piece_id, -1, linearDamping=0.04, angularDamping=0.04, lateralFriction=3)
 
