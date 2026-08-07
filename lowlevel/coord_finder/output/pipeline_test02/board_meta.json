@@ -1,0 +1,25 @@
+{
+  "source_image": "/Users/ashakeshavarz/Documents/Vs/LiveChess2FEN_setup/testing/example_imA/im2.jpeg",
+  "warped_board": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test02/warped_board.jpg",
+  "board_size_px": 1200,
+  "board_corners": [
+    [
+      583.0,
+      305.0
+    ],
+    [
+      1293.0,
+      283.0
+    ],
+    [
+      1305.0,
+      988.0
+    ],
+    [
+      597.0,
+      1002.0
+    ]
+  ],
+  "square_corners_count": 81,
+  "method": "livechess2fen_detect_board"
+}
