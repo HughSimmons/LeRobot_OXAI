@@ -431,7 +431,15 @@ def build_donor_carry_splice_override(lookup_dir, move_key, lookup, entry):
     }
 
 
-def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=None):
+def run_saved_entry(
+    move_key,
+    lookup,
+    entry,
+    output_dir,
+    lookup_dir,
+    test_mode=None,
+    record_video=True,
+):
     from_square, to_square = parse_move_key(move_key)
     metrics = entry.get("metrics", {})
     grasp_offset = np.array(entry["source_grasp_offset"], dtype=float)
@@ -520,7 +528,11 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
         edge_support_margin=builder.LOOKUP_EDGE_SUPPORT_MARGIN,
         home_joints=trajectory_home_joints,
     )
-    video_context = sim.create_video_context(output_dir / move_key)
+    video_context = (
+        sim.create_video_context(output_dir / move_key)
+        if record_video
+        else None
+    )
     try:
         result = sim.run_sim_move(
             world,
@@ -529,7 +541,7 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
             grasp_offset,
             place_offset=place_offset,
             return_metrics=True,
-            record_video=True,
+            record_video=record_video,
             trajectory_override=trajectory_override,
             move_steps_per_waypoint=move_steps,
             placement_lower_steps=placement_lower_steps,
@@ -547,7 +559,8 @@ def run_saved_entry(move_key, lookup, entry, output_dir, lookup_dir, test_mode=N
         elif trajectory_override is not None:
             result = builder.annotate_bridge_result(result, trajectory_override)
     finally:
-        sim.close_video_context(video_context)
+        if video_context is not None:
+            sim.close_video_context(video_context)
         p.removeState(world["state_id"])
 
     return {
@@ -593,6 +606,11 @@ def main():
         default=Path(__file__).resolve().parent,
         type=Path,
         help="Folder containing <source>_non_h_reverse_move_lookup.json files.",
+    )
+    parser.add_argument(
+        "--no-video",
+        action="store_true",
+        help="Replay and score moves without writing video files.",
     )
     parser.add_argument(
         "--test-mode",
@@ -643,6 +661,7 @@ def main():
             output_dir,
             lookup_dir,
             test_mode=args.test_mode,
+            record_video=not args.no_video,
         )
         row["lookup_path"] = str(lookup_path)
         summary["moves"].append(row)

@@ -5,6 +5,12 @@ import time
 import numpy as np
 from contextlib import contextmanager
 
+from board_coordinates import (
+    is_exact_square,
+    location_file,
+    location_label,
+    location_world_xyz,
+)
 from testkinematics import relativexyz, relativexyz_with_error, vectodic
 
 B_FILE_PLACE_DOWNFLAG = True
@@ -319,7 +325,7 @@ def append_post_place_tail(
     # Retreat either by reversing the first lowering waypoint (near squares)
     # or by lifting away while holding the exact post-release wrist-roll value.
     mark_segment_start(traj_metrics, "retreat", jntslist)
-    if to_square[0] not in far_rows:
+    if location_file(to_square, board_origin=board_origin) not in far_rows:
         for j in downjnts[::-1]:
             j = j.copy()
             j[5] = gripper_angle_open
@@ -339,7 +345,7 @@ def append_post_place_tail(
             gripper_angle_open,
             downflag,
             traj_metrics=traj_metrics,
-            stage=f"{to_square}_far_lift_after_release"
+            stage=f"{location_label(to_square)}_far_lift_after_release"
         )
         above_to_open[WRIST_ROLL_IDX] = retreat_roll_deg
         if traj_metrics is not None:
@@ -520,7 +526,7 @@ def make_square_pickup_lift_path(
         gripper_angle_open,
         downflag,
         traj_metrics=traj_metrics,
-        stage=f"{square}_pickup_style_above"
+        stage=f"{location_label(square)}_pickup_style_above"
     )
 
     target_xyz = square_xyz + np.array([0, 0, 0])
@@ -540,7 +546,7 @@ def make_square_pickup_lift_path(
             GRASP_OFFSET,
             downflag,
             traj_metrics=traj_metrics,
-            stage=f"{square}_pickup_style_lower"
+            stage=f"{location_label(square)}_pickup_style_lower"
         )
         intermediate_joints[5] = gripper_angle_open
         descent_path.append(intermediate_joints.copy())
@@ -557,37 +563,29 @@ def make_square_pickup_lift_path(
 
 
 def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
-    file = FILES.index(square[0].lower())
-    rank = int(square[1]) - 1
-    board_x, board_y, board_z = board_origin
-    board_size = 8 * square_size
-    # x = board_x - board_size/2 + (file + 0.5) * square_size
-    y = board_y - board_size/2 + (rank + 0.5) * square_size
-    x = board_x - board_size/2 + (file + 0.5) * square_size
-    # y = board_y - board_size/2 + (rank + 0.85) * square_size
-    z = board_z + 0.04  # best slightly above the board
-    # z = board_z + 0.01  # best slightly above the board
-    # z = board_z + 0.035  # slightly above the board
-    # z = board_z + 0.06  # slightly above the board
-    # z = board_z + 0.1  # slightly above the board
-    return np.array([x, y, z])
+    """Resolve a square or continuous XY location to a world XYZ target."""
+
+    return np.array(
+        location_world_xyz(
+            square,
+            board_origin=board_origin,
+            square_size=square_size,
+            z_offset=0.04,
+        ),
+        dtype=float,
+    )
 
 
 def chess_to_xycalib(square, board_origin=(0.25, 0, 0), square_size=0.04):
-    file = FILES.index(square[0].lower())
-    rank = int(square[1]) - 1
-    board_x, board_y, board_z = board_origin
-    board_size = 8 * square_size
-    # x = board_x - board_size/2 + (file + 0.5) * square_size
-    y = board_y - board_size/2 + (rank ) * square_size
-    x = board_x - board_size/2 + (file ) * square_size
-    # y = board_y - board_size/2 + (rank + 0.85) * square_size
-    z = board_z   # best slightly above the board
-    # z = board_z + 0.01  # best slightly above the board
-    # z = board_z + 0.035  # slightly above the board
-    # z = board_z + 0.06  # slightly above the board
-    # z = board_z + 0.1  # slightly above the board
-    return np.array([x, y, z])
+    return np.array(
+        location_world_xyz(
+            square,
+            board_origin=board_origin,
+            square_size=square_size,
+            z_offset=0.0,
+        ),
+        dtype=float,
+    )
 
 
 urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
@@ -652,7 +650,7 @@ H_FILE_LIFT_HEIGHT = 0.09
 
 
 def lift_height_for_square(square, default_height=DEFAULT_LIFT_HEIGHT):
-    if isinstance(square, str) and len(square) == 2 and square[0] == "h":
+    if location_file(square) == "h":
         return H_FILE_LIFT_HEIGHT
     return default_height
 
@@ -1240,9 +1238,14 @@ def pickupmove_traj(
     far_rows = ["f","g", "h"]
     # far_rows = []
 
+    from_file = location_file(from_square, board_origin=board_origin)
+    to_file = location_file(to_square, board_origin=board_origin)
+    from_label = location_label(from_square)
+    to_label = location_label(to_square)
+
     # current = home.copy()
     # if "g" in from_square or "h" in from_square:
-    if from_square[0] in far_rows:
+    if from_file in far_rows:
         downflag = False
 
         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
@@ -1262,7 +1265,7 @@ def pickupmove_traj(
 
     target_xyz = from_xyz + np.array([0, 0, height])
 
-    if from_square[0] in far_rows:
+    if from_file in far_rows:
         above_from = solve_seeded_target_xyz(
             target_xyz,
             reach_pose,
@@ -1270,7 +1273,7 @@ def pickupmove_traj(
             gripper_angle_open,
             downflag,
             traj_metrics=traj_metrics,
-            stage=f"{from_square}_far_above_pickup"
+            stage=f"{from_label}_far_above_pickup"
         )
         current = append_joint_interpolation(
             jntslist,
@@ -1297,7 +1300,7 @@ def pickupmove_traj(
                 GRASP_OFFSET, 
                 downflag,
                 traj_metrics=traj_metrics,
-                stage=f"{from_square}_above_pickup"
+                stage=f"{from_label}_above_pickup"
             )
 
             intermediate_joints[5] = gripper_angle_open
@@ -1329,7 +1332,7 @@ def pickupmove_traj(
             GRASP_OFFSET, 
             downflag,
             traj_metrics=traj_metrics,
-            stage=f"{from_square}_lower_pickup"
+            stage=f"{from_label}_lower_pickup"
         )
 
         intermediate_joints[5] = gripper_angle_open
@@ -1369,11 +1372,11 @@ def pickupmove_traj(
 
 
     # 3. Move to to_square (above)
-    if to_square[0] in far_rows:
+    if to_file in far_rows:
         downflag = False
 
         reach_pose = np.array([0.0,70,-90,40,90.0,5.0])
-    elif to_square[0] == "b" and not B_FILE_PLACE_DOWNFLAG:
+    elif to_file == "b" and not B_FILE_PLACE_DOWNFLAG:
         downflag = False
     else:
         downflag = True
@@ -1385,7 +1388,7 @@ def pickupmove_traj(
     target_xyz = to_xyz + np.array([0, 0, height])
 
     mark_segment_start(traj_metrics, "destination_above_place", jntslist)
-    if to_square[0] in far_rows:
+    if to_file in far_rows:
         pickup_like_seed = make_far_square_pickup_seed(
             to_square,
             board_origin,
@@ -1401,7 +1404,7 @@ def pickupmove_traj(
             gripper_angle_closed,
             downflag,
             traj_metrics=traj_metrics,
-            stage=f"{to_square}_far_above_place"
+            stage=f"{to_label}_far_above_place"
         )
         current = append_joint_interpolation(
             jntslist,
@@ -1428,7 +1431,7 @@ def pickupmove_traj(
                 PLACE_OFFSET,
                 downflag,
                 traj_metrics=traj_metrics,
-                stage=f"{to_square}_above_place"
+                stage=f"{to_label}_above_place"
             )
 
             intermediate_joints[5] = gripper_angle_closed
@@ -1457,7 +1460,7 @@ def pickupmove_traj(
         else np.array(lower_place_path_bias, dtype=float)
     )
     mark_segment_start(traj_metrics, "destination_lower_place", jntslist)
-    if to_square == "f1":
+    if is_exact_square(to_square, "f1"):
         pickup_lift_path = make_square_pickup_lift_path(
             to_square,
             board_origin,
@@ -1498,7 +1501,7 @@ def pickupmove_traj(
                 PLACE_OFFSET,
                 downflag,
                 traj_metrics=traj_metrics,
-                stage=f"{to_square}_lower_place"
+                stage=f"{to_label}_lower_place"
             )
 
             intermediate_joints[5] = gripper_angle_closed
@@ -1562,6 +1565,10 @@ def pickupmove_traj_with_metrics(
         "release_target_xyz": None,
         "release_target_z": None,
         "lift_height": lift_height_for_square(to_square),
+        "from_location_label": location_label(from_square),
+        "to_location_label": location_label(to_square),
+        "from_world_xyz": chess_to_xy(from_square, board_origin=board_origin),
+        "to_world_xyz": chess_to_xy(to_square, board_origin=board_origin),
     }
     if lift_height is not None:
         traj_metrics["lift_height"] = float(lift_height)

@@ -19,6 +19,7 @@ from chess_traj import (
     temporary_home_joints,
     xyz_homeref_with_error,
 )
+from board_coordinates import location_label, location_world_xy
 from testkinematics import kinematics
 board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
 # video_on = False
@@ -879,7 +880,17 @@ def run_sim_move(
     )
 
     sq1, sq2 = from_square, to_square
-    simid = f"{sq1}_to_{sq2}"
+    from_label = location_label(sq1)
+    to_label = location_label(sq2)
+    simid = f"{from_label}_to_{to_label}"
+    from_world_xy = np.array(
+        location_world_xy(sq1, board_origin=board_origin),
+        dtype=float,
+    )
+    to_world_xy = np.array(
+        location_world_xy(sq2, board_origin=board_origin),
+        dtype=float,
+    )
     active_place_offset = PLACE_OFFSET if place_offset is None else place_offset
     video_enabled = video_context is not None or (video_on if record_video is None else record_video)
     robot_id = world["robot_id"]
@@ -939,6 +950,8 @@ def run_sim_move(
             "pickup_success": False,
             "from_square": sq1,
             "to_square": sq2,
+            "from_world_xy": from_world_xy,
+            "to_world_xy": to_world_xy,
             "place_offset": active_place_offset.copy(),
             "lower_place_path_bias": (
                 None
@@ -1262,6 +1275,8 @@ def run_sim_move(
             "pickup_success": pickup_success,
             "from_square": sq1,
             "to_square": sq2,
+            "from_world_xy": from_world_xy,
+            "to_world_xy": to_world_xy,
             "place_offset": active_place_offset.copy(),
             "lower_place_path_bias": (
                 None
