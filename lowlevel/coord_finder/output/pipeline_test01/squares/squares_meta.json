@@ -1,0 +1,777 @@
+{
+  "method": "split_board_image_trivial",
+  "board_size_px": 1200,
+  "square_size_px": 150,
+  "a1_pos": "TR",
+  "count": 64,
+  "squares": {
+    "sq_a8_r0_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a8_r0_c0.jpg",
+      "row": 0,
+      "col": 0,
+      "algebraic": "a8",
+      "roi_xyxy": [
+        0,
+        0,
+        150,
+        150
+      ]
+    },
+    "sq_b8_r0_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b8_r0_c1.jpg",
+      "row": 0,
+      "col": 1,
+      "algebraic": "b8",
+      "roi_xyxy": [
+        150,
+        0,
+        300,
+        150
+      ]
+    },
+    "sq_c8_r0_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c8_r0_c2.jpg",
+      "row": 0,
+      "col": 2,
+      "algebraic": "c8",
+      "roi_xyxy": [
+        300,
+        0,
+        450,
+        150
+      ]
+    },
+    "sq_d8_r0_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d8_r0_c3.jpg",
+      "row": 0,
+      "col": 3,
+      "algebraic": "d8",
+      "roi_xyxy": [
+        450,
+        0,
+        600,
+        150
+      ]
+    },
+    "sq_e8_r0_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e8_r0_c4.jpg",
+      "row": 0,
+      "col": 4,
+      "algebraic": "e8",
+      "roi_xyxy": [
+        600,
+        0,
+        750,
+        150
+      ]
+    },
+    "sq_f8_r0_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f8_r0_c5.jpg",
+      "row": 0,
+      "col": 5,
+      "algebraic": "f8",
+      "roi_xyxy": [
+        750,
+        0,
+        900,
+        150
+      ]
+    },
+    "sq_g8_r0_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g8_r0_c6.jpg",
+      "row": 0,
+      "col": 6,
+      "algebraic": "g8",
+      "roi_xyxy": [
+        900,
+        0,
+        1050,
+        150
+      ]
+    },
+    "sq_h8_r0_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h8_r0_c7.jpg",
+      "row": 0,
+      "col": 7,
+      "algebraic": "h8",
+      "roi_xyxy": [
+        1050,
+        0,
+        1200,
+        150
+      ]
+    },
+    "sq_a7_r1_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a7_r1_c0.jpg",
+      "row": 1,
+      "col": 0,
+      "algebraic": "a7",
+      "roi_xyxy": [
+        0,
+        150,
+        150,
+        300
+      ]
+    },
+    "sq_b7_r1_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b7_r1_c1.jpg",
+      "row": 1,
+      "col": 1,
+      "algebraic": "b7",
+      "roi_xyxy": [
+        150,
+        150,
+        300,
+        300
+      ]
+    },
+    "sq_c7_r1_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c7_r1_c2.jpg",
+      "row": 1,
+      "col": 2,
+      "algebraic": "c7",
+      "roi_xyxy": [
+        300,
+        150,
+        450,
+        300
+      ]
+    },
+    "sq_d7_r1_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d7_r1_c3.jpg",
+      "row": 1,
+      "col": 3,
+      "algebraic": "d7",
+      "roi_xyxy": [
+        450,
+        150,
+        600,
+        300
+      ]
+    },
+    "sq_e7_r1_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e7_r1_c4.jpg",
+      "row": 1,
+      "col": 4,
+      "algebraic": "e7",
+      "roi_xyxy": [
+        600,
+        150,
+        750,
+        300
+      ]
+    },
+    "sq_f7_r1_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f7_r1_c5.jpg",
+      "row": 1,
+      "col": 5,
+      "algebraic": "f7",
+      "roi_xyxy": [
+        750,
+        150,
+        900,
+        300
+      ]
+    },
+    "sq_g7_r1_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g7_r1_c6.jpg",
+      "row": 1,
+      "col": 6,
+      "algebraic": "g7",
+      "roi_xyxy": [
+        900,
+        150,
+        1050,
+        300
+      ]
+    },
+    "sq_h7_r1_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h7_r1_c7.jpg",
+      "row": 1,
+      "col": 7,
+      "algebraic": "h7",
+      "roi_xyxy": [
+        1050,
+        150,
+        1200,
+        300
+      ]
+    },
+    "sq_a6_r2_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a6_r2_c0.jpg",
+      "row": 2,
+      "col": 0,
+      "algebraic": "a6",
+      "roi_xyxy": [
+        0,
+        300,
+        150,
+        450
+      ]
+    },
+    "sq_b6_r2_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b6_r2_c1.jpg",
+      "row": 2,
+      "col": 1,
+      "algebraic": "b6",
+      "roi_xyxy": [
+        150,
+        300,
+        300,
+        450
+      ]
+    },
+    "sq_c6_r2_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c6_r2_c2.jpg",
+      "row": 2,
+      "col": 2,
+      "algebraic": "c6",
+      "roi_xyxy": [
+        300,
+        300,
+        450,
+        450
+      ]
+    },
+    "sq_d6_r2_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d6_r2_c3.jpg",
+      "row": 2,
+      "col": 3,
+      "algebraic": "d6",
+      "roi_xyxy": [
+        450,
+        300,
+        600,
+        450
+      ]
+    },
+    "sq_e6_r2_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e6_r2_c4.jpg",
+      "row": 2,
+      "col": 4,
+      "algebraic": "e6",
+      "roi_xyxy": [
+        600,
+        300,
+        750,
+        450
+      ]
+    },
+    "sq_f6_r2_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f6_r2_c5.jpg",
+      "row": 2,
+      "col": 5,
+      "algebraic": "f6",
+      "roi_xyxy": [
+        750,
+        300,
+        900,
+        450
+      ]
+    },
+    "sq_g6_r2_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g6_r2_c6.jpg",
+      "row": 2,
+      "col": 6,
+      "algebraic": "g6",
+      "roi_xyxy": [
+        900,
+        300,
+        1050,
+        450
+      ]
+    },
+    "sq_h6_r2_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h6_r2_c7.jpg",
+      "row": 2,
+      "col": 7,
+      "algebraic": "h6",
+      "roi_xyxy": [
+        1050,
+        300,
+        1200,
+        450
+      ]
+    },
+    "sq_a5_r3_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a5_r3_c0.jpg",
+      "row": 3,
+      "col": 0,
+      "algebraic": "a5",
+      "roi_xyxy": [
+        0,
+        450,
+        150,
+        600
+      ]
+    },
+    "sq_b5_r3_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b5_r3_c1.jpg",
+      "row": 3,
+      "col": 1,
+      "algebraic": "b5",
+      "roi_xyxy": [
+        150,
+        450,
+        300,
+        600
+      ]
+    },
+    "sq_c5_r3_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c5_r3_c2.jpg",
+      "row": 3,
+      "col": 2,
+      "algebraic": "c5",
+      "roi_xyxy": [
+        300,
+        450,
+        450,
+        600
+      ]
+    },
+    "sq_d5_r3_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d5_r3_c3.jpg",
+      "row": 3,
+      "col": 3,
+      "algebraic": "d5",
+      "roi_xyxy": [
+        450,
+        450,
+        600,
+        600
+      ]
+    },
+    "sq_e5_r3_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e5_r3_c4.jpg",
+      "row": 3,
+      "col": 4,
+      "algebraic": "e5",
+      "roi_xyxy": [
+        600,
+        450,
+        750,
+        600
+      ]
+    },
+    "sq_f5_r3_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f5_r3_c5.jpg",
+      "row": 3,
+      "col": 5,
+      "algebraic": "f5",
+      "roi_xyxy": [
+        750,
+        450,
+        900,
+        600
+      ]
+    },
+    "sq_g5_r3_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g5_r3_c6.jpg",
+      "row": 3,
+      "col": 6,
+      "algebraic": "g5",
+      "roi_xyxy": [
+        900,
+        450,
+        1050,
+        600
+      ]
+    },
+    "sq_h5_r3_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h5_r3_c7.jpg",
+      "row": 3,
+      "col": 7,
+      "algebraic": "h5",
+      "roi_xyxy": [
+        1050,
+        450,
+        1200,
+        600
+      ]
+    },
+    "sq_a4_r4_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a4_r4_c0.jpg",
+      "row": 4,
+      "col": 0,
+      "algebraic": "a4",
+      "roi_xyxy": [
+        0,
+        600,
+        150,
+        750
+      ]
+    },
+    "sq_b4_r4_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b4_r4_c1.jpg",
+      "row": 4,
+      "col": 1,
+      "algebraic": "b4",
+      "roi_xyxy": [
+        150,
+        600,
+        300,
+        750
+      ]
+    },
+    "sq_c4_r4_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c4_r4_c2.jpg",
+      "row": 4,
+      "col": 2,
+      "algebraic": "c4",
+      "roi_xyxy": [
+        300,
+        600,
+        450,
+        750
+      ]
+    },
+    "sq_d4_r4_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d4_r4_c3.jpg",
+      "row": 4,
+      "col": 3,
+      "algebraic": "d4",
+      "roi_xyxy": [
+        450,
+        600,
+        600,
+        750
+      ]
+    },
+    "sq_e4_r4_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e4_r4_c4.jpg",
+      "row": 4,
+      "col": 4,
+      "algebraic": "e4",
+      "roi_xyxy": [
+        600,
+        600,
+        750,
+        750
+      ]
+    },
+    "sq_f4_r4_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f4_r4_c5.jpg",
+      "row": 4,
+      "col": 5,
+      "algebraic": "f4",
+      "roi_xyxy": [
+        750,
+        600,
+        900,
+        750
+      ]
+    },
+    "sq_g4_r4_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g4_r4_c6.jpg",
+      "row": 4,
+      "col": 6,
+      "algebraic": "g4",
+      "roi_xyxy": [
+        900,
+        600,
+        1050,
+        750
+      ]
+    },
+    "sq_h4_r4_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h4_r4_c7.jpg",
+      "row": 4,
+      "col": 7,
+      "algebraic": "h4",
+      "roi_xyxy": [
+        1050,
+        600,
+        1200,
+        750
+      ]
+    },
+    "sq_a3_r5_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a3_r5_c0.jpg",
+      "row": 5,
+      "col": 0,
+      "algebraic": "a3",
+      "roi_xyxy": [
+        0,
+        750,
+        150,
+        900
+      ]
+    },
+    "sq_b3_r5_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b3_r5_c1.jpg",
+      "row": 5,
+      "col": 1,
+      "algebraic": "b3",
+      "roi_xyxy": [
+        150,
+        750,
+        300,
+        900
+      ]
+    },
+    "sq_c3_r5_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c3_r5_c2.jpg",
+      "row": 5,
+      "col": 2,
+      "algebraic": "c3",
+      "roi_xyxy": [
+        300,
+        750,
+        450,
+        900
+      ]
+    },
+    "sq_d3_r5_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d3_r5_c3.jpg",
+      "row": 5,
+      "col": 3,
+      "algebraic": "d3",
+      "roi_xyxy": [
+        450,
+        750,
+        600,
+        900
+      ]
+    },
+    "sq_e3_r5_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e3_r5_c4.jpg",
+      "row": 5,
+      "col": 4,
+      "algebraic": "e3",
+      "roi_xyxy": [
+        600,
+        750,
+        750,
+        900
+      ]
+    },
+    "sq_f3_r5_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f3_r5_c5.jpg",
+      "row": 5,
+      "col": 5,
+      "algebraic": "f3",
+      "roi_xyxy": [
+        750,
+        750,
+        900,
+        900
+      ]
+    },
+    "sq_g3_r5_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g3_r5_c6.jpg",
+      "row": 5,
+      "col": 6,
+      "algebraic": "g3",
+      "roi_xyxy": [
+        900,
+        750,
+        1050,
+        900
+      ]
+    },
+    "sq_h3_r5_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h3_r5_c7.jpg",
+      "row": 5,
+      "col": 7,
+      "algebraic": "h3",
+      "roi_xyxy": [
+        1050,
+        750,
+        1200,
+        900
+      ]
+    },
+    "sq_a2_r6_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a2_r6_c0.jpg",
+      "row": 6,
+      "col": 0,
+      "algebraic": "a2",
+      "roi_xyxy": [
+        0,
+        900,
+        150,
+        1050
+      ]
+    },
+    "sq_b2_r6_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b2_r6_c1.jpg",
+      "row": 6,
+      "col": 1,
+      "algebraic": "b2",
+      "roi_xyxy": [
+        150,
+        900,
+        300,
+        1050
+      ]
+    },
+    "sq_c2_r6_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c2_r6_c2.jpg",
+      "row": 6,
+      "col": 2,
+      "algebraic": "c2",
+      "roi_xyxy": [
+        300,
+        900,
+        450,
+        1050
+      ]
+    },
+    "sq_d2_r6_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d2_r6_c3.jpg",
+      "row": 6,
+      "col": 3,
+      "algebraic": "d2",
+      "roi_xyxy": [
+        450,
+        900,
+        600,
+        1050
+      ]
+    },
+    "sq_e2_r6_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e2_r6_c4.jpg",
+      "row": 6,
+      "col": 4,
+      "algebraic": "e2",
+      "roi_xyxy": [
+        600,
+        900,
+        750,
+        1050
+      ]
+    },
+    "sq_f2_r6_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f2_r6_c5.jpg",
+      "row": 6,
+      "col": 5,
+      "algebraic": "f2",
+      "roi_xyxy": [
+        750,
+        900,
+        900,
+        1050
+      ]
+    },
+    "sq_g2_r6_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g2_r6_c6.jpg",
+      "row": 6,
+      "col": 6,
+      "algebraic": "g2",
+      "roi_xyxy": [
+        900,
+        900,
+        1050,
+        1050
+      ]
+    },
+    "sq_h2_r6_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h2_r6_c7.jpg",
+      "row": 6,
+      "col": 7,
+      "algebraic": "h2",
+      "roi_xyxy": [
+        1050,
+        900,
+        1200,
+        1050
+      ]
+    },
+    "sq_a1_r7_c0.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_a1_r7_c0.jpg",
+      "row": 7,
+      "col": 0,
+      "algebraic": "a1",
+      "roi_xyxy": [
+        0,
+        1050,
+        150,
+        1200
+      ]
+    },
+    "sq_b1_r7_c1.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_b1_r7_c1.jpg",
+      "row": 7,
+      "col": 1,
+      "algebraic": "b1",
+      "roi_xyxy": [
+        150,
+        1050,
+        300,
+        1200
+      ]
+    },
+    "sq_c1_r7_c2.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_c1_r7_c2.jpg",
+      "row": 7,
+      "col": 2,
+      "algebraic": "c1",
+      "roi_xyxy": [
+        300,
+        1050,
+        450,
+        1200
+      ]
+    },
+    "sq_d1_r7_c3.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_d1_r7_c3.jpg",
+      "row": 7,
+      "col": 3,
+      "algebraic": "d1",
+      "roi_xyxy": [
+        450,
+        1050,
+        600,
+        1200
+      ]
+    },
+    "sq_e1_r7_c4.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_e1_r7_c4.jpg",
+      "row": 7,
+      "col": 4,
+      "algebraic": "e1",
+      "roi_xyxy": [
+        600,
+        1050,
+        750,
+        1200
+      ]
+    },
+    "sq_f1_r7_c5.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_f1_r7_c5.jpg",
+      "row": 7,
+      "col": 5,
+      "algebraic": "f1",
+      "roi_xyxy": [
+        750,
+        1050,
+        900,
+        1200
+      ]
+    },
+    "sq_g1_r7_c6.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_g1_r7_c6.jpg",
+      "row": 7,
+      "col": 6,
+      "algebraic": "g1",
+      "roi_xyxy": [
+        900,
+        1050,
+        1050,
+        1200
+      ]
+    },
+    "sq_h1_r7_c7.jpg": {
+      "path": "/Users/ashakeshavarz/Documents/Vs/coord_finder/output/pipeline_test01/squares/sq_h1_r7_c7.jpg",
+      "row": 7,
+      "col": 7,
+      "algebraic": "h1",
+      "roi_xyxy": [
+        1050,
+        1050,
+        1200,
+        1200
+      ]
+    }
+  }
+}
