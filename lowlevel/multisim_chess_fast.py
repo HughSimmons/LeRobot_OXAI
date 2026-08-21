@@ -21,7 +21,14 @@ from chess_traj import (
 )
 from board_coordinates import location_label, location_world_xy
 from testkinematics import kinematics
-board_origin = (0.25, 0, 0)  # Must match the origin used in pybsim_chess.py
+BOARD_SQUARE_SIZE = float(os.environ.get("SIM_BOARD_SQUARE_SIZE", "0.04125"))
+board_origin = (
+    float(os.environ.get("SIM_BOARD_ORIGIN_X", "0.27")),
+    float(os.environ.get("SIM_BOARD_ORIGIN_Y", "0")),
+    float(os.environ.get("SIM_BOARD_ORIGIN_Z", "0.03")),
+)
+BOARD_BASE_HALF_HEIGHT = 0.005
+BOARD_TOP_Z = board_origin[2] + BOARD_BASE_HALF_HEIGHT
 # video_on = False
 video_on = True
 runid = "multisim_place_lookup"
@@ -107,9 +114,9 @@ if PIECE_MODEL not in {"cylinder", "rook_kiri"}:
 CYLINDER_PIECE_HEIGHT = 0.04
 CYLINDER_PIECE_RADIUS = 0.012
 CYLINDER_PIECE_MASS = 0.05
-CYLINDER_PIECE_BASE_Z = 0.04
-CYLINDER_PIECE_LIFTED_Z_THRESHOLD = 0.05
-CYLINDER_PIECE_DROPPED_Z_THRESHOLD = 0.035
+CYLINDER_PIECE_BASE_Z = board_origin[2] + 0.04
+CYLINDER_PIECE_LIFTED_Z_THRESHOLD = board_origin[2] + 0.05
+CYLINDER_PIECE_DROPPED_Z_THRESHOLD = board_origin[2] + 0.035
 CYLINDER_PIECE_DYNAMICS = {
     "lateralFriction": 1.0,
     "rollingFriction": 0.001,
@@ -152,9 +159,9 @@ ROOK_KIRI_BAND_COLLISION_MESH_DIR = Path(
 ).expanduser().resolve()
 ROOK_KIRI_TARGET_HEIGHT = 0.04
 ROOK_KIRI_MASS = 0.05
-ROOK_KIRI_BOARD_TOP_Z = 0.005
-ROOK_KIRI_LIFTED_Z_THRESHOLD = 0.045
-ROOK_KIRI_DROPPED_Z_THRESHOLD = 0.025
+ROOK_KIRI_BOARD_TOP_Z = BOARD_TOP_Z
+ROOK_KIRI_LIFTED_Z_THRESHOLD = board_origin[2] + 0.045
+ROOK_KIRI_DROPPED_Z_THRESHOLD = board_origin[2] + 0.025
 ROOK_KIRI_DYNAMICS = {
     "lateralFriction": 1.0,
     "rollingFriction": 0.001,
@@ -583,7 +590,7 @@ def create_piece(sq="a1"):
     return(piece_id)
 
 
-def board_xy_bounds(board_origin=board_origin, square_size=0.04):
+def board_xy_bounds(board_origin=board_origin, square_size=BOARD_SQUARE_SIZE):
     board_x, board_y, _ = board_origin
     board_size = 8 * square_size
     return (
@@ -594,7 +601,7 @@ def board_xy_bounds(board_origin=board_origin, square_size=0.04):
     )
 
 
-def is_xy_on_board(position, board_origin=board_origin, square_size=0.04, margin=0.0):
+def is_xy_on_board(position, board_origin=board_origin, square_size=BOARD_SQUARE_SIZE, margin=0.0):
     position = np.array(position)
     if position.shape[0] < 2 or not np.all(np.isfinite(position[:2])):
         return False
@@ -628,13 +635,13 @@ def ensure_physics_connected():
     return p.isConnected()
 
 
-def create_board_edge_support(board_origin=board_origin, square_size=0.04, margin=0.0):
+def create_board_edge_support(board_origin=board_origin, square_size=BOARD_SQUARE_SIZE, margin=0.0):
     if margin <= 0.0:
         return []
 
     board_x, board_y, board_z = board_origin
     board_size = 8 * square_size
-    support_half_height = 0.005
+    support_half_height = BOARD_BASE_HALF_HEIGHT
     support_ids = []
 
     strips = (
@@ -718,11 +725,11 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
         print(f"⚠ Error loading robot: {e}")
 
     board_x, board_y, board_z = board_origin
-    square_size = 0.04
+    square_size = BOARD_SQUARE_SIZE
     board_size = 8 * square_size
 
-    board_base_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005])
-    board_base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, 0.005], 
+    board_base_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, BOARD_BASE_HALF_HEIGHT])
+    board_base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, BOARD_BASE_HALF_HEIGHT], 
                                             rgbaColor=[0.3, 0.3, 0.3, 1])
     board_base_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=board_base_shape,
                                     baseVisualShapeIndex=board_base_visual, 
@@ -737,7 +744,7 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
         for col in range(8):
             x = board_x - board_size/2 + (col + 0.5) * square_size
             y = board_y - board_size/2 + (row + 0.5) * square_size
-            z = board_z + 0.008
+            z = BOARD_TOP_Z + 0.001
 
             if (row + col) % 2 == 0:
                 color = [1, 1, 1, 0.5]
@@ -809,9 +816,9 @@ def append_video_frame(video_context):
         "up": [0, 0, 1],
     }
     top_down_camera_params = {
-        "eye": [0.3, 0, 0.6],
-        "target": [0.3, 0, 0],
-        "up": [0, -1, 0],
+        "eye": [board_origin[0], board_origin[1], board_origin[2] + 0.6],
+        "target": [board_origin[0], board_origin[1], board_origin[2]],
+        "up": [0, 1, 0],
     }
 
     view_matrix = p.computeViewMatrix(
@@ -935,10 +942,7 @@ def run_sim_move(
         and "premature_drop_z_threshold" in trajectory_override
     ):
         premature_drop_z_threshold = trajectory_override["premature_drop_z_threshold"]
-    lifted_z_threshold = max(
-        PIECE_LIFTED_Z_THRESHOLD,
-        release_target_z + 0.02
-    )
+    lifted_z_threshold = PIECE_LIFTED_Z_THRESHOLD
 
     if trajectory_fk_error > MAX_TRAJECTORY_FK_ERROR:
         expected_piece_pos = np.array(chess_to_xy(sq2, board_origin=board_origin))

@@ -8,8 +8,9 @@ from typing import Sequence
 
 
 FILES = "abcdefgh"
-DEFAULT_BOARD_ORIGIN = (0.25, 0.0, 0.0)
-DEFAULT_SQUARE_SIZE = 0.04
+DEFAULT_BOARD_ORIGIN = (0.27, 0.0, 0.03)
+DEFAULT_SQUARE_SIZE = 0.04125
+DEFAULT_PIECE_TARGET_Z_OFFSET = 0.04
 
 
 @dataclass(frozen=True)
@@ -125,7 +126,7 @@ def location_world_xyz(
     *,
     board_origin: Sequence[float] = DEFAULT_BOARD_ORIGIN,
     square_size: float = DEFAULT_SQUARE_SIZE,
-    z_offset: float = 0.04,
+    z_offset: float = DEFAULT_PIECE_TARGET_Z_OFFSET,
 ) -> tuple[float, float, float]:
     x, y = location_world_xy(
         location,

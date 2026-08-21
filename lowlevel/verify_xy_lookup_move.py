@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -73,8 +74,15 @@ def main() -> int:
         replay_strategy = "continuous_neighbor_lower_place_bias"
     video_context = sim.create_video_context(output_dir / lookup["move_id"]) if args.video else None
 
+    edge_support_margin = float(
+        search.get(
+            "edge_support_margin",
+            os.environ.get("XY_LOOKUP_EDGE_SUPPORT_MARGIN", "0.0"),
+        )
+    )
+
     sim.ensure_physics_connected()
-    world = sim.setup_sim_world(start, edge_support_margin=0.08)
+    world = sim.setup_sim_world(start, edge_support_margin=edge_support_margin)
     try:
         result = sim.run_sim_move(
             world,

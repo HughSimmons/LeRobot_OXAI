@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +46,7 @@ DEFAULT_GRASP_OFFSET = np.array([-0.014, 0.002, -0.003], dtype=float)
 DEFAULT_PLACE_OFFSET = np.array([-0.011, 0.002, -0.003], dtype=float)
 XY_SUCCESS_THRESHOLD = 0.01
 MAX_PLACE_OFFSET_XY_ABS = 0.08
-EDGE_SUPPORT_MARGIN = 0.08
+EDGE_SUPPORT_MARGIN = float(os.environ.get("XY_LOOKUP_EDGE_SUPPORT_MARGIN", "0.0"))
 LONG_MOVE_STEP_MIN_SQUARE_DISTANCE = 5
 LONG_MOVE_STEP_DESTINATION_FILES = ("a", "b")
 CONTINUOUS_DONOR_TARGET_TOLERANCE_M = 1e-6
@@ -612,6 +613,7 @@ def main() -> int:
         "move_steps": args.move_steps,
         "move_steps_policy": move_steps_policy,
         "placement_lower_steps": args.placement_lower_steps,
+        "edge_support_margin": EDGE_SUPPORT_MARGIN,
         "database_accept_final_square": args.database_accept_final_square,
         "builder_strategy_recovery": not args.disable_builder_recovery,
         "far_square_seed_policy": "native_chess_traj_location_file",

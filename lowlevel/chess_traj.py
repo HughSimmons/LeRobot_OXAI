@@ -6,6 +6,9 @@ import numpy as np
 from contextlib import contextmanager
 
 from board_coordinates import (
+    DEFAULT_BOARD_ORIGIN,
+    DEFAULT_PIECE_TARGET_Z_OFFSET,
+    DEFAULT_SQUARE_SIZE,
     is_exact_square,
     location_file,
     location_label,
@@ -562,7 +565,7 @@ def make_square_pickup_lift_path(
 
 
 
-def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
+def chess_to_xy(square, board_origin=DEFAULT_BOARD_ORIGIN, square_size=DEFAULT_SQUARE_SIZE):
     """Resolve a square or continuous XY location to a world XYZ target."""
 
     return np.array(
@@ -570,13 +573,13 @@ def chess_to_xy(square, board_origin=(0.25, 0, 0), square_size=0.04):
             square,
             board_origin=board_origin,
             square_size=square_size,
-            z_offset=0.04,
+            z_offset=DEFAULT_PIECE_TARGET_Z_OFFSET,
         ),
         dtype=float,
     )
 
 
-def chess_to_xycalib(square, board_origin=(0.25, 0, 0), square_size=0.04):
+def chess_to_xycalib(square, board_origin=DEFAULT_BOARD_ORIGIN, square_size=DEFAULT_SQUARE_SIZE):
     return np.array(
         location_world_xyz(
             square,
@@ -1445,7 +1448,7 @@ def pickupmove_traj(
 
     ### lower to board
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
-    target_xyz = to_xyz + np.array([0, 0, 0.02]) #wiggle room for drop
+    target_xyz = to_xyz + np.array([0, 0, 0.02]) # wiggle room for drop
     # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
