@@ -33,6 +33,11 @@ DEFAULT_LOOKUP_JSON = (
 DEFAULT_OUTPUT_DIR = LOWLEVEL_DIR / "real_world_runs"
 DEFAULT_ROBOT_PORT = "/dev/tty.usbmodem5B7B0157051"
 DEFAULT_ROBOT_ID = "my_awesome_follower_arm"
+DEFAULT_REAL_BOARD_ORIGIN = (
+    float(DEFAULT_BOARD_ORIGIN[0]),
+    float(DEFAULT_BOARD_ORIGIN[1]),
+    0.025,
+)
 SIM_STEPS_PER_WAYPOINT = 50
 SIM_TIMESTEP_S = 1.0 / 240.0
 MOTOR_KEYS = (
@@ -169,6 +174,8 @@ def waypoint_command_index(
 
 def build_trajectory_from_lookup(
     lookup: dict[str, Any],
+    *,
+    board_origin: tuple[float, float, float],
 ) -> tuple[list[np.ndarray], int, dict[str, Any]]:
     start = point_from_saved(lookup["from"])
     target = point_from_saved(lookup["to"])
@@ -188,7 +195,7 @@ def build_trajectory_from_lookup(
         movelist, closeidx, traj_metrics = pickupmove_traj_with_metrics(
             start,
             target,
-            board_origin=DEFAULT_BOARD_ORIGIN,
+            board_origin=board_origin,
             GRASP_OFFSET=grasp_offset,
             PLACE_OFFSET=place_offset,
             placement_lower_steps=int(search["placement_lower_steps"]),
@@ -207,6 +214,7 @@ def build_trajectory_from_lookup(
         "lookup_metrics": metrics,
         "regenerated_trajectory_metrics": traj_metrics,
         "closeidx": closeidx,
+        "board_origin": board_origin,
         "trajectory_home_joints_deg": (
             DEFAULT_HOME.copy() if trajectory_home is None else trajectory_home.copy()
         ),
@@ -230,6 +238,7 @@ def write_dry_run(
         "execute": bool(args.execute),
         "port": args.port,
         "robot_id": args.robot_id,
+        "board_origin": args.board_origin,
         "steps_per_waypoint": args.steps_per_waypoint,
         "command_delay_s": args.command_delay,
         "interpolation": args.interpolation,
@@ -331,6 +340,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--port", default=DEFAULT_ROBOT_PORT)
     parser.add_argument("--robot-id", default=DEFAULT_ROBOT_ID)
+    parser.add_argument(
+        "--board-origin-z",
+        type=float,
+        default=DEFAULT_REAL_BOARD_ORIGIN[2],
+        help=(
+            "Board collision-box centre z used for real trajectory regeneration. "
+            "Default 0.025 gives a 0.030 m board top with the 5 mm sim half-height."
+        ),
+    )
     parser.add_argument("--steps-per-waypoint", type=int, default=SIM_STEPS_PER_WAYPOINT)
     parser.add_argument("--command-delay", type=float, default=SIM_TIMESTEP_S)
     parser.add_argument(
@@ -383,13 +401,21 @@ def main() -> int:
     args = parse_args()
     if args.pickup_pause_s < 0.0:
         raise ValueError("--pickup-pause-s must be non-negative")
+    args.board_origin = (
+        DEFAULT_REAL_BOARD_ORIGIN[0],
+        DEFAULT_REAL_BOARD_ORIGIN[1],
+        float(args.board_origin_z),
+    )
     lookup_path = args.lookup_json.expanduser().resolve()
     output_dir = args.output_dir.expanduser().resolve()
     lookup = json.loads(lookup_path.read_text(encoding="utf-8"))
     if lookup.get("schema") != "continuous_xy_lookup_v1":
         raise ValueError(f"Unsupported lookup schema in {lookup_path}")
 
-    waypoints, closeidx, metadata = build_trajectory_from_lookup(lookup)
+    waypoints, closeidx, metadata = build_trajectory_from_lookup(
+        lookup,
+        board_origin=args.board_origin,
+    )
     commands = interpolate_joint_waypoints(
         waypoints,
         steps_per_waypoint=args.steps_per_waypoint,
@@ -416,6 +442,7 @@ def main() -> int:
     )
 
     print(f"lookup: {lookup_path}")
+    print(f"board_origin: {args.board_origin}")
     print(f"waypoints: {len(waypoints)} | commands: {len(commands)} | closeidx: {closeidx}")
     if pause_command_index is not None:
         print(f"pickup pause command index: {pause_command_index}")

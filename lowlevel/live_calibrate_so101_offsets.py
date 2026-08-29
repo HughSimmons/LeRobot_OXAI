@@ -17,11 +17,12 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 
-from board_coordinates import DEFAULT_BOARD_ORIGIN, DEFAULT_SQUARE_SIZE, square_center_world_xy
+from board_coordinates import DEFAULT_SQUARE_SIZE, square_center_world_xy
 from chess_traj import gripper_angle_closed, gripper_angle_open
 from run_real_so101_from_xy_lookup import (
     DEFAULT_LOOKUP_JSON,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_REAL_BOARD_ORIGIN,
     DEFAULT_ROBOT_ID,
     DEFAULT_ROBOT_PORT,
     MOTOR_KEYS,
@@ -36,8 +37,11 @@ LOWLEVEL_DIR = Path(__file__).resolve().parent
 REPO_DIR = LOWLEVEL_DIR.parent
 URDF_PATH = REPO_DIR / "SO-ARM100" / "Simulation" / "SO101" / "so101_new_calib.urdf"
 SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
+BOARD_ORIGIN = DEFAULT_REAL_BOARD_ORIGIN
 BOARD_BASE_HALF_HEIGHT = 0.005
-BOARD_TOP_Z = DEFAULT_BOARD_ORIGIN[2] + BOARD_BASE_HALF_HEIGHT
+BOARD_TOP_Z = BOARD_ORIGIN[2] + BOARD_BASE_HALF_HEIGHT
+BASE_ORIGIN_AXIS_LENGTH = 0.06
+BASE_ORIGIN_AXIS_RADIUS = 0.002
 VIEWER_WINDOW = "SO101 real/sim calibration"
 CONTROLS_WINDOW = "SO101 motor offsets"
 VIEWER_WIDTH = 960
@@ -163,14 +167,80 @@ def setup_pybullet_scene(from_square: str, to_square: str) -> tuple[int, int]:
 
     p.loadURDF("plane.urdf", [0, 0, 0])
     robot_id = p.loadURDF(str(URDF_PATH), [0, 0, 0], useFixedBase=True)
+    create_base_origin_marker()
     board_id = create_board_visuals()
     create_square_marker(from_square, [0.1, 0.45, 1.0, 0.8])
     create_square_marker(to_square, [1.0, 0.55, 0.0, 0.8])
     return robot_id, board_id
 
 
+def create_marker_cylinder(
+    *,
+    position: list[float],
+    axis: str,
+    length: float,
+    radius: float,
+    color: list[float],
+) -> None:
+    if axis == "x":
+        orientation = p.getQuaternionFromEuler([0.0, np.pi / 2.0, 0.0])
+    elif axis == "y":
+        orientation = p.getQuaternionFromEuler([np.pi / 2.0, 0.0, 0.0])
+    elif axis == "z":
+        orientation = p.getQuaternionFromEuler([0.0, 0.0, 0.0])
+    else:
+        raise ValueError(f"Unsupported marker axis: {axis}")
+
+    visual = p.createVisualShape(
+        p.GEOM_CYLINDER,
+        radius=radius,
+        length=length,
+        rgbaColor=color,
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=visual,
+        basePosition=position,
+        baseOrientation=orientation,
+    )
+
+
+def create_base_origin_marker() -> None:
+    origin_visual = p.createVisualShape(
+        p.GEOM_SPHERE,
+        radius=0.006,
+        rgbaColor=[1.0, 0.0, 1.0, 1.0],
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=origin_visual,
+        basePosition=[0.0, 0.0, 0.0],
+    )
+    create_marker_cylinder(
+        position=[BASE_ORIGIN_AXIS_LENGTH / 2.0, 0.0, 0.0],
+        axis="x",
+        length=BASE_ORIGIN_AXIS_LENGTH,
+        radius=BASE_ORIGIN_AXIS_RADIUS,
+        color=[1.0, 0.0, 0.0, 1.0],
+    )
+    create_marker_cylinder(
+        position=[0.0, BASE_ORIGIN_AXIS_LENGTH / 2.0, 0.0],
+        axis="y",
+        length=BASE_ORIGIN_AXIS_LENGTH,
+        radius=BASE_ORIGIN_AXIS_RADIUS,
+        color=[0.0, 0.7, 0.0, 1.0],
+    )
+    create_marker_cylinder(
+        position=[0.0, 0.0, BASE_ORIGIN_AXIS_LENGTH / 2.0],
+        axis="z",
+        length=BASE_ORIGIN_AXIS_LENGTH,
+        radius=BASE_ORIGIN_AXIS_RADIUS,
+        color=[0.0, 0.2, 1.0, 1.0],
+    )
+
+
 def create_board_visuals() -> int:
-    board_x, board_y, board_z = DEFAULT_BOARD_ORIGIN
+    board_x, board_y, board_z = BOARD_ORIGIN
     board_size = 8 * DEFAULT_SQUARE_SIZE
     board_base_shape = p.createCollisionShape(
         p.GEOM_BOX,
@@ -207,7 +277,7 @@ def create_board_visuals() -> int:
 
 
 def create_square_marker(square: str, color: list[float]) -> None:
-    x, y = square_center_world_xy(square)
+    x, y = square_center_world_xy(square, board_origin=BOARD_ORIGIN)
     visual = p.createVisualShape(
         p.GEOM_CYLINDER,
         radius=DEFAULT_SQUARE_SIZE * 0.18,
@@ -397,7 +467,7 @@ def save_calibration(
         "motor_offsets_deg": {
             key: float(offset) for key, offset in zip(MOTOR_KEYS, offsets_deg)
         },
-        "board_origin": list(DEFAULT_BOARD_ORIGIN),
+        "board_origin": list(BOARD_ORIGIN),
         "square_size": DEFAULT_SQUARE_SIZE,
         "lookup_json": str(lookup_path),
         "pose_name": pose["name"],
@@ -474,7 +544,7 @@ def render_view(status_lines: list[str]) -> np.ndarray:
     )
     view = p.computeViewMatrix(
         cameraEyePosition=[0.0, -0.62, 0.28],
-        cameraTargetPosition=[DEFAULT_BOARD_ORIGIN[0], DEFAULT_BOARD_ORIGIN[1], DEFAULT_BOARD_ORIGIN[2] + 0.03],
+        cameraTargetPosition=[BOARD_ORIGIN[0], BOARD_ORIGIN[1], BOARD_ORIGIN[2] + 0.03],
         cameraUpVector=[0.0, 0.0, 1.0],
     )
     _, _, rgba, _, _ = p.getCameraImage(
@@ -558,6 +628,7 @@ def run_calibration_loop(
             status_lines = [
                 f"pose {pose_index + 1}/{len(poses)}: {pose['name']} | waypoint: {pose['waypoint_index']}",
                 f"selected motor {selected_motor + 1}: {MOTOR_KEYS[selected_motor]}",
+                "base_link/world origin: magenta dot, RGB axes",
                 format_pose_line("target", pose["joints_deg"]),
                 format_pose_line("offset", offsets_deg),
                 format_pose_line("command", commanded),
@@ -657,7 +728,10 @@ def main() -> int:
     if lookup.get("schema") != "continuous_xy_lookup_v1":
         raise ValueError(f"Unsupported lookup schema in {lookup_path}")
 
-    waypoints, closeidx, metadata = build_trajectory_from_lookup(lookup)
+    waypoints, closeidx, metadata = build_trajectory_from_lookup(
+        lookup,
+        board_origin=BOARD_ORIGIN,
+    )
     if args.pose_set == "comparison":
         poses = build_comparison_poses(metadata)
     else:

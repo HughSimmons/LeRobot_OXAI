@@ -29,6 +29,10 @@ board_origin = (
 )
 BOARD_BASE_HALF_HEIGHT = 0.005
 BOARD_TOP_Z = board_origin[2] + BOARD_BASE_HALF_HEIGHT
+BASE_ORIGIN_AXIS_LENGTH = 0.06
+BASE_ORIGIN_AXIS_RADIUS = 0.002
+BASE_FAR_EDGE_MARKER_RADIUS = 0.008
+BOARD_CENTER_MARKER_RADIUS = 0.007
 # video_on = False
 video_on = True
 runid = "multisim_place_lookup"
@@ -626,6 +630,119 @@ GRIPPER_IDX = 6
 CONTROL_JOINTS = ARM_JOINTS + [GRIPPER_IDX]
 
 
+def create_marker_cylinder(position, axis, length, radius, color):
+    if axis == "x":
+        orientation = p.getQuaternionFromEuler([0.0, math.pi / 2.0, 0.0])
+    elif axis == "y":
+        orientation = p.getQuaternionFromEuler([math.pi / 2.0, 0.0, 0.0])
+    elif axis == "z":
+        orientation = p.getQuaternionFromEuler([0.0, 0.0, 0.0])
+    else:
+        raise ValueError(f"Unsupported marker axis: {axis}")
+
+    visual = p.createVisualShape(
+        p.GEOM_CYLINDER,
+        radius=radius,
+        length=length,
+        rgbaColor=color,
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=visual,
+        basePosition=position,
+        baseOrientation=orientation,
+    )
+
+
+def create_base_origin_marker():
+    origin_visual = p.createVisualShape(
+        p.GEOM_SPHERE,
+        radius=0.006,
+        rgbaColor=[1.0, 0.0, 1.0, 1.0],
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=origin_visual,
+        basePosition=[0.0, 0.0, 0.0],
+    )
+    create_marker_cylinder(
+        [BASE_ORIGIN_AXIS_LENGTH / 2.0, 0.0, 0.0],
+        "x",
+        BASE_ORIGIN_AXIS_LENGTH,
+        BASE_ORIGIN_AXIS_RADIUS,
+        [1.0, 0.0, 0.0, 1.0],
+    )
+    create_marker_cylinder(
+        [0.0, BASE_ORIGIN_AXIS_LENGTH / 2.0, 0.0],
+        "y",
+        BASE_ORIGIN_AXIS_LENGTH,
+        BASE_ORIGIN_AXIS_RADIUS,
+        [0.0, 0.7, 0.0, 1.0],
+    )
+    create_marker_cylinder(
+        [0.0, 0.0, BASE_ORIGIN_AXIS_LENGTH / 2.0],
+        "z",
+        BASE_ORIGIN_AXIS_LENGTH,
+        BASE_ORIGIN_AXIS_RADIUS,
+        [0.0, 0.2, 1.0, 1.0],
+    )
+
+
+def create_base_far_edge_marker(robot_id):
+    # The board sits in +X, so the far side of base_link is the minimum-X AABB side.
+    aabb_min, aabb_max = p.getAABB(robot_id, -1)
+    marker_position = [
+        aabb_min[0],
+        (aabb_min[1] + aabb_max[1]) / 2.0,
+        aabb_max[2] + BASE_FAR_EDGE_MARKER_RADIUS,
+    ]
+    visual = p.createVisualShape(
+        p.GEOM_SPHERE,
+        radius=BASE_FAR_EDGE_MARKER_RADIUS,
+        rgbaColor=[0.0, 1.0, 1.0, 1.0],
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=visual,
+        basePosition=marker_position,
+    )
+    create_marker_cylinder(
+        [
+            aabb_min[0],
+            (aabb_min[1] + aabb_max[1]) / 2.0,
+            aabb_max[2] + BASE_FAR_EDGE_MARKER_RADIUS * 2.0 + 0.025,
+        ],
+        "z",
+        0.05,
+        BASE_ORIGIN_AXIS_RADIUS,
+        [0.0, 1.0, 1.0, 1.0],
+    )
+
+
+def create_board_center_marker():
+    visual = p.createVisualShape(
+        p.GEOM_SPHERE,
+        radius=BOARD_CENTER_MARKER_RADIUS,
+        rgbaColor=[1.0, 0.0, 0.0, 1.0],
+    )
+    p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=visual,
+        basePosition=[board_origin[0], board_origin[1], BOARD_TOP_Z + 0.012],
+    )
+    create_marker_cylinder(
+        [
+            board_origin[0],
+            board_origin[1],
+            BOARD_TOP_Z + 0.047,
+        ],
+        "z",
+        0.07,
+        BASE_ORIGIN_AXIS_RADIUS,
+        [1.0, 0.0, 0.0, 1.0],
+    )
+
+
 def ensure_physics_connected():
     if not p.isConnected():
         p.connect(p.DIRECT)
@@ -721,6 +838,8 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
         )
         print(f"✓ Loaded SO101 from URDF")
         print(f"✓ Number of joints: {p.getNumJoints(robot_id)}")
+        create_base_origin_marker()
+        create_base_far_edge_marker(robot_id)
     except Exception as e:
         print(f"⚠ Error loading robot: {e}")
 
@@ -734,6 +853,7 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
     board_base_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=board_base_shape,
                                     baseVisualShapeIndex=board_base_visual, 
                                     basePosition=[board_x, board_y, board_z])
+    create_board_center_marker()
     edge_support_ids = create_board_edge_support(
         board_origin=board_origin,
         square_size=square_size,
@@ -803,6 +923,16 @@ def create_video_context(output_dir):
     }
 
 
+def env_vector(name, default):
+    raw = os.environ.get(name)
+    if not raw:
+        return list(default)
+    values = [float(part.strip()) for part in raw.split(",")]
+    if len(values) != 3:
+        raise ValueError(f"{name} must contain three comma-separated floats")
+    return values
+
+
 def append_video_frame(video_context):
     proj_matrix = p.computeProjectionMatrixFOV(
         fov=60,
@@ -811,14 +941,20 @@ def append_video_frame(video_context):
         farVal=100
     )
     camera_params = {
-        "eye": [0.0, -0.6, 0.25],
-        "target": [0.3, 0.0, 0.05],
-        "up": [0, 0, 1],
+        "eye": env_vector("SIM_CAMERA_EYE", [0.0, -0.6, 0.25]),
+        "target": env_vector("SIM_CAMERA_TARGET", [0.3, 0.0, 0.05]),
+        "up": env_vector("SIM_CAMERA_UP", [0, 0, 1]),
     }
     top_down_camera_params = {
-        "eye": [board_origin[0], board_origin[1], board_origin[2] + 0.6],
-        "target": [board_origin[0], board_origin[1], board_origin[2]],
-        "up": [0, 1, 0],
+        "eye": env_vector(
+            "SIM_TOPDOWN_CAMERA_EYE",
+            [board_origin[0], board_origin[1], board_origin[2] + 0.6],
+        ),
+        "target": env_vector(
+            "SIM_TOPDOWN_CAMERA_TARGET",
+            [board_origin[0], board_origin[1], board_origin[2]],
+        ),
+        "up": env_vector("SIM_TOPDOWN_CAMERA_UP", [0, 1, 0]),
     }
 
     view_matrix = p.computeViewMatrix(

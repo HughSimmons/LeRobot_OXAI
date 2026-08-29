@@ -25,7 +25,16 @@ import numpy as np
 
 
 def _lc2fen_repo() -> Path:
-    return Path(__file__).resolve().parent.parent / "LiveChess2FEN_setup" / "LiveChess2FEN"
+    lowlevel_dir = Path(__file__).resolve().parent.parent
+    project_dir = lowlevel_dir.parent
+    candidates = [
+        lowlevel_dir / "LiveChess2FEN_setup" / "LiveChess2FEN",
+        project_dir / "vision" / "LiveChess2FEN",
+    ]
+    for candidate in candidates:
+        if (candidate / "lc2fen" / "detectboard" / "detect_board.py").is_file():
+            return candidate
+    return candidates[0]
 
 
 def detect_and_warp_board(
