@@ -176,6 +176,7 @@ def build_trajectory_from_lookup(
     lookup: dict[str, Any],
     *,
     board_origin: tuple[float, float, float],
+    zero_grasp_offset: bool = False,
 ) -> tuple[list[np.ndarray], int, dict[str, Any]]:
     start = point_from_saved(lookup["from"])
     target = point_from_saved(lookup["to"])
@@ -186,6 +187,13 @@ def build_trajectory_from_lookup(
     lower_place_path_bias = metrics.get("lower_place_path_bias")
     if lower_place_path_bias is not None:
         lower_place_path_bias = np.array(lower_place_path_bias, dtype=float)
+
+    if zero_grasp_offset:
+        # The saved offsets and the lower-place bias were solved together, so drop
+        # them as a set rather than leaving a bias tuned for offsets we removed.
+        grasp_offset = np.zeros(3, dtype=float)
+        place_offset = np.zeros(3, dtype=float)
+        lower_place_path_bias = None
 
     trajectory_home = metrics.get("trajectory_home_joints_deg")
     if trajectory_home is not None:
@@ -215,6 +223,7 @@ def build_trajectory_from_lookup(
         "regenerated_trajectory_metrics": traj_metrics,
         "closeidx": closeidx,
         "board_origin": board_origin,
+        "zero_grasp_offset": zero_grasp_offset,
         "trajectory_home_joints_deg": (
             DEFAULT_HOME.copy() if trajectory_home is None else trajectory_home.copy()
         ),
@@ -349,6 +358,16 @@ def parse_args() -> argparse.Namespace:
             "Default 0.025 gives a 0.030 m board top with the 5 mm sim half-height."
         ),
     )
+    parser.add_argument(
+        "--zero-grasp-offset",
+        action="store_true",
+        help=(
+            "Ignore the lookup's grasp/place offsets and regenerate with zeros. "
+            "The offsets are tool-frame corrections for gripper geometry, so zeroing "
+            "them aims the wrist at the square centre instead of the fingers; the "
+            "lower-place path bias is dropped too since it was solved alongside them."
+        ),
+    )
     parser.add_argument("--steps-per-waypoint", type=int, default=SIM_STEPS_PER_WAYPOINT)
     parser.add_argument("--command-delay", type=float, default=SIM_TIMESTEP_S)
     parser.add_argument(
@@ -415,6 +434,7 @@ def main() -> int:
     waypoints, closeidx, metadata = build_trajectory_from_lookup(
         lookup,
         board_origin=args.board_origin,
+        zero_grasp_offset=args.zero_grasp_offset,
     )
     commands = interpolate_joint_waypoints(
         waypoints,
@@ -443,6 +463,10 @@ def main() -> int:
 
     print(f"lookup: {lookup_path}")
     print(f"board_origin: {args.board_origin}")
+    if args.zero_grasp_offset:
+        print(
+            "zero-grasp-offset: ON (lookup grasp/place offsets and lower-place bias ignored)"
+        )
     print(f"waypoints: {len(waypoints)} | commands: {len(commands)} | closeidx: {closeidx}")
     if pause_command_index is not None:
         print(f"pickup pause command index: {pause_command_index}")
