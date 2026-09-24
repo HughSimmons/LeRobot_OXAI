@@ -4,21 +4,29 @@ a calibration photo, combined with a LiveChess2FEN board-plane homography.
 
 Click three things on the photo: 2+ points on the board's own playing-surface
 edge (its outer wooden frame, not the 8x8 grid boundary), 2+ points on the
-robot base's front edge, and exactly 2 points on a tape measure lying on the
-table (each paired with its real-world reading, typed in after clicking).
+robot base's front edge, and 2+ points along EACH of the tape measure's two
+long edges (each paired with its real-world reading, typed in after
+clicking), plus the tape's known physical width. Clicking both edges of the
+tape (not just its centreline) gives 2D-spread correspondences, so a real
+table-plane homography can be fit (cv2.findHomography), not just a 1D scale.
 
 Two measurements combine to give the final robot-origin-to-board-centre
 distance:
-- front edge -> playing-surface edge: the tape's two known readings give a
-  direct pixel-to-metres scale; both point groups are projected onto the
-  tape's own fitted line. This crosses from the table plane to the elevated
-  board plane, so it's a simple cross-check, not fully parallax-corrected.
+- front edge -> playing-surface edge: both point groups are mapped through
+  the table-plane homography and the Euclidean distance is taken. This
+  crosses from the table plane to the elevated board plane, so it's a
+  cross-check, not fully parallax-corrected.
 - playing-surface edge -> board centre: measured precisely on the board
   plane itself (no parallax issue, both points are on the same elevated
   surface) using the LiveChess2FEN-detected board corners/homography and the
   known square length. This is what reveals the true edge-to-centre
   distance, since the outer frame sits further out than the 4-square-length
   distance to the 8x8 grid's own boundary.
+
+A third result, `oriented_board_offset_measurement`, decomposes the
+front-edge-to-board-centre offset into forward/lateral components using the
+robot's own front-edge orientation (not the tape's), giving both
+board_origin_x and board_origin_y directly.
 """
 
 from __future__ import annotations
@@ -59,11 +67,59 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--square-length-m", type=float, default=DEFAULT_SQUARE_LENGTH_M)
     parser.add_argument(
+        "--tape-width-m",
+        type=float,
+        default=None,
+        help=(
+            "Physical width of the tape measure's blade, in metres. Combined "
+            "with clicks on both its long edges, this gives 2D-spread "
+            "correspondences for a real table-plane homography. Prompted "
+            "interactively if not given."
+        ),
+    )
+    parser.add_argument(
+        "--no-tape",
+        action="store_true",
+        help="Skip the tape-measure homography source (default: used).",
+    )
+    parser.add_argument(
+        "--no-table-edges",
+        action="store_true",
+        help=(
+            "Skip the table-edges homography source (default: used). Click "
+            ">=2 points on each of two perpendicular table edges, each with "
+            "known measured distances from their shared corner."
+        ),
+    )
+    parser.add_argument(
+        "--no-local-grid",
+        action="store_true",
+        help=(
+            "Skip clicking the 9 central grid intersections for a locally-fit "
+            "board homography (default: used). The global 4-corner homography "
+            "assumes an ideal pinhole camera; real lens distortion makes its "
+            "interpolated interior grid lines drift from the true squares. "
+            "Clicking the 9 points bounding the central 2x2 block of squares "
+            "(d4/d5/e4/e5) gives a homography that's only trusted near the "
+            "board centre, but isn't biased by distortion far from those "
+            "clicks -- used to get a more accurate board centre pixel."
+        ),
+    )
+    parser.add_argument(
         "--board-corners",
         nargs=4,
         metavar=("TL", "TR", "BR", "BL"),
         help="Manual board corners as x,y pairs in original image pixels, "
         "if LiveChess2FEN detection is unavailable or wrong.",
+    )
+    parser.add_argument(
+        "--reclick-local-grid",
+        action="store_true",
+        help=(
+            "Force a fresh click of the 9 central grid points even when "
+            "--replay-points-from already has a local_grid saved; all other "
+            "points/sources are still replayed as usual."
+        ),
     )
     parser.add_argument(
         "--replay-points-from",
@@ -171,10 +227,21 @@ def board_plane_edge_to_centre_measurement(
         )
         points_board_xy_m.append(list(xy_m))
         distances_m.append(float(np.hypot(*xy_m)))
+
+    # Perpendicular distance from centre to the fitted edge *line* -- the
+    # true closest approach, not the distance to individual clicked points
+    # (which also carries however far along the edge each point happens to
+    # be, so it's >= this value).
+    perpendicular_distance_m = None
+    if len(points_board_xy_m) >= 2:
+        line_point, line_dir = fit_line_px(points_board_xy_m)
+        perpendicular_distance_m = float(abs(line_point[0] * line_dir[1] - line_point[1] * line_dir[0]))
+
     return {
         "points_board_xy_m": points_board_xy_m,
         "distances_from_centre_m": distances_m,
         "mean_edge_to_centre_m": float(np.mean(distances_m)),
+        "perpendicular_distance_to_edge_line_m": perpendicular_distance_m,
     }
 
 
@@ -183,6 +250,7 @@ def draw_board_overlay(
     corners: np.ndarray,
     homography: np.ndarray,
     board_size_px: int,
+    square_corners_px: list[tuple[float, float]] | None = None,
 ) -> tuple[np.ndarray, tuple[int, int]]:
     overlay = image.copy()
     corners_i = np.round(corners).astype(np.int32)
@@ -194,74 +262,252 @@ def draw_board_overlay(
         q1 = inverse_project((float(board_size_px), i * board_size_px / 8.0), homography)
         cv2.line(overlay, p0, p1, (255, 255, 255), 1, cv2.LINE_AA)
         cv2.line(overlay, q0, q1, (255, 255, 255), 1, cv2.LINE_AA)
+    # LiveChess2FEN's own detected 9x9 lattice points (independent of the
+    # 4-corner homography interpolation above) -- drawn alongside the white
+    # interpolated grid so drift between the two is visible directly.
+    if square_corners_px:
+        for x, y in square_corners_px:
+            cv2.drawMarker(
+                overlay, (int(round(x)), int(round(y))), (255, 255, 0), cv2.MARKER_CROSS, 10, 2, cv2.LINE_AA
+            )
     center_px = inverse_project((board_size_px / 2.0, board_size_px / 2.0), homography)
-    cv2.circle(overlay, center_px, 10, (0, 0, 255), -1, cv2.LINE_AA)
+    cv2.drawMarker(overlay, center_px, (0, 0, 255), cv2.MARKER_CROSS, 24, 3, cv2.LINE_AA)
     used_rects: list[tuple[int, int, int, int]] = []
     draw_label(overlay, "board centre", center_px, (0, 0, 255), used_rects, font_scale=0.7)
     return overlay, center_px
 
 
+def fit_line_px(points_px: list[tuple[float, float]]) -> tuple[np.ndarray, np.ndarray]:
+    """Least-squares line through 2+ pixel (or metric) points via SVD.
+
+    Returns (point_on_line, unit_direction).
+    """
+    points = np.asarray(points_px, dtype=float)
+    centroid = points.mean(axis=0)
+    _, _, vh = np.linalg.svd(points - centroid)
+    direction = vh[0]
+    return centroid, direction / np.linalg.norm(direction)
+
+
+def fit_table_homography(
+    tape_near_points_px: list[tuple[float, float]],
+    tape_near_values_m: list[float],
+    tape_far_points_px: list[tuple[float, float]],
+    tape_far_values_m: list[float],
+    tape_width_m: float,
+) -> dict:
+    """Real table-plane homography (pixel -> metric (u, v)) fit from points on
+    both long edges of a tape measure of known width.
+
+    u is the tape's own along-length reading; v is 0 on the near edge and
+    tape_width_m on the far edge. Clicking both edges (not just the
+    centreline) gives 2D-spread correspondences, so this is a genuine
+    projective homography (cv2.findHomography, >=4 points), not just a 1D
+    scale -- it captures perspective properly across the whole photo.
+    """
+    if len(tape_near_points_px) < 2 or len(tape_far_points_px) < 2:
+        raise ValueError("Need >=2 points on each tape edge.")
+    if len(tape_near_points_px) != len(tape_near_values_m):
+        raise ValueError("Near-edge points/values count mismatch.")
+    if len(tape_far_points_px) != len(tape_far_values_m):
+        raise ValueError("Far-edge points/values count mismatch.")
+
+    src = np.asarray(tape_near_points_px + tape_far_points_px, dtype=np.float32)
+    dst = np.asarray(
+        [[v, 0.0] for v in tape_near_values_m] + [[v, tape_width_m] for v in tape_far_values_m],
+        dtype=np.float32,
+    )
+    homography, _ = cv2.findHomography(src, dst, method=0)
+    if homography is None:
+        raise ValueError("Failed to fit a homography from the tape edge points.")
+    return {
+        "source": "tape",
+        "tape_near_points_px": [[float(x), float(y)] for x, y in tape_near_points_px],
+        "tape_near_values_m": [float(v) for v in tape_near_values_m],
+        "tape_far_points_px": [[float(x), float(y)] for x, y in tape_far_points_px],
+        "tape_far_values_m": [float(v) for v in tape_far_values_m],
+        "tape_width_m": float(tape_width_m),
+        "homography": homography.tolist(),
+    }
+
+
+def fit_table_edges_homography(
+    flush_points_px: list[tuple[float, float]],
+    flush_values_m: list[float],
+    perpendicular_points_px: list[tuple[float, float]],
+    perpendicular_values_m: list[float],
+) -> dict:
+    """Real table-plane homography (pixel -> metric (u, v)) fit from two
+    perpendicular table edges, each with known readings (e.g. measured with a
+    tape/ruler from their shared corner).
+
+    flush edge points -> (reading, 0); perpendicular edge points -> (0,
+    reading). Assumes both edges' readings are measured from the same shared
+    corner and that the edges are genuinely perpendicular -- if that's not
+    exactly true, the homography absorbs a small amount of skew error.
+    """
+    if len(flush_points_px) < 2 or len(perpendicular_points_px) < 2:
+        raise ValueError("Need >=2 points on each table edge.")
+    if len(flush_points_px) != len(flush_values_m):
+        raise ValueError("Flush-edge points/values count mismatch.")
+    if len(perpendicular_points_px) != len(perpendicular_values_m):
+        raise ValueError("Perpendicular-edge points/values count mismatch.")
+
+    src = np.asarray(flush_points_px + perpendicular_points_px, dtype=np.float32)
+    dst = np.asarray(
+        [[v, 0.0] for v in flush_values_m] + [[0.0, v] for v in perpendicular_values_m],
+        dtype=np.float32,
+    )
+    homography, _ = cv2.findHomography(src, dst, method=0)
+    if homography is None:
+        raise ValueError("Failed to fit a homography from the table edge points.")
+    return {
+        "source": "table_edges",
+        "table_flush_points_px": [[float(x), float(y)] for x, y in flush_points_px],
+        "table_flush_values_m": [float(v) for v in flush_values_m],
+        "table_perpendicular_points_px": [[float(x), float(y)] for x, y in perpendicular_points_px],
+        "table_perpendicular_values_m": [float(v) for v in perpendicular_values_m],
+        "homography": homography.tolist(),
+    }
+
+
+def fit_local_board_homography(
+    central_square_corners_px: list[tuple[float, float]],
+    square_length_m: float,
+) -> dict:
+    """Locally-fit pixel <-> board-plane-metric homography from the 9 grid
+    intersections bounding the central 2x2 block of squares (d4/d5/e4/e5),
+    clicked in row-major order (3 rows top-to-bottom, 3 points left-to-right
+    per row).
+
+    The global 4-corner homography (`board_transform_from_corners`) assumes
+    an ideal pinhole camera, so its straight-line interpolation between the
+    4 outer corners drifts away from the true (slightly lens-distorted)
+    interior grid lines. This local fit is only trusted near the board
+    centre -- it should not be extrapolated out to the playing-surface edge
+    -- but gives an accurate board-centre pixel and nearby square locations,
+    since lens distortion is locally near-linear over such a small patch.
+
+    The middle of the 9 clicked points (index 4) IS the board's true centre
+    by construction (it's the point shared by all 4 central squares), so
+    `board_center_px` is read off directly, not solved via the homography.
+    """
+    if len(central_square_corners_px) != 9:
+        raise ValueError("Need exactly 9 points (3x3 grid, row-major).")
+
+    src = np.asarray(central_square_corners_px, dtype=np.float32)
+    dst = np.asarray(
+        [[(col - 1) * square_length_m, (row - 1) * square_length_m] for row in range(3) for col in range(3)],
+        dtype=np.float32,
+    )
+    homography, _ = cv2.findHomography(src, dst, method=0)
+    if homography is None:
+        raise ValueError("Failed to fit a local homography from the central grid points.")
+
+    return {
+        "central_square_corners_px": [[float(x), float(y)] for x, y in central_square_corners_px],
+        "square_length_m": float(square_length_m),
+        "homography": homography.tolist(),
+        "board_center_px": [float(central_square_corners_px[4][0]), float(central_square_corners_px[4][1])],
+    }
+
+
+def local_grid_point_px(local_grid: dict, dx_squares: float, dy_squares: float) -> tuple[int, int]:
+    """Pixel location of a point `dx_squares`/`dy_squares` squares away from
+    the board centre (in the local grid's row/col click directions), via the
+    local homography. Only accurate near the centre -- see
+    `fit_local_board_homography`.
+    """
+    homography = np.asarray(local_grid["homography"], dtype=float)
+    square_length_m = local_grid["square_length_m"]
+    return inverse_project((dx_squares * square_length_m, dy_squares * square_length_m), homography)
+
+
 def tape_calibrated_measurement(
     playing_surface_edge_points_px: list[tuple[float, float]],
     robot_base_front_points_px: list[tuple[float, float]],
-    tape_measure_points_px: list[tuple[float, float]],
-    tape_measure_values_m: list[float],
+    table_homography: np.ndarray,
 ) -> dict:
     """Distance between the robot's front edge and the board's playing-surface
-    edge, using a tape measure visible in the same photo as the metric scale.
+    edge, mapping both point groups through the real table-plane homography.
 
-    The tape lies flat on the table, so this projects both point groups onto
-    the tape's own fitted pixel-space direction and scales by
-    metres-per-pixel derived directly from the tape's two known readings --
-    no homography needed. That also means the result has a parallax bias for
-    whichever segment lies over the elevated playing surface (the tape sits
-    lower than that surface); treat this as a quick, self-contained
-    cross-check rather than a fully corrected measurement.
+    This crosses from the table plane to the elevated board plane, so it
+    still carries a parallax bias for whichever point sits on the raised
+    surface; treat this as a cross-check against the properly board-plane
+    corrected `board_plane_edge_to_centre_measurement`, not a final figure.
     """
-    if len(tape_measure_points_px) != 2 or len(tape_measure_values_m) != 2:
-        raise ValueError("Tape-measure calibration needs exactly 2 points and 2 values.")
     if len(playing_surface_edge_points_px) < 2 or len(robot_base_front_points_px) < 2:
         raise ValueError("Need >=2 points each for the playing-surface edge and robot base front.")
 
-    tape_a, tape_b = (np.asarray(p, dtype=float) for p in tape_measure_points_px)
-    tape_vec = tape_b - tape_a
-    tape_pixel_length = float(np.linalg.norm(tape_vec))
-    if tape_pixel_length < 1e-6:
-        raise ValueError("Tape-measure points are coincident in the image.")
-    tape_unit = tape_vec / tape_pixel_length
-
-    value_a, value_b = tape_measure_values_m
-    metres_per_pixel = abs(value_b - value_a) / tape_pixel_length
-
-    def projected_value_m(points_px: list[tuple[float, float]]) -> float:
-        centroid = np.mean(np.asarray(points_px, dtype=float), axis=0)
-        signed_pixels_from_a = float(np.dot(centroid - tape_a, tape_unit))
-        # value_a is the reading at tape_a; walking along tape_unit increases
-        # the reading toward value_b (or decreases it, if value_b < value_a).
-        direction_sign = 1.0 if value_b >= value_a else -1.0
-        return value_a + direction_sign * signed_pixels_from_a * metres_per_pixel
-
-    playing_surface_value_m = projected_value_m(playing_surface_edge_points_px)
-    robot_front_value_m = projected_value_m(robot_base_front_points_px)
-    raw_distance_m = abs(playing_surface_value_m - robot_front_value_m)
+    playing_surface_uv = [apply_homography(p, table_homography) for p in playing_surface_edge_points_px]
+    robot_front_uv = [apply_homography(p, table_homography) for p in robot_base_front_points_px]
+    playing_surface_centroid = np.mean(np.asarray(playing_surface_uv), axis=0)
+    robot_front_centroid = np.mean(np.asarray(robot_front_uv), axis=0)
+    raw_distance_m = float(np.linalg.norm(playing_surface_centroid - robot_front_centroid))
     robot_origin_distance_m = raw_distance_m + ROBOT_ORIGIN_TO_FRONT_EDGE_M
 
     return {
-        "tape_measure_points_px": [[float(x), float(y)] for x, y in tape_measure_points_px],
-        "tape_measure_values_m": [float(v) for v in tape_measure_values_m],
-        "metres_per_pixel": metres_per_pixel,
-        "tape_unit_direction_px": tape_unit.tolist(),
         "playing_surface_edge_points_px": [
             [float(x), float(y)] for x, y in playing_surface_edge_points_px
         ],
         "robot_base_front_points_px": [
             [float(x), float(y)] for x, y in robot_base_front_points_px
         ],
-        "playing_surface_edge_tape_value_m": playing_surface_value_m,
-        "robot_base_front_tape_value_m": robot_front_value_m,
+        "playing_surface_edge_uv_m": playing_surface_centroid.tolist(),
+        "robot_base_front_uv_m": robot_front_centroid.tolist(),
         "raw_tape_distance_m": raw_distance_m,
         "robot_origin_to_front_edge_m": ROBOT_ORIGIN_TO_FRONT_EDGE_M,
         "robot_origin_to_playing_surface_edge_m": robot_origin_distance_m,
+    }
+
+
+def oriented_board_offset_measurement(
+    robot_base_front_points_px: list[tuple[float, float]],
+    board_center_px: tuple[int, int],
+    table_homography: np.ndarray,
+) -> dict:
+    """Forward/lateral offset from the robot's front edge to the board centre,
+    using the front edge's own orientation (not the tape's) to define the
+    forward/lateral axes, with distances read directly from the real
+    table-plane homography (metric throughout, no separate pixel scale).
+
+    This avoids assuming the tape was laid exactly along the robot's true
+    centreline: the front edge is a fixed, known feature of the robot itself,
+    so its own fitted direction (mapped into the table-plane) defines
+    lateral, and the perpendicular defines forward -- toward the board.
+    """
+    if len(robot_base_front_points_px) < 2:
+        raise ValueError("Need >=2 points for the robot base front edge.")
+
+    front_uv = [apply_homography(p, table_homography) for p in robot_base_front_points_px]
+    front_centroid, lateral_unit = fit_line_px(front_uv)
+    forward_unit = np.array([-lateral_unit[1], lateral_unit[0]])
+    board_uv = np.asarray(apply_homography(board_center_px, table_homography), dtype=float)
+    board_vec = board_uv - front_centroid
+    if np.dot(board_vec, forward_unit) < 0:
+        forward_unit = -forward_unit
+
+    forward_m = float(np.dot(board_vec, forward_unit))
+    lateral_m = float(np.dot(board_vec, lateral_unit))
+
+    board_origin_x = ROBOT_ORIGIN_TO_FRONT_EDGE_M + forward_m
+    board_origin_y = lateral_m
+
+    return {
+        "robot_base_front_points_px": [
+            [float(x), float(y)] for x, y in robot_base_front_points_px
+        ],
+        "robot_base_front_uv_m": [list(p) for p in front_uv],
+        "board_center_px": [float(board_center_px[0]), float(board_center_px[1])],
+        "board_center_uv_m": board_uv.tolist(),
+        "front_centroid_uv_m": front_centroid.tolist(),
+        "forward_unit_uv": forward_unit.tolist(),
+        "lateral_unit_uv": lateral_unit.tolist(),
+        "front_to_centre_forward_m": forward_m,
+        "front_to_centre_lateral_m": lateral_m,
+        "robot_origin_to_front_edge_m": ROBOT_ORIGIN_TO_FRONT_EDGE_M,
+        "board_origin_x": board_origin_x,
+        "board_origin_y": board_origin_y,
     }
 
 
@@ -431,21 +677,47 @@ def draw_summary_panel(
         )
 
 
+SOURCE_POINT_GROUPS = {
+    "tape": [
+        ("tape_near_points_px", "tape_near_values_m", "tape_near", (0, 255, 255)),
+        ("tape_far_points_px", "tape_far_values_m", "tape_far", (255, 0, 255)),
+    ],
+    "table_edges": [
+        ("table_flush_points_px", "table_flush_values_m", "tbl_flush", (0, 140, 255)),
+        ("table_perpendicular_points_px", "table_perpendicular_values_m", "tbl_perp", (140, 255, 0)),
+    ],
+}
+SOURCE_AXIS_COLORS = {
+    "tape": ((0, 0, 255), (255, 255, 0)),
+    "table_edges": ((0, 0, 180), (180, 180, 0)),
+}
+
+
 def draw_tape_calibration_overlay(
     image: np.ndarray,
     playing_surface_edge_points_px: list[tuple[float, float]],
     robot_base_front_points_px: list[tuple[float, float]],
-    tape_measurement: dict,
+    homography_sources: dict[str, dict],
+    per_source_measurements: dict[str, dict],
     board_plane_measurement: dict,
-    robot_origin_to_board_centre_m: float,
+    combined_board_origin_x: float,
+    combined_board_origin_y: float,
+    combined_robot_origin_to_board_centre_m: float,
+    local_grid: dict | None = None,
+    global_board_center_px: tuple[int, int] | None = None,
 ) -> np.ndarray:
     overlay = image.copy()
     used_rects: list[tuple[int, int, int, int]] = []
     groups = [
         ("edge", playing_surface_edge_points_px, (0, 255, 0)),
         ("front", robot_base_front_points_px, (255, 0, 0)),
-        ("tape", tape_measurement["tape_measure_points_px"], (0, 255, 255)),
     ]
+    if local_grid is not None:
+        groups.append(("grid", local_grid["central_square_corners_px"], (0, 255, 127)))
+    for source_name, info in homography_sources.items():
+        for points_key, _values_key, label, color in SOURCE_POINT_GROUPS[source_name]:
+            groups.append((label, info[points_key], color))
+
     for _label, points, _color in groups:
         used_rects.extend(
             point_reserved_rect((int(round(x)), int(round(y)))) for x, y in points
@@ -462,27 +734,73 @@ def draw_tape_calibration_overlay(
                 cv2.LINE_AA,
             )
         for idx, point in enumerate(points_i, start=1):
-            cv2.circle(overlay, point, 8, color, -1, cv2.LINE_AA)
+            cv2.drawMarker(overlay, point, color, cv2.MARKER_CROSS, 18, 3, cv2.LINE_AA)
             draw_label(overlay, f"{label}{idx}", point, color, used_rects, font_scale=0.5)
 
-    for point, value in zip(
-        tape_measurement["tape_measure_points_px"], tape_measurement["tape_measure_values_m"]
-    ):
-        point_i = (int(round(point[0])), int(round(point[1])))
-        draw_label(overlay, f"{value:.3f}m", point_i, (0, 255, 255), used_rects, font_scale=0.6)
+    for source_name, info in homography_sources.items():
+        for points_key, values_key, _label, color in SOURCE_POINT_GROUPS[source_name]:
+            for point, value in zip(info[points_key], info[values_key]):
+                point_i = (int(round(point[0])), int(round(point[1])))
+                draw_label(overlay, f"{value:.3f}m", point_i, color, used_rects, font_scale=0.6)
 
     summary_lines = [
-        (f"front->edge (tape)={tape_measurement['raw_tape_distance_m']:.3f}m", (0, 255, 255)),
         (
-            f"edge->centre (board plane)={board_plane_measurement['mean_edge_to_centre_m']:.3f}m",
+            f"edge->centre (perpendicular)={board_plane_measurement['perpendicular_distance_to_edge_line_m']:.3f}m "
+            f"(mean-to-points={board_plane_measurement['mean_edge_to_centre_m']:.3f}m)",
             (0, 0, 255),
         ),
-        (
-            f"robot origin->board centre (total)={robot_origin_to_board_centre_m:.3f}m",
-            (0, 255, 0),
-        ),
     ]
-    draw_summary_panel(overlay, summary_lines, used_rects, origin=(20, 80), font_scale=0.75)
+
+    if local_grid is not None and global_board_center_px is not None:
+        local_center_i = (
+            int(round(local_grid["board_center_px"][0])),
+            int(round(local_grid["board_center_px"][1])),
+        )
+        global_center_i = (int(round(global_board_center_px[0])), int(round(global_board_center_px[1])))
+        delta_px = float(np.hypot(*(np.array(local_center_i) - np.array(global_center_i))))
+        cv2.drawMarker(overlay, local_center_i, (0, 255, 127), cv2.MARKER_CROSS, 20, 3, cv2.LINE_AA)
+        draw_label(overlay, "board centre (local)", local_center_i, (0, 255, 127), used_rects, font_scale=0.6)
+        summary_lines.append(
+            (
+                f"local vs global board centre: local={local_center_i} global={global_center_i} "
+                f"delta={delta_px:.1f}px (lens-distortion drift)",
+                (0, 255, 127),
+            )
+        )
+    for source_name, m in per_source_measurements.items():
+        info = homography_sources[source_name]
+        table_homography = np.asarray(info["homography"], dtype=float)
+        om = m["oriented_board_offset_measurement"]
+        front_centroid_uv = np.asarray(om["front_centroid_uv_m"], dtype=float)
+        forward_unit = np.asarray(om["forward_unit_uv"], dtype=float)
+        lateral_unit = np.asarray(om["lateral_unit_uv"], dtype=float)
+        axis_len_m = 0.08
+        front_centroid_i = inverse_project(tuple(front_centroid_uv), table_homography)
+        forward_tip = inverse_project(tuple(front_centroid_uv + forward_unit * axis_len_m), table_homography)
+        lateral_tip = inverse_project(tuple(front_centroid_uv + lateral_unit * axis_len_m), table_homography)
+        forward_color, lateral_color = SOURCE_AXIS_COLORS[source_name]
+        cv2.arrowedLine(overlay, front_centroid_i, forward_tip, forward_color, 3, cv2.LINE_AA, tipLength=0.15)
+        cv2.arrowedLine(overlay, front_centroid_i, lateral_tip, lateral_color, 3, cv2.LINE_AA, tipLength=0.15)
+        draw_label(overlay, f"{source_name} +x", forward_tip, forward_color, used_rects, font_scale=0.55)
+        draw_label(overlay, f"{source_name} +y", lateral_tip, lateral_color, used_rects, font_scale=0.55)
+
+        summary_lines.append(
+            (
+                f"[{source_name}] front->edge={m['tape_calibrated_measurement']['raw_tape_distance_m']:.3f}m  "
+                f"origin={m['robot_origin_to_board_centre_m']:.3f}m  "
+                f"x={om['board_origin_x']:.3f} y={om['board_origin_y']:.3f}",
+                forward_color,
+            )
+        )
+
+    summary_lines.append(
+        (
+            f"COMBINED: x={combined_board_origin_x:.3f} y={combined_board_origin_y:.3f}  "
+            f"robot origin->board centre={combined_robot_origin_to_board_centre_m:.3f}m",
+            (0, 255, 0),
+        )
+    )
+    draw_summary_panel(overlay, summary_lines, used_rects, origin=(20, 80), font_scale=0.7)
     return overlay
 
 
@@ -508,7 +826,7 @@ def draw_click_preview(
             cv2.LINE_AA,
         )
     for idx, point in enumerate(marker_points, start=1):
-        cv2.circle(view, point, 9, color, -1, cv2.LINE_AA)
+        cv2.drawMarker(view, point, color, cv2.MARKER_CROSS, 20, 3, cv2.LINE_AA)
         draw_label(view, str(idx), point, color, used_rects)
     draw_corner_label(view, prompt, (20, 40), color, used_rects, font_scale=0.8)
     return view
@@ -578,27 +896,95 @@ def click_robot_base_front_points(image: np.ndarray) -> list[tuple[float, float]
     )
 
 
-def click_tape_measure_points(image: np.ndarray) -> list[tuple[float, float]] | None:
+def approx_square_size_px(corners: np.ndarray) -> float:
+    corners = np.asarray(corners, dtype=float)
+    side_lengths = [float(np.linalg.norm(corners[(i + 1) % 4] - corners[i])) for i in range(4)]
+    return float(np.mean(side_lengths)) / 8.0
+
+
+def click_central_square_corners(
+    image: np.ndarray,
+    board_center_px: tuple[float, float],
+    corners: np.ndarray,
+) -> list[tuple[float, float]] | None:
+    """Crop and zoom in on the board centre before clicking, since the 9
+    target points are a small fraction of the full photo -- zooming makes
+    each click meaningfully more precise.
+    """
+    square_size_px = approx_square_size_px(corners)
+    half_size_px = square_size_px * 2.0
+    cx, cy = board_center_px
+    x0 = max(0, int(round(cx - half_size_px)))
+    y0 = max(0, int(round(cy - half_size_px)))
+    x1 = min(image.shape[1], int(round(cx + half_size_px)))
+    y1 = min(image.shape[0], int(round(cy + half_size_px)))
+    crop = image[y0:y1, x0:x1]
+    zoom_scale = 900.0 / max(crop.shape[0], crop.shape[1], 1)
+    zoomed = cv2.resize(
+        crop,
+        (max(1, int(round(crop.shape[1] * zoom_scale))), max(1, int(round(crop.shape[0] * zoom_scale)))),
+        interpolation=cv2.INTER_CUBIC,
+    )
+
+    while True:
+        points = click_points(
+            zoomed,
+            "ZOOMED: click the 9 grid intersections bounding the central 2x2 "
+            "block of squares (d4/d5/e4/e5): 3 rows top-to-bottom, 3 points "
+            "left-to-right per row, in that order; s/enter saves",
+            (0, 255, 0),
+            allow_empty=False,
+        )
+        if points is None:
+            return None
+        if len(points) == 9:
+            return [(x0 + x / zoom_scale, y0 + y / zoom_scale) for x, y in points]
+        print(f"Need exactly 9 points (3x3 grid); got {len(points)}. Try again.")
+
+
+def click_tape_edge_points(image: np.ndarray, edge_name: str) -> list[tuple[float, float]] | None:
     return click_points(
         image,
-        "click exactly 2 points on the tape measure's markings (you'll be asked "
-        "for each point's real-world value next); s/enter saves",
-        (0, 255, 255),
+        f"click >=2 points along the tape measure's {edge_name} edge, at "
+        "markings you can read off (you'll be asked for each point's "
+        "real-world value next); s/enter saves",
+        (0, 255, 255) if edge_name == "near" else (255, 0, 255),
         allow_empty=False,
     )
 
 
-def prompt_tape_measure_values(count: int) -> list[float]:
+def click_table_edge_points(image: np.ndarray, edge_name: str) -> list[tuple[float, float]] | None:
+    return click_points(
+        image,
+        f"click >=2 points along the table's {edge_name} edge, at known "
+        "measured distances from the shared corner with the other table "
+        "edge (you'll be asked for each point's value next); s/enter saves",
+        (0, 140, 255) if edge_name == "flush" else (140, 255, 0),
+        allow_empty=False,
+    )
+
+
+def prompt_tape_measure_values(count: int, edge_name: str = "") -> list[float]:
     values: list[float] = []
+    label = f"{edge_name} edge " if edge_name else ""
     for index in range(1, count + 1):
         while True:
-            raw = input(f"Real-world value at tape point {index}/{count} (metres): ").strip()
+            raw = input(f"Real-world value at {label}tape point {index}/{count} (metres): ").strip()
             try:
                 values.append(float(raw))
                 break
             except ValueError:
                 print(f"Could not parse {raw!r} as a number; try again.")
     return values
+
+
+def prompt_tape_width_m() -> float:
+    while True:
+        raw = input("Tape measure's physical width (metres), e.g. 0.025: ").strip()
+        try:
+            return float(raw)
+        except ValueError:
+            print(f"Could not parse {raw!r} as a number; try again.")
 
 
 # --- main run ------------------------------------------------------------
@@ -623,7 +1009,8 @@ def run(args: argparse.Namespace) -> dict:
     corners = np.asarray(board_meta["board_corners"], dtype=np.float32)
     transform = board_transform_from_corners(corners, board_size_px=board_size_px)
     board_overlay, board_center_px = draw_board_overlay(
-        image, corners, transform.homography, board_size_px
+        image, corners, transform.homography, board_size_px,
+        square_corners_px=board_meta.get("square_corners"),
     )
     board_overlay_path = out_dir / "robot_to_board_calibration_board_detected.jpg"
     save_debug(board_overlay_path, board_overlay)
@@ -637,11 +1024,11 @@ def run(args: argparse.Namespace) -> dict:
         "board_center_px": list(board_center_px),
         "playing_surface_edge_points_px": [],
         "robot_base_front_points_px": [],
-        "tape_measure_points_px": [],
-        "tape_measure_values_m": [],
-        "tape_calibrated_measurement": None,
-        "board_plane_edge_to_centre_measurement": None,
-        "robot_origin_to_board_centre_m": None,
+        "homography_sources": {},
+        "per_source_measurements": {},
+        "combined_board_origin_x": None,
+        "combined_board_origin_y": None,
+        "combined_robot_origin_to_board_centre_m": None,
         "output_paths": {
             "board_detected": str(board_overlay_path),
             "tape_measurement": None,
@@ -666,55 +1053,135 @@ def run(args: argparse.Namespace) -> dict:
     robot_base_front_points_px = replay_points("robot_base_front_points_px")
     if robot_base_front_points_px is None:
         robot_base_front_points_px = click_robot_base_front_points(board_overlay)
-    tape_measure_points_px = replay_points("tape_measure_points_px")
-    tape_measure_values_m = None
-    if tape_measure_points_px is not None and replay_data is not None:
-        tape_measure_values_m = replay_data.get("tape_measure_values_m")
-    if tape_measure_points_px is None:
-        tape_measure_points_px = click_tape_measure_points(board_overlay)
-        tape_measure_values_m = (
-            prompt_tape_measure_values(len(tape_measure_points_px))
-            if tape_measure_points_px
-            else None
-        )
 
-    if not (
-        playing_surface_edge_points_px
-        and robot_base_front_points_px
-        and tape_measure_points_px
-        and tape_measure_values_m
-    ):
+    global_board_center_px = board_center_px
+    local_grid = None
+    if not args.no_local_grid:
+        replayed_local_grid = None if args.reclick_local_grid else (replay_data or {}).get("local_grid")
+        if replayed_local_grid:
+            local_grid = replayed_local_grid
+        else:
+            central_square_corners_px = click_central_square_corners(
+                board_overlay, global_board_center_px, corners
+            )
+            if central_square_corners_px:
+                local_grid = fit_local_board_homography(central_square_corners_px, args.square_length_m)
+        if local_grid:
+            board_center_px = (
+                int(round(local_grid["board_center_px"][0])),
+                int(round(local_grid["board_center_px"][1])),
+            )
+            print(
+                f"Local grid board centre px={board_center_px} vs global (lens-distortion-affected) "
+                f"interpolated centre px={tuple(int(round(v)) for v in global_board_center_px)}  "
+                f"delta={np.hypot(*(np.array(board_center_px) - np.array(global_board_center_px))):.1f}px"
+            )
+
+    result["board_center_px"] = list(board_center_px)
+    result["global_board_center_px"] = list(global_board_center_px)
+    result["local_grid"] = local_grid
+
+    replayed_sources = (replay_data or {}).get("homography_sources", {})
+
+    homography_sources: dict[str, dict] = {}
+    if not args.no_tape:
+        if replayed_sources.get("tape"):
+            homography_sources["tape"] = replayed_sources["tape"]
+        else:
+            tape_near_points_px = click_tape_edge_points(board_overlay, "near")
+            tape_near_values_m = (
+                prompt_tape_measure_values(len(tape_near_points_px), "near") if tape_near_points_px else None
+            )
+            tape_far_points_px = click_tape_edge_points(board_overlay, "far")
+            tape_far_values_m = (
+                prompt_tape_measure_values(len(tape_far_points_px), "far") if tape_far_points_px else None
+            )
+            tape_width_m = args.tape_width_m if args.tape_width_m is not None else prompt_tape_width_m()
+            if tape_near_points_px and tape_far_points_px and tape_near_values_m and tape_far_values_m:
+                homography_sources["tape"] = fit_table_homography(
+                    tape_near_points_px, tape_near_values_m,
+                    tape_far_points_px, tape_far_values_m,
+                    tape_width_m,
+                )
+
+    if not args.no_table_edges:
+        if replayed_sources.get("table_edges"):
+            homography_sources["table_edges"] = replayed_sources["table_edges"]
+        else:
+            flush_points_px = click_table_edge_points(board_overlay, "flush")
+            flush_values_m = (
+                prompt_tape_measure_values(len(flush_points_px), "flush") if flush_points_px else None
+            )
+            perpendicular_points_px = click_table_edge_points(board_overlay, "perpendicular")
+            perpendicular_values_m = (
+                prompt_tape_measure_values(len(perpendicular_points_px), "perpendicular")
+                if perpendicular_points_px else None
+            )
+            if flush_points_px and perpendicular_points_px and flush_values_m and perpendicular_values_m:
+                homography_sources["table_edges"] = fit_table_edges_homography(
+                    flush_points_px, flush_values_m,
+                    perpendicular_points_px, perpendicular_values_m,
+                )
+
+    if not (playing_surface_edge_points_px and robot_base_front_points_px and homography_sources):
         print("Incomplete points/values; nothing to measure.")
         measurement_path = out_dir / "measurement.json"
         measurement_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
         result["measurement_json"] = str(measurement_path)
         return result
 
-    tape_measurement = tape_calibrated_measurement(
-        playing_surface_edge_points_px,
-        robot_base_front_points_px,
-        tape_measure_points_px,
-        tape_measure_values_m,
-    )
     board_plane_measurement = board_plane_edge_to_centre_measurement(
         playing_surface_edge_points_px,
         transform.homography,
         board_size_px,
         args.square_length_m,
     )
-    robot_origin_to_board_centre_m = (
-        ROBOT_ORIGIN_TO_FRONT_EDGE_M
-        + tape_measurement["raw_tape_distance_m"]
-        + board_plane_measurement["mean_edge_to_centre_m"]
+    edge_to_centre_m = (
+        board_plane_measurement["perpendicular_distance_to_edge_line_m"]
+        if board_plane_measurement["perpendicular_distance_to_edge_line_m"] is not None
+        else board_plane_measurement["mean_edge_to_centre_m"]
+    )
+
+    per_source_measurements: dict[str, dict] = {}
+    for name, info in homography_sources.items():
+        table_homography = np.asarray(info["homography"], dtype=float)
+        tape_measurement = tape_calibrated_measurement(
+            playing_surface_edge_points_px, robot_base_front_points_px, table_homography,
+        )
+        oriented_measurement = oriented_board_offset_measurement(
+            robot_base_front_points_px, board_center_px, table_homography,
+        )
+        robot_origin_to_board_centre_m = (
+            ROBOT_ORIGIN_TO_FRONT_EDGE_M + tape_measurement["raw_tape_distance_m"] + edge_to_centre_m
+        )
+        per_source_measurements[name] = {
+            "tape_calibrated_measurement": tape_measurement,
+            "oriented_board_offset_measurement": oriented_measurement,
+            "robot_origin_to_board_centre_m": robot_origin_to_board_centre_m,
+        }
+
+    combined_board_origin_x = float(
+        np.mean([m["oriented_board_offset_measurement"]["board_origin_x"] for m in per_source_measurements.values()])
+    )
+    combined_board_origin_y = float(
+        np.mean([m["oriented_board_offset_measurement"]["board_origin_y"] for m in per_source_measurements.values()])
+    )
+    combined_robot_origin_to_board_centre_m = float(
+        np.mean([m["robot_origin_to_board_centre_m"] for m in per_source_measurements.values()])
     )
 
     overlay = draw_tape_calibration_overlay(
         board_overlay,
         playing_surface_edge_points_px,
         robot_base_front_points_px,
-        tape_measurement,
+        homography_sources,
+        per_source_measurements,
         board_plane_measurement,
-        robot_origin_to_board_centre_m,
+        combined_board_origin_x,
+        combined_board_origin_y,
+        combined_robot_origin_to_board_centre_m,
+        local_grid=local_grid,
+        global_board_center_px=global_board_center_px,
     )
     overlay_path = out_dir / "robot_to_board_calibration_tape_measurement.jpg"
     save_debug(overlay_path, overlay)
@@ -727,18 +1194,36 @@ def run(args: argparse.Namespace) -> dict:
             "robot_base_front_points_px": [
                 [float(x), float(y)] for x, y in robot_base_front_points_px
             ],
-            "tape_measure_points_px": [[float(x), float(y)] for x, y in tape_measure_points_px],
-            "tape_measure_values_m": [float(v) for v in tape_measure_values_m],
-            "tape_calibrated_measurement": tape_measurement,
+            "board_center_px": list(board_center_px),
+            "global_board_center_px": list(global_board_center_px),
+            "local_grid": local_grid,
+            "homography_sources": homography_sources,
             "board_plane_edge_to_centre_measurement": board_plane_measurement,
-            "robot_origin_to_board_centre_m": robot_origin_to_board_centre_m,
+            "per_source_measurements": per_source_measurements,
+            "combined_board_origin_x": combined_board_origin_x,
+            "combined_board_origin_y": combined_board_origin_y,
+            "combined_robot_origin_to_board_centre_m": combined_robot_origin_to_board_centre_m,
         }
     )
     result["output_paths"]["tape_measurement"] = str(overlay_path)
 
-    print(f"front edge -> playing-surface edge (tape) = {tape_measurement['raw_tape_distance_m']:.4f} m")
-    print(f"playing-surface edge -> board centre       = {board_plane_measurement['mean_edge_to_centre_m']:.4f} m")
-    print(f"robot origin -> board centre (total)       = {robot_origin_to_board_centre_m:.4f} m")
+    print(
+        "playing-surface edge -> board centre       = "
+        f"{board_plane_measurement['perpendicular_distance_to_edge_line_m']:.4f} m "
+        f"(perpendicular to fitted edge line; mean-to-clicked-points={board_plane_measurement['mean_edge_to_centre_m']:.4f} m)"
+    )
+    for name, m in per_source_measurements.items():
+        om = m["oriented_board_offset_measurement"]
+        print(
+            f"[{name}] front->edge={m['tape_calibrated_measurement']['raw_tape_distance_m']:.4f}m  "
+            f"robot origin->board centre={m['robot_origin_to_board_centre_m']:.4f}m  "
+            f"oriented board_origin x={om['board_origin_x']:.4f} y={om['board_origin_y']:.4f}"
+        )
+    print(
+        f"COMBINED (mean of {len(per_source_measurements)} source(s)): "
+        f"board_origin x={combined_board_origin_x:.4f} y={combined_board_origin_y:.4f}  "
+        f"robot origin->board centre={combined_robot_origin_to_board_centre_m:.4f}m"
+    )
 
     measurement_path = out_dir / "measurement.json"
     measurement_path.write_text(json.dumps(result, indent=2), encoding="utf-8")

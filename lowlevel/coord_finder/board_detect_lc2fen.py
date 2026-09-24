@@ -87,6 +87,7 @@ def detect_and_warp_board(
             "board_size_px": int(side),
             "board_corners": np.asarray(corners, dtype=float).tolist(),
             "square_corners_count": int(len(square_corners)),
+            "square_corners": np.asarray(square_corners, dtype=float).tolist(),
             "method": "livechess2fen_detect_board",
         }
         meta_path = out_dir / "board_meta.json"
