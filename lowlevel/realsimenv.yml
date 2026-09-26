@@ -183,6 +183,7 @@ dependencies:
       - imageio==2.37.3
       - imageio-ffmpeg==0.6.0
       - importlib-metadata==8.7.1
+      - iniconfig==2.3.0
       - ipython==9.13.0
       - ipython-pygments-lexers==1.1.1
       - ischedule==1.2.7
@@ -218,6 +219,7 @@ dependencies:
       - pin==3.8.0
       - placo==0.9.20
       - platformdirs==4.9.4
+      - pluggy==1.6.0
       - prompt-toolkit==3.0.52
       - propcache==0.4.1
       - protobuf==6.33.5
@@ -238,6 +240,7 @@ dependencies:
       - pyopengl==3.1.10
       - pyparsing==3.3.2
       - pyserial==3.5
+      - pytest==9.1.1
       - python-dateutil==2.9.0.post0
       - pyyaml==6.0.3
       - pyyaml-include==1.4.1

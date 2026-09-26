@@ -15,6 +15,7 @@ from board_coordinates import (
     location_world_xyz,
 )
 from testkinematics import relativexyz, relativexyz_with_error, vectodic
+import paths
 
 B_FILE_PLACE_DOWNFLAG = True
 
@@ -591,8 +592,8 @@ def chess_to_xycalib(square, board_origin=DEFAULT_BOARD_ORIGIN, square_size=DEFA
     )
 
 
-urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
-mesh_dir = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101"
+urdf_path = str(paths.URDF_PATH)
+mesh_dir = str(paths.MESH_DIR)
 
 FILES = "abcdefgh"
 

@@ -7,6 +7,7 @@ import os
 import sys
 import time
 from pathlib import Path
+import paths
 from chess_traj import (
     DEFAULT_HOME,
     chess_to_xy,
@@ -811,7 +812,7 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
 
     robot_id = None
     try:
-        urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+        urdf_path = str(paths.URDF_PATH)
         robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
         for traj_idx, sim_idx in enumerate(CONTROL_JOINTS):
             p.resetJointState(

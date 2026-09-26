@@ -5,11 +5,12 @@ import time
 import numpy as np
 import meshcat.geometry as g
 from testkinematics import relativexyz, vectodic
+import paths
 
 
-urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+urdf_path = str(paths.URDF_PATH)
 
-mesh_dir = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101"
+mesh_dir = str(paths.MESH_DIR)
 
 model, collision_model, visual_model = pin.buildModelsFromUrdf(
     urdf_path,

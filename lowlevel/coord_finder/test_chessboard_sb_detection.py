@@ -61,18 +61,12 @@ import numpy as np
 from board_geometry import board_transform_from_corners
 from robot_to_board_calibration import inverse_project
 
-BOARD_META_PATH = Path(
-    "/Users/zhg603/Documents/OXAI/lowlevel/coord_finder/output/"
-    "robot_to_board_calibration/board_meta.json"
+_CALIBRATION_OUTPUT_DIR = (
+    Path(__file__).resolve().parent / "output" / "robot_to_board_calibration"
 )
-OUT_PATH = Path(
-    "/Users/zhg603/Documents/OXAI/lowlevel/coord_finder/output/"
-    "robot_to_board_calibration/chessboard_sb_lc2fen_interior_crop.jpg"
-)
-UNDISTORTED_OUT_PATH = Path(
-    "/Users/zhg603/Documents/OXAI/lowlevel/coord_finder/output/"
-    "robot_to_board_calibration/chessboard_sb_undistorted.jpg"
-)
+BOARD_META_PATH = _CALIBRATION_OUTPUT_DIR / "board_meta.json"
+OUT_PATH = _CALIBRATION_OUTPUT_DIR / "chessboard_sb_lc2fen_interior_crop.jpg"
+UNDISTORTED_OUT_PATH = _CALIBRATION_OUTPUT_DIR / "chessboard_sb_undistorted.jpg"
 SQUARE_CROPS_DIR = Path(__file__).resolve().parent / "output" / "robot_to_board_calibration" / "square_crops"
 PATTERN_SIZE = (7, 7)  # max detectable interior corners for an 8x8 board
 CROP_MARGIN_PX = 15  # quiet-zone margin around the interior bbox; <15 fails to detect
