@@ -1,0 +1,7 @@
+# generate_sim_images.py (pybullet env, e.g. ../realsimenv.yml)
+pybullet
+numpy
+imageio
+
+# calibrate_camera_distance.py (opencv env, e.g. ../coord_finder/live2fen_env.yml)
+opencv-python-headless
