@@ -92,6 +92,8 @@ def main() -> None:
     if args.manifest:
         manifest = json.loads(Path(args.manifest).read_text())
         intrinsics = manifest["intrinsics"]
+        if args.camera and "intrinsics" in manifest["cameras"][args.camera]:
+            intrinsics = manifest["cameras"][args.camera]["intrinsics"]  # per-camera FOV
         fx, fy, cx, cy = intrinsics["fx"], intrinsics["fy"], intrinsics["cx"], intrinsics["cy"]
     else:
         missing = [name for name in ("fx", "fy", "cx", "cy") if getattr(args, name) is None]

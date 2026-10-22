@@ -137,13 +137,17 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def camera_matrix_for(manifest: dict, name: str) -> np.ndarray:
+    """K for one camera: its own intrinsics if the manifest has them, else the shared default."""
+    intrinsics = manifest["cameras"][name].get("intrinsics", manifest["intrinsics"])
+    return np.array(
+        [[intrinsics["fx"], 0, intrinsics["cx"]], [0, intrinsics["fy"], intrinsics["cy"]], [0, 0, 1]]
+    )
+
+
 def main() -> None:
     args = parse_args()
     manifest = json.loads(Path(args.manifest).read_text())
-    intrinsics = manifest["intrinsics"]
-    camera_matrix = np.array(
-        [[intrinsics["fx"], 0, intrinsics["cx"]], [0, intrinsics["fy"], intrinsics["cy"]], [0, 0, 1]]
-    )
     square_size = manifest["board"]["square_size_m"]
     output_dir = Path(args.output_dir)
 
@@ -152,7 +156,7 @@ def main() -> None:
     views = {}
     for name in ("tripod", "wrist"):
         image_path = output_dir / manifest["cameras"][name]["image_file"]
-        views[name] = synthesize(image_path, square_size, camera_matrix, args.px_per_square)
+        views[name] = synthesize(image_path, square_size, camera_matrix_for(manifest, name), args.px_per_square)
         out_path = output_dir / f"common_view_from_{name}.png"
         cv2.imwrite(str(out_path), views[name])
         print(f"Wrote {out_path}")
@@ -164,7 +168,9 @@ def main() -> None:
     # but its result never feeds into the tripod/wrist views above.
     if "topdown" in manifest["cameras"]:
         topdown_path = output_dir / manifest["cameras"]["topdown"]["image_file"]
-        views["topdown"] = synthesize(topdown_path, square_size, camera_matrix, args.px_per_square)
+        views["topdown"] = synthesize(
+            topdown_path, square_size, camera_matrix_for(manifest, "topdown"), args.px_per_square
+        )
         out_path = output_dir / "common_view_from_topdown.png"
         cv2.imwrite(str(out_path), views["topdown"])
         print(f"Wrote {out_path} (ground-truth reference, not used above)")

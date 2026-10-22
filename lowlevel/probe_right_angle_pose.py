@@ -19,7 +19,7 @@ import json
 import time
 from pathlib import Path
 from typing import Any
-
+import paths
 import numpy as np
 import pybullet as p
 
@@ -34,7 +34,7 @@ from probe_xy_pose import (
 )
 
 LOWLEVEL_DIR = Path(__file__).resolve().parent
-URDF_PATH = str(LOWLEVEL_DIR.parent / "SO-ARM100" / "Simulation" / "SO101" / "so101_new_calib.urdf")
+URDF_PATH = paths.URDF_PATH
 DEFAULT_OUTPUT_DIR = LOWLEVEL_DIR / "real_world_runs"
 DEFAULT_ROBOT_PORT = "/dev/tty.usbmodem5B7B0157051"
 DEFAULT_ROBOT_ID = "my_awesome_follower_arm"

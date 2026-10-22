@@ -1,0 +1,2 @@
+index,label,saved_at,wrist_file,wrist_stamp,stationary_file,stationary_stamp,skew_ms,joints_stamp,shoulder_pan.pos,shoulder_lift.pos,elbow_flex.pos,wrist_flex.pos,wrist_roll.pos,gripper.pos
+1,shot,2026-10-22T14:21:01.313,pair_001_shot_wrist.png,1792675261.302,pair_001_shot_stationary.png,1792675261.292,10.2,1792675261.307,-21.538,-103.516,96.527,69.934,-89.626,2.579

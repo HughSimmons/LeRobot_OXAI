@@ -35,3 +35,7 @@ __pycache__/
 # Cylinder-era cleanup bundle
 !lowlevel/cleanup_cylinder/
 !lowlevel/cleanup_cylinder/**
+
+# Meeting recordings: transcripts and screenshots of private calls (see .claude/skills/meeting)
+meetings/
+CLAUDE.local.md

@@ -1,8 +1,9 @@
 """Shared constants for the two-camera PyBullet board-imaging scene.
 
 This module is the single source of truth for the rendering setup used by
-`generate_sim_images.py`: image size, field of view, the two hardcoded
-camera poses, and the derived pinhole intrinsics. `calibrate_camera_distance.py`
+`generate_sim_images.py`: image size, field of view, the hardcoded camera
+poses, the forward-kinematics wrist camera's placement on the arm, and the
+derived pinhole intrinsics. `calibrate_camera_distance.py`
 deliberately does not import this module -- it only reads intrinsics and
 ground truth back out of the manifest that `generate_sim_images.py` writes
 (or takes them as CLI flags), so there is exactly one place where the
@@ -65,6 +66,26 @@ CAMERAS = {
         "up": [0.0, 1.0, 0.0],
     },
 }
+
+# Wrist camera driven by the arm's forward kinematics (generate_sim_images.py
+# --with-robot), replacing the hardcoded "wrist" pose above. Loads
+# paths.MOUNT_URDF_PATH, which adds the camera mount + camera as
+# WRIST_CAMERA_LINK on gripper_link.
+WRIST_CAMERA_LINK = "wrist_camera_mount_link"
+# Lens axis in WRIST_CAMERA_LINK's frame, metres: centre of the lens where it
+# meets the board -> centre of the lens front face. Measured from the lens
+# cylinder in lowlevel/urdf/so101_wrist_cam_mount.stl (STL coords + the
+# link's (0, 18.4, -6.3) mm visual offset).
+WRIST_LENS_BASE = (-0.049341, -0.019730, 0.011200)
+WRIST_LENS_TIP = (-0.040904, -0.001574, 0.011200)
+# Image "up" in the link frame. Picked so the jaws sit at the bottom of the
+# image; NOTE check against a real photo and flip if the sim image is rotated.
+WRIST_IMAGE_UP = (-0.9069, 0.4214, 0.0)
+# Vertical FOV of the wrist camera. 
+WRIST_FOV_DEG = 80.0
+# Default Joint angles in degrees (shoulder_pan, shoulder_lift, elbow_flex,
+# wrist_flex, wrist_roll, gripper)
+DEFAULT_WRIST_JOINTS_DEG = (-23.2, -93.9, 45.9, 94.9, -101.5, 0.0)
 
 
 def intrinsics_from_fov(fov_deg: float = FOV_DEG, width: int = WIDTH, height: int = HEIGHT) -> dict:

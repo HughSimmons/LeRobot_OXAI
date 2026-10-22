@@ -1,0 +1,5 @@
+index,label,saved_at,wrist_file,wrist_stamp,stationary_file,stationary_stamp,skew_ms,joints_stamp,shoulder_pan.pos,shoulder_lift.pos,elbow_flex.pos,wrist_flex.pos,wrist_roll.pos,gripper.pos
+1,shot,2026-10-22T17:25:37.430,pair_001_shot_wrist.png,1792686337.423,pair_001_shot_stationary.png,1792686337.423,0.3,1792686337.428,-0.440,-3.033,11.253,79.165,-104.220,2.844
+2,shot,2026-10-22T17:26:53.681,pair_002_shot_wrist.png,1792686413.679,pair_002_shot_stationary.png,1792686413.648,30.9,1792686413.681,-4.396,-49.538,-0.615,101.582,-86.901,2.844
+3,shot,2026-10-22T17:28:23.515,pair_003_shot_wrist.png,1792686503.503,pair_003_shot_stationary.png,1792686503.504,0.5,1792686503.515,-5.626,-52.440,15.824,97.714,-86.022,2.844
+4,shot,2026-10-22T17:29:08.280,pair_004_shot_wrist.png,1792686548.273,pair_004_shot_stationary.png,1792686548.270,2.2,1792686548.269,-0.088,14.989,-23.736,100.703,-93.846,2.844

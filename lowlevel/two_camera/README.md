@@ -28,8 +28,23 @@ Writes `output/{topdown,tripod,wrist}_camera.png` and `output/manifest.json`
 (image size, derived camera intrinsics, and each camera's ground-truth
 distance to the board plane).
 
-The wrist camera here is a **second hardcoded pose**, not yet driven by the
+By default the wrist camera is a **second hardcoded pose**, not driven by the
 robot's forward kinematics -- there's no robot loaded in this scene.
+
+Pass `--with-robot [--wrist-joints-deg PAN LIFT ELBOW WRIST_FLEX WRIST_ROLL GRIPPER]`
+to load the SO101 with the wrist camera mount (`paths.MOUNT_URDF_PATH`) and
+place the wrist camera where the arm actually puts it at that pose. Output
+goes to `output/with_robot/`, so the baseline above is never overwritten.
+The camera's placement on the mount, its field of view and the default arm
+pose are in `camera_rig.py` (`WRIST_*`, `DEFAULT_WRIST_JOINTS_DEG`). Notes:
+
+- The arm is in the scene, so it also shows up in the topdown/tripod views.
+- The wrist camera gets its own FOV (`WRIST_FOV_DEG`, placeholder 80 deg until
+  the real module is calibrated): at the shared 60 deg, no reachable arm pose
+  sees all 49 inner corners. Each camera's intrinsics are written to the
+  manifest, and scripts 2 and 3 use them when present.
+- Image "up" (`WRIST_IMAGE_UP`) is chosen so the jaws sit at the bottom of the
+  frame; check against a real photo from the camera.
 
 Pass `--with-piece [--piece-square e4]` to render the same three views again
 with a piece placed on the board, written to `output/with_piece/` so the

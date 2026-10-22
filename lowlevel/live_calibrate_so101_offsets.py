@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import pybullet as p
 import pybullet_data
-
+import paths
 from board_coordinates import DEFAULT_SQUARE_SIZE, square_center_world_xy
 from chess_traj import gripper_angle_closed, gripper_angle_open
 from run_real_so101_from_xy_lookup import (
@@ -35,7 +35,7 @@ from run_real_so101_from_xy_lookup import (
 
 LOWLEVEL_DIR = Path(__file__).resolve().parent
 REPO_DIR = LOWLEVEL_DIR.parent
-URDF_PATH = REPO_DIR / "SO-ARM100" / "Simulation" / "SO101" / "so101_new_calib.urdf"
+URDF_PATH = paths.URDF_PATH
 SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
 BOARD_ORIGIN = DEFAULT_REAL_BOARD_ORIGIN
 BOARD_BASE_HALF_HEIGHT = 0.005

@@ -29,6 +29,38 @@ The vision env used for `coord_finder/` in this README is `Live2FEN`; see
 [`coord_finder/live2fen_env.yml`](coord_finder/live2fen_env.yml) and
 [`coord_finder/README.md`](coord_finder/README.md#environment).
 
+## Board layout
+
+The robot does **not** sit behind rank 1 like a player. It sits beside the
+a-file, with white on its right. `square_center_world_xy()` in
+`board_coordinates.py` maps **files to world x** (away from the robot) and
+**ranks to world y** (+y is the robot's left). Top-down view, robot at the
+bottom:
+
+```
+                   +x (away from robot)
+                         ^
+            h8 . . . . . . . . h1      h-file centres ~41.4 cm out
+            .                   .
+     +y <-  .   board centre    .      rank 8 on the robot's left,
+            .   (x=0.27, y=0)   .      rank 1 (white) on its right
+            .                   .
+            a8 . . . . . . . . a1      a-file centres ~12.6 cm out
+                     [robot]
+```
+
+- Board centre: 27 cm straight out from the robot base origin, on its
+  centreline (`DEFAULT_BOARD_ORIGIN`).
+- Squares: 41.25 mm (`DEFAULT_SQUARE_SIZE`).
+- Playing-surface height: 3 cm in sim, 2.5 cm for the real arm
+  (`DEFAULT_REAL_BOARD_ORIGIN` in `run_real_so101_from_xy_lookup.py`).
+
+So a "d4→d5" lookup moves the piece one square **sideways**, to the robot's
+left. If the board is set up the player's way round (robot behind rank 1),
+that same lookup plays e4→d4 instead. Every lookup table and the simulation
+use this layout, so rotate the physical board to match it rather than
+changing the code.
+
 ## Layout
 
 - **Core library** -- shared modules other scripts import, not run directly:
@@ -56,6 +88,13 @@ The vision env used for `coord_finder/` in this README is `Live2FEN`; see
   found on real hardware: `toggle_joint_calibration.py`, `read_current_pose.py`,
   `probe_xy_pose.py`, `probe_right_angle_pose.py`, `fk_from_pose_json.py`,
   `live_calibrate_so101_offsets.py`, `run_lookup_sequence.py`.
+
+  `capture_camera_pair.py` previews the wrist and stationary cameras side by
+  side and saves synchronised image pairs (space = pair, c = calibration pair)
+  to `outputs/camera_pairs/<session>/` with a `pairs.csv` log. With `--teleop`
+  it also runs leader->follower teleop itself (so it can share the serial port)
+  and logs the follower's joints per pair as `current_pose_v1` JSON, readable
+  by `fk_from_pose_json.py`. **`--teleop` moves the real arm -- a human runs it.**
 
   **`run_real_so101_from_xy_lookup.py` drives the physical robot arm -- it is
   never run automatically by an assistant; a human runs it deliberately.**
