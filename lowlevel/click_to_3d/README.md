@@ -70,6 +70,23 @@ Until you finish step 7, the tool uses the URDF wrist-camera estimate. Do not
 copy another machine’s `output/camera_mount/wrist_camera_mount.yaml` as if it
 were yours.
 
+## What a click stores
+
+The board frame has its origin at the a1 corner, +x toward the h-file, +y toward rank 8, and +z up. Squares are 41.75 mm.
+
+Corner clicks in step 6, and each mount capture, snap to a detected ring within 12 pixels, solve the camera pose, and are not written to the log.
+
+After `space`, the wrist click is the raw undistorted pixel. `y` intersects that ray with the board plane `z = 0`. `n` takes a second click on the stationary view and uses the midpoint of the two rays.
+
+Each saved point is one line in `output/sessions/session_log.jsonl`:
+
+- `wrist_px` and `side_px` (`side_px` is empty when the point is on the board)
+- `board_mm`, `base_mm`, `square`
+- `method`: `board_plane` or `two_view`
+- `ray_gap_mm`
+
+Pixels are in that view’s undistorted image, origin at the top-left, rounded to 2 decimals.
+
 ## Keys (click tool)
 
 | Key | Action |
@@ -96,10 +113,9 @@ Writes:
 
 - `output/camera_mount/wrist_camera_mount.yaml`
 - `output/camera_mount/so101_new_calib_wrist_cam_calibrated.urdf`
-- `output/camera_mount/board_in_base_mm.yaml` (diagnostic; live board-in-base still comes from mount + PnP)
+- `output/camera_mount/board_in_base_mm.yaml` (diagnostic; see below)
 
-Mount solve uses OpenCV hand–eye for the camera-to-gripper transform and averages
-board-in-base across the same captures.
+Forward kinematics gives the gripper in the robot base. The corner pose gives the camera in the board. Hand–eye solves the camera-to-gripper mount from at least three widely rotated parks, and the written `board_in_base_mm.yaml` is only the average from those parks. A later click’s `base_mm` is that saved mount combined with the pose from the current `c`, so it changes when the board or the arm pose changes. Until `u` succeeds, `base_mm` uses the URDF camera estimate.
 
 ## Demo without hardware
 
