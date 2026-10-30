@@ -330,15 +330,29 @@ class App:
         if float(point[2]) < -1.0:
             self.status = "point is beneath the board — click again on the line"
             return
-        self.report_point(point, method="two_view", ray_gap_mm=gap)
+        self.report_point(point, method="two_view", ray_gap_mm=gap, side_px=side_px)
 
-    def report_point(self, point_board: np.ndarray, *, method: str, ray_gap_mm: float) -> None:
+    def report_point(
+        self,
+        point_board: np.ndarray,
+        *,
+        method: str,
+        ray_gap_mm: float,
+        side_px: np.ndarray | tuple[float, float] | None = None,
+    ) -> None:
         joints = self.frozen_joints or self.joints or [0.0] * 6
         T_bb = T_base_board_mm(self.T_board_wrist, joints, self.mount)
         point_base = point_board_to_base(point_board, T_bb)
         square = algebraic_from_xy(float(point_board[0]), float(point_board[1]))
+        assert self.wrist_click is not None
+        wrist_px = [round(float(self.wrist_click[0]), 2), round(float(self.wrist_click[1]), 2)]
+        recorded_side = None
+        if side_px is not None:
+            recorded_side = [round(float(side_px[0]), 2), round(float(side_px[1]), 2)]
         self.last_result = {
             "method": method,
+            "wrist_px": wrist_px,
+            "side_px": recorded_side,
             "board_mm": [round(float(v), 3) for v in point_board],
             "base_mm": [round(float(v), 3) for v in point_base],
             "square": square,
@@ -641,6 +655,9 @@ class App:
         self.finish_on_board()
         board = self.last_result["board_mm"]
         assert abs(board[0] - 146.125) < 8 and abs(board[1] - 229.625) < 8
+        assert self.last_result["side_px"] is None
+        assert abs(self.last_result["wrist_px"][0] - self.wrist_click[0]) < 0.02
+        assert abs(self.last_result["wrist_px"][1] - self.wrist_click[1]) < 0.02
         o, d = pixel_ray_board(self.wrist_click, self.T_board_wrist, self.K_wrist)
         lifted = np.array([146.125, 229.625, 40.0], dtype=np.float64)
         side_pix, side_depth = project_points(lifted.reshape(1, 3), self.T_board_side, self.K_side)
@@ -655,6 +672,9 @@ class App:
         self.finish_above(side_pix[0])
         assert self.last_result["method"] == "two_view"
         assert self.last_result["board_mm"][2] > 5
+        assert abs(self.last_result["wrist_px"][0] - self.wrist_click[0]) < 0.02
+        assert abs(self.last_result["side_px"][0] - float(side_pix[0, 0])) < 0.02
+        assert abs(self.last_result["side_px"][1] - float(side_pix[0, 1])) < 0.02
         # Force under-board triangulation rejection
         below_pt = np.array([146.125, 229.625, -20.0])
         side_below, d2 = project_points(below_pt.reshape(1, 3), self.T_board_side, self.K_side)
