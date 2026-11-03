@@ -1,17 +1,18 @@
+from pathlib import Path
 import os
 import mujoco
 import imageio
 import numpy as np
 
 # Load the original SO101 XML
-xml_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.xml"
+xml_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.xml")
 
 with open(xml_path, 'r') as f:
     xml_content = f.read()
 
 # Fix the meshdir to use absolute path
-assets_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/assets"
-xml_content = xml_content.replace('meshdir="assets"', f'meshdir="{assets_path}"')
+assets_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/assets")
+xml_content = xml_content.replace('meshdir="assets"', 'meshdir="../SO-ARM100/Simulation/SO101/assets"')
 
 # Add chessboard and pieces before the closing </worldbody> tag
 chessboard_xml = '''    <!-- Chessboard with squares -->
@@ -78,7 +79,7 @@ test_piece_xml = '''    <!-- Test piece dropping on robot origin -->
 xml_modified = xml_content.replace('  </worldbody>', chessboard_xml + test_piece_xml + '  </worldbody>')
 
 # Save modified XML
-xml_output_path = "/Users/zhg603/Documents/OXAI/lowlevel/so101_with_chess.xml"
+xml_output_path = str(Path(__file__).resolve().parents[1] / "lowlevel/so101_with_chess.xml")
 with open(xml_output_path, 'w') as f:
     f.write(xml_modified)
 

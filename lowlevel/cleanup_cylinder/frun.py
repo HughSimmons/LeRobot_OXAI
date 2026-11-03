@@ -1,3 +1,4 @@
+import sys
 import argparse
 import os
 import subprocess
@@ -29,7 +30,7 @@ home_group.add_argument(
 )
 args = parser.parse_args()
 
-python_exe = "/opt/miniconda3/envs/IKsim_mj/bin/python"
+python_exe = sys.executable
 script = Path(__file__).resolve().parent / "build_general_nonh_reverse_lookup.py"
 source = args.source
 target_moves = args.target_moves or f"{source}_to_f5"

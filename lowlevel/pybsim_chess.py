@@ -111,7 +111,7 @@ if create_sim:    # Initialize PyBullet in HEADLESS mode
     # Load SO101 robot
     robot_id = None
     try:
-        urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+        urdf_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
         robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
 
 

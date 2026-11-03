@@ -1,6 +1,7 @@
+import sys
 import subprocess
 
-python_exe = "/opt/miniconda3/envs/IKsim_mj/bin/python"
+python_exe = sys.executable
 # script = "lowlevel/build_general_nonh_reverse_lookup.py"
 script = "build_general_nonh_reverse_lookup.py"
 

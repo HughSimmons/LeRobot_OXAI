@@ -1,3 +1,4 @@
+from pathlib import Path
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 import numpy as np
@@ -588,8 +589,8 @@ def chess_to_xycalib(square, board_origin=(0.25, 0, 0), square_size=0.04):
     )
 
 
-urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
-mesh_dir = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101"
+urdf_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
+mesh_dir = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101")
 
 FILES = "abcdefgh"
 

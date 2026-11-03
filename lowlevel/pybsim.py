@@ -17,7 +17,7 @@ plane_id = p.loadURDF("plane.urdf", [0, 0, 0])
 
 # Try to load SO101 robot
 try:
-    urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+    urdf_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
     robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
     print(f"✓ Loaded SO101 from URDF")
 except FileNotFoundError:

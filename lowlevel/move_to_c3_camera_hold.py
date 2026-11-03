@@ -1,3 +1,4 @@
+from pathlib import Path
 import argparse
 import time
 
@@ -15,7 +16,7 @@ PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 DEFAULT_PORT = "/dev/tty.usbmodem5B7B0157051"
 DEFAULT_ROBOT_ID = "my_awesome_follower_arm"
-URDF_PATH = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+URDF_PATH = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
 TARGET_FRAME_NAME = "gripper_frame_link"
 
 JOINT_NAMES = [

@@ -1,3 +1,4 @@
+from pathlib import Path
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 import numpy as np
@@ -7,9 +8,9 @@ import meshcat.geometry as g
 from testkinematics import relativexyz, vectodic
 
 
-urdf_path = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+urdf_path = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
 
-mesh_dir = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101"
+mesh_dir = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101")
 
 model, collision_model, visual_model = pin.buildModelsFromUrdf(
     urdf_path,

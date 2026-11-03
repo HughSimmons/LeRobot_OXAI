@@ -1,3 +1,4 @@
+from pathlib import Path
 import inspect
 from lerobot.model.kinematics import RobotKinematics
 import numpy as np
@@ -30,7 +31,7 @@ robotconnected = False
 # Path to your downloaded URDF
 # URDF_PATH = "./SO101/so101_new_calib.urdf"
 # URDF_PATH = "/Users/zhg603/Documents/OXAI/so101_new_calib.urdf"
-URDF_PATH = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO101/so101_new_calib.urdf"
+URDF_PATH = str(Path(__file__).resolve().parents[1] / "SO-ARM100/Simulation/SO101/so101_new_calib.urdf")
 # URDF_PATH = "/Users/zhg603/Documents/OXAI/SO-ARM100/Simulation/SO100/so100.urdf"
 
 # Joint names in the SAME order as the robot motors
