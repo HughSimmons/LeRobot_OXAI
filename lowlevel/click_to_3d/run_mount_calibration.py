@@ -171,6 +171,7 @@ class MountApp:
             image,
             raw_bgr=self.frame_raw,
             fisheye_calib=self.fisheye_calib,
+            restrict_to_board=False,
         )
         self.pending_image = image
         self.pending_grid = grid
@@ -184,6 +185,7 @@ class MountApp:
             )
             self.help_lines = [
                 "Rings = detected corners — clicks snap to them",
+                "Shift+click = free (ignore snap)",
                 "1st click: GREEN = corner nearest a1",
                 "then 3 cyan, counter-clockwise in the image",
                 "next is toward h, then far corner, then rank 8",
@@ -256,7 +258,10 @@ class MountApp:
         if x >= 640:
             return
         if self.mode == "label":
-            snapped, err = resolve_label_click(self.pending_grid, (float(x), float(y)))
+            free = bool(flags & cv2.EVENT_FLAG_SHIFTKEY)
+            snapped, err = resolve_label_click(
+                self.pending_grid, (float(x), float(y)), free_click=free
+            )
             if err is not None:
                 self.status = err
                 return

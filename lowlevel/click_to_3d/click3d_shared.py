@@ -35,13 +35,20 @@ from calib_board_pose import (  # noqa: E402
     se3,
     square_file_rank,
 )
+from board_roi import (  # noqa: E402
+    board_aabb,
+    find_board_gate_quad,
+    pad_quad,
+    point_in_quad,
+)
 from calib_intrinsics import (  # noqa: E402
     detect_largest_inner_grid,
     load_fisheye_calibration,
     undistort_fisheye,
 )
 
-SQUARE_MM = 41.75
+# Oliver tape: 33.6 cm across 8 squares (playing surface).
+SQUARE_MM = 42.0
 SESSION_CONFIG = OUTPUT / "session_config.yaml"
 OXAI_PATHS_HINT = (
     "Place this folder at LeRobot_OXAI/lowlevel/click_to_3d so the parent "
@@ -156,10 +163,16 @@ def resolve_core_assets(
 ) -> tuple[AssetReport, dict[str, ResolvedAsset]]:
     report = report or AssetReport()
     coord = ROOT.parent
+    # Default: OpenCV full-point fit. Alternate: wrist_fisheye_status_quo.yaml
+    # (dense-grid interim). Pick either via the asset menu (m).
     fisheye = resolve_asset(
         "wrist_fisheye.yaml",
         cli_path=fisheye_cli,
-        local_candidates=[coord / "output" / "lens_calib" / "wrist_fisheye.yaml"],
+        local_candidates=[
+            MOUNT_DIR / "wrist_fisheye.yaml",
+            MOUNT_DIR / "wrist_fisheye_status_quo.yaml",
+            coord / "output" / "lens_calib" / "wrist_fisheye.yaml",
+        ],
         bundle_path=BUNDLE / "wrist_fisheye.yaml",
         report=report,
     )
@@ -584,16 +597,52 @@ def pose_from_square_corners(
     return None
 
 
-def detect_grid(image_bgr: np.ndarray) -> np.ndarray | None:
-    """Return (rows, cols, 2) inner-grid corners or None."""
-    detection = detect_largest_inner_grid(image_bgr)
+def detect_grid(
+    image_bgr: np.ndarray,
+    *,
+    restrict_to_board: bool = False,
+) -> np.ndarray | None:
+    """Return (rows, cols, 2) inner-grid corners or None.
+
+    When ``restrict_to_board`` is True (stationary view only):
+      1. Find outer board quad (LiveChess2FEN, contour fallback).
+      2. Pad that quad (~9% from centroid) — the accept/reject gate.
+      3. Pass a rectangular crop (AABB of the padded quad) to OpenCV.
+      4. After detection, keep only corners inside the padded quad.
+
+    Wrist / overhead stays ungated (full-frame search, no accept/reject).
+    """
+    offset = np.array([0.0, 0.0], dtype=np.float64)
+    search = image_bgr
+    padded_gate: np.ndarray | None = None
+    if restrict_to_board:
+        quad, _method = find_board_gate_quad(image_bgr)
+        if quad is not None:
+            padded_gate = pad_quad(quad)
+            x0, y0, x1, y1 = board_aabb(padded_gate, image_bgr.shape)
+            search = image_bgr[y0:y1, x0:x1]
+            offset = np.array([float(x0), float(y0)], dtype=np.float64)
+            if search.size == 0:
+                search = image_bgr
+                offset = np.array([0.0, 0.0], dtype=np.float64)
+                padded_gate = None
+    # Largest OpenCV grid for click-snap coverage. (usable_inner_grid is for
+    # lens-calib gripper filtering only — too strict for rings here.)
+    detection = detect_largest_inner_grid(search)
     if detection is None:
         return None
-    flat = np.asarray(detection["corners"], dtype=np.float64).reshape(-1, 2)
+    flat = np.asarray(detection["corners"], dtype=np.float64).reshape(-1, 2) + offset.reshape(1, 2)
     rows = int(detection["inner_rows"])
     cols = int(detection["inner_cols"])
     if flat.shape[0] != rows * cols:
         return None
+    if padded_gate is not None:
+        keep = np.array([point_in_quad(pt, padded_gate) for pt in flat], dtype=bool)
+        if not np.any(keep):
+            return None
+        if not np.all(keep):
+            # Snap rings only need a point list; store as (N, 1, 2).
+            return flat[keep].reshape(-1, 1, 2)
     return flat.reshape(rows, cols, 2)
 
 
@@ -613,6 +662,7 @@ def detect_grid_for_view(
     *,
     raw_bgr: np.ndarray | None = None,
     fisheye_calib: dict | None = None,
+    restrict_to_board: bool = False,
 ) -> tuple[np.ndarray | None, str]:
     """Detect inner corners in the click frame.
 
@@ -620,14 +670,16 @@ def detect_grid_for_view(
     raw fisheye frame + calibration are provided, detect on the raw image and map
     corners into the undistorted frame via ``fisheye.undistortPoints``.
 
+    ``restrict_to_board`` gates the search to a coarse board AABB (stationary only).
+
     Returns ``(grid, source_tag)`` where source_tag is one of
     ``\"undistorted\"``, ``\"image\"``, ``\"raw→undistort\"``, ``\"none\"``.
     """
-    grid = detect_grid(image_bgr)
+    grid = detect_grid(image_bgr, restrict_to_board=restrict_to_board)
     if grid is not None:
         return grid, ("undistorted" if raw_bgr is not None else "image")
     if raw_bgr is not None and fisheye_calib is not None:
-        raw_grid = detect_grid(raw_bgr)
+        raw_grid = detect_grid(raw_bgr, restrict_to_board=False)
         if raw_grid is not None:
             return map_fisheye_grid_to_undistorted(raw_grid, fisheye_calib), "raw→undistort"
     return None, "none"
@@ -651,19 +703,23 @@ def resolve_label_click(
     grid: np.ndarray | None,
     pixel: np.ndarray | tuple[float, float],
     max_dist_px: float = 12.0,
+    *,
+    free_click: bool = False,
 ) -> tuple[tuple[float, float] | None, str | None]:
     """Resolve a calib label click.
 
     If ``grid`` is set, snap within ``max_dist_px`` or return an error.
+    Hold Shift (``free_click=True``) to accept the raw pixel even when a grid
+    is present — escape hatch when rings are partial or double-spaced.
     If no grid, accept the raw pixel (last-resort fallback).
     Returns ``((x, y), None)`` on success, or ``(None, error_message)``.
     """
     px = (float(pixel[0]), float(pixel[1]))
-    if grid is None:
+    if grid is None or free_click:
         return px, None
     snapped = snap_click_to_grid(grid, px, max_dist_px=max_dist_px)
     if snapped is None:
-        return None, "click nearer a detected corner"
+        return None, "click nearer a detected corner (or Shift+click for free)"
     return snapped, None
 
 
@@ -1063,11 +1119,12 @@ def panel_text(lines: list[str], width: int = 480, height: int = 480) -> np.ndar
 def list_asset_candidates() -> dict[str, list[Path]]:
     """Discover YAML/URDF choices for the in-app asset menu."""
     coord = ROOT.parent
-    fisheye = []
+    # Wrist lens menu: only the two project files (default + status-quo alternate).
+    # Bundle / lens_calib are resolve fallbacks, not menu choices.
+    fisheye: list[Path] = []
     for path in [
-        BUNDLE / "wrist_fisheye.yaml",
-        coord / "output" / "lens_calib" / "wrist_fisheye.yaml",
         MOUNT_DIR / "wrist_fisheye.yaml",
+        MOUNT_DIR / "wrist_fisheye_status_quo.yaml",
     ]:
         if path.is_file() and path not in fisheye:
             fisheye.append(path)
@@ -1099,7 +1156,15 @@ def list_asset_candidates() -> dict[str, list[Path]]:
     calibrated = MOUNT_DIR / "wrist_camera_mount.yaml"
     if calibrated.is_file():
         mounts.append(calibrated)
+    skip_mount = {
+        "wrist_fisheye.yaml",
+        "wrist_fisheye_status_quo.yaml",
+        "stationary_intrinsics.yaml",
+        "board_in_base_mm.yaml",
+    }
     for path in sorted(MOUNT_DIR.glob("*.yaml")):
+        if path.name in skip_mount:
+            continue
         if path not in mounts:
             mounts.append(path)
     return {

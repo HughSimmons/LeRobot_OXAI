@@ -190,29 +190,36 @@ class App:
         self.square_buffer = ""
         self.label_square = None
         self.label_points = []
-        self.wrist_grid = None
-        self.wrist_grid_source = "none"
-        self.side_grid, self.side_grid_source = detect_grid_for_view(side)
+        # Detect on both views immediately so the user can pick a square that
+        # has a complete cell in both cameras. Stationary search is gated to a
+        # coarse board AABB so the wrist-cam cable is not treated as a grid.
+        self.wrist_grid, self.wrist_grid_source = detect_grid_for_view(
+            wrist,
+            raw_bgr=self.frozen_wrist_raw,
+            fisheye_calib=self.fisheye_calib,
+            restrict_to_board=False,
+        )
+        self.side_grid, self.side_grid_source = detect_grid_for_view(
+            side,
+            restrict_to_board=True,
+        )
         self.mode = "enter_square"
         self.status = "type square name (e.g. d6) then Enter"
         self.help_lines = [
+            "Rings = corners on BOTH views — pick a square complete in both",
             "Type file then rank, e.g. d then 6",
             "Enter confirms, Esc clears",
-            "Then label that square on the wrist",
+            f"wrist corners: {self.wrist_grid_source}  side: {self.side_grid_source}",
         ]
 
     def start_wrist_label(self) -> None:
         self.mode = "label_wrist"
         self.label_points = []
-        self.wrist_grid, self.wrist_grid_source = detect_grid_for_view(
-            self.frozen_wrist,
-            raw_bgr=self.frozen_wrist_raw,
-            fisheye_calib=self.fisheye_calib,
-        )
         if self.wrist_grid is not None:
             self.status = f"wrist: 4 corners of {self.label_square} (corners: {self.wrist_grid_source})"
             self.help_lines = [
                 "Rings = detected corners — clicks snap to them",
+                "Shift+click = free (ignore snap)",
                 "1st click: GREEN = corner nearest a1",
                 "then 3 cyan, counter-clockwise in the image",
                 "next is toward h, then far corner, then rank 8",
@@ -245,6 +252,7 @@ class App:
             )
             self.help_lines = [
                 "Rings = detected corners — clicks snap to them",
+                "Shift+click = free (ignore snap)",
                 "1st click: GREEN = corner nearest a1",
                 "then 3 cyan, counter-clockwise in the image",
                 "next is toward h, then far corner, then rank 8",
@@ -275,8 +283,11 @@ class App:
     def on_mouse(self, event, x, y, flags, param) -> None:
         if event != cv2.EVENT_LBUTTONDOWN:
             return
+        free = bool(flags & cv2.EVENT_FLAG_SHIFTKEY)
         if self.mode == "label_wrist" and x < 640:
-            snapped, err = resolve_label_click(self.wrist_grid, (float(x), float(y)))
+            snapped, err = resolve_label_click(
+                self.wrist_grid, (float(x), float(y)), free_click=free
+            )
             if err is not None:
                 self.status = err
                 return
@@ -286,7 +297,9 @@ class App:
                 self.finish_wrist_label()
             return
         if self.mode == "label_side" and x >= 640:
-            snapped, err = resolve_label_click(self.side_grid, (float(x - 640), float(y)))
+            snapped, err = resolve_label_click(
+                self.side_grid, (float(x - 640), float(y)), free_click=free
+            )
             if err is not None:
                 self.status = err
                 return
@@ -457,13 +470,14 @@ class App:
             cv2.circle(wrist, (int(self.wrist_click[0]), int(self.wrist_click[1])), 6, (0, 255, 255), 2)
         if self.mode == "click_side" and self.polyline is not None:
             draw_ray_polyline(side, self.polyline)
-        if self.mode == "label_wrist":
+        if self.mode in ("enter_square", "label_wrist", "label_side"):
             draw_detected_corners(wrist, self.wrist_grid)
+            draw_detected_corners(side, self.side_grid)
+        if self.mode == "label_wrist":
             for i, (px, py) in enumerate(self.label_points):
                 color = (0, 255, 0) if i == 0 else (255, 200, 0)
                 cv2.circle(wrist, (int(px), int(py)), 5, color, -1)
         if self.mode == "label_side":
-            draw_detected_corners(side, self.side_grid)
             for i, (px, py) in enumerate(self.label_points):
                 color = (0, 255, 0) if i == 0 else (255, 200, 0)
                 cv2.circle(side, (int(px), int(py)), 5, color, -1)

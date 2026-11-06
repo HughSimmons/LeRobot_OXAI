@@ -4,8 +4,16 @@ Park the SO-101, calibrate both cameras to the chessboard, click a point in the
 wrist camera, and get that point in board millimetres and arm-base millimetres.
 
 Assumptions for this handoff: **same SO-101**, **same wrist camera + Logitech C920**,
-**same 33.4 cm board** (41.75 mm squares), frames at **640×480 MJPG**. Bundled
-lens files are used; this tool does not refit intrinsics.
+**same 33.6 cm board** (42.0 mm squares; Oliver tape), frames at **640×480 MJPG**.
+
+Wrist lens files (pick with `m` → fisheye):
+
+- **Default:** `output/camera_mount/wrist_fisheye.yaml` — OpenCV `fisheye.calibrate`
+  on all a1-indexed grown corners from the Nov-3 d4 set (`run_standard_wrist_fisheye.py`).
+- **Alternate:** `output/camera_mount/wrist_fisheye_status_quo.yaml` — earlier dense-grid
+  interim (f≈540, principal point fixed at centre).
+
+The old f=1400 fallback is removed. Bundle mirrors the default OpenCV file only as a last-resort copy.
 
 ## Place in OXAI
 
@@ -57,7 +65,16 @@ access in the operating system's privacy settings.
    to swap indices until that is true. Indices are saved under
    `output/session_config.yaml`.
 5. Press `c`. Type the square (e.g. `d` then `6`) and Enter.
-6. On each view, click the four corners of that square. The **first click is green** and must be the corner nearest a1. Then click the other three **counter-clockwise in the picture**: next corner is toward the h-file, then the far corner, then the rank-8 side. A clockwise tour is the mirror image and is rejected. Rings snap to detected corners when available.
+6. Rings appear on **both** views as soon as you press `c` — pick a square that
+   has a complete cell in both cameras (any square is fine; it need not hold a
+   piece). On each view, click the four corners of that square. The **first click
+   is green** and must be the corner nearest a1. Then click the other three
+   **counter-clockwise in the picture**: next corner is toward the h-file, then
+   the far corner, then the rank-8 side. A clockwise tour is the mirror image and
+   is rejected. Rings snap to detected corners when available; **Shift+click**
+   accepts a free pixel when the snap is wrong. The stationary view gates corners
+   with a padded LiveChess2FEN board quad (rectangular OpenCV crop, then
+   accept/reject); the wrist / overhead view is ungated.
 7. Press `u` for mount calibration. Park the arm, press `space` at least three times at **widely different arm rotations** (same square), then `s`. Each capture uses the same corner circuit: green nearest a1, then the other three counter-clockwise in the wrist image. Small nudges are not enough; hand–eye fails when the motion is too small. The click tool reloads the new mount when that window closes.
 8. Press `c` again, then `space`, click a point, `y` (on the board) or `n`
    (above — then click the ray on the stationary view).
@@ -72,7 +89,18 @@ were yours.
 
 ## What a click stores
 
-The board frame has its origin at the a1 corner, +x toward the h-file, +y toward rank 8, and +z up. Squares are 41.75 mm.
+The board frame has its origin at the a1 corner, +x toward the h-file, +y toward rank 8, and +z up. Squares are 42.0 mm (33.6 cm / 8).
+
+## Wrist lens calibration
+
+```bash
+python run_standard_wrist_fisheye.py   # default file (OpenCV full-point)
+python run_refit_wrist_fisheye.py      # earlier dense-grid interim path
+```
+
+Both read `../sample images/wrist_photos_20261103_225124/` (drop `shot_001`).
+The click tool defaults to `wrist_fisheye.yaml`; use `m` → fisheye to select
+`wrist_fisheye_status_quo.yaml` if needed.
 
 Corner clicks in step 6, and each mount capture, snap to a detected ring within 12 pixels, solve the camera pose, and are not written to the log.
 

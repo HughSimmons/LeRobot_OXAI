@@ -303,28 +303,45 @@ def fisheye_object_points(inner_cols: int, inner_rows: int, square_mm: float) ->
     return points
 
 
-def _fisheye_initial(image_size: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
+def _fisheye_flag(name: str, default: int = 0) -> int:
+    """OpenCV 4 keeps fisheye flags on ``cv2.fisheye``; OpenCV 5 on ``cv2``."""
+    if hasattr(cv2.fisheye, name):
+        return int(getattr(cv2.fisheye, name))
+    if hasattr(cv2, name):
+        return int(getattr(cv2, name))
+    return int(default)
+
+
+def _fisheye_initial(
+    image_size: tuple[int, int],
+    focal: float | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     width, height = image_size
+    # ~0.8 * shorter side is a better wrist-cam seed than max(w,h) (which
+    # pushed the old fallback grid toward f=1400).
+    seed = float(focal) if focal is not None else 0.8 * float(min(width, height))
     camera = np.eye(3, dtype=np.float64)
-    camera[0, 0] = camera[1, 1] = float(max(width, height))
+    camera[0, 0] = camera[1, 1] = seed
     camera[0, 2] = width / 2.0
     camera[1, 2] = height / 2.0
     return camera, np.zeros((4, 1), dtype=np.float64)
 
 
-def _fit_fisheye(
+def _opencv_fisheye_calibrate(
     object_points: list[np.ndarray],
     image_points: list[np.ndarray],
     image_size: tuple[int, int],
+    *,
+    focal: float | None = None,
+    extra_flags: int = 0,
 ) -> tuple[float, np.ndarray, np.ndarray, list, list]:
-    """OpenCV fisheye fit, replaced when the polynomial folds the frame.
-
-    Skew is fixed and extrinsics are recomputed. On this wrist lens the free
-    higher-order coefficients fit the corners and then fold the rest of the
-    picture, so a monotonic (k1, k2) model is kept instead.
-    """
-    camera, distortion = _fisheye_initial(image_size)
-    flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC | cv2.fisheye.CALIB_FIX_SKEW | cv2.fisheye.CALIB_USE_INTRINSIC_GUESS
+    camera, distortion = _fisheye_initial(image_size, focal=focal)
+    flags = (
+        _fisheye_flag("CALIB_RECOMPUTE_EXTRINSIC")
+        | _fisheye_flag("CALIB_FIX_SKEW")
+        | _fisheye_flag("CALIB_USE_INTRINSIC_GUESS", default=1)
+        | int(extra_flags)
+    )
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-7)
     rms, camera, distortion, rvecs, tvecs = cv2.fisheye.calibrate(
         object_points,
@@ -335,12 +352,66 @@ def _fit_fisheye(
         flags=flags,
         criteria=criteria,
     )
-    distortion = np.asarray(distortion, dtype=np.float64).reshape(4, 1)
-    replaced = False
-    if _distortion_folds(camera, distortion, image_size):
-        camera, distortion, rvecs, tvecs, rms = _monotonic_fisheye(object_points, image_points, image_size)
-        replaced = True
-    return float(rms), camera, distortion, list(rvecs), list(tvecs), replaced
+    return (
+        float(rms),
+        np.asarray(camera, dtype=np.float64),
+        np.asarray(distortion, dtype=np.float64).reshape(4, 1),
+        list(rvecs),
+        list(tvecs),
+    )
+
+
+def _fit_fisheye(
+    object_points: list[np.ndarray],
+    image_points: list[np.ndarray],
+    image_size: tuple[int, int],
+) -> tuple[float, np.ndarray, np.ndarray, list, list, bool]:
+    """OpenCV fisheye fit. Folding high-order coeffs are re-constrained, not grid-searched.
+
+    Tries free ``fisheye.calibrate``, then ``FIX_K3|FIX_K4``, then also ``FIX_K2``.
+    The coarse ``_monotonic_fisheye`` table is only a last resort.
+    """
+    width, height = image_size
+    seed_focals = (
+        0.8 * float(min(width, height)),
+        0.7 * float(min(width, height)),
+        float(min(width, height)),
+    )
+    fix_k2 = _fisheye_flag("CALIB_FIX_K2")
+    fix_k3 = _fisheye_flag("CALIB_FIX_K3")
+    fix_k4 = _fisheye_flag("CALIB_FIX_K4")
+    attempts: list[tuple[str, float | None, int]] = [
+        ("free", seed_focals[0], 0),
+        ("fix_k3k4", seed_focals[0], fix_k3 | fix_k4),
+        ("fix_k2k3k4", seed_focals[1], fix_k2 | fix_k3 | fix_k4),
+        ("fix_k3k4_wide", seed_focals[2], fix_k3 | fix_k4),
+    ]
+    last_error: Exception | None = None
+    for _name, focal, extra in attempts:
+        try:
+            rms, camera, distortion, rvecs, tvecs = _opencv_fisheye_calibrate(
+                object_points,
+                image_points,
+                image_size,
+                focal=focal,
+                extra_flags=extra,
+            )
+        except cv2.error as exc:
+            last_error = exc
+            continue
+        if not _distortion_folds(camera, distortion, image_size):
+            return float(rms), camera, distortion, rvecs, tvecs, False
+    # Last resort only — prefer rejecting a folded OpenCV fit over shipping the
+    # coarse (f,k1,k2) table that produced the bad f=1400 bundle.
+    try:
+        camera, distortion, rvecs, tvecs, rms = _monotonic_fisheye(
+            object_points, image_points, image_size
+        )
+        return float(rms), camera, distortion, list(rvecs), list(tvecs), True
+    except RuntimeError:
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("fisheye.calibrate failed and no monotonic fallback fitted")
 
 
 def _distortion_folds(camera: np.ndarray, distortion: np.ndarray, image_size: tuple[int, int]) -> bool:
@@ -395,17 +466,25 @@ def _monotonic_fisheye(
     image_points: list[np.ndarray],
     image_size: tuple[int, int],
 ) -> tuple[np.ndarray, np.ndarray, list, list, float]:
-    """Search focal length and k1, k2 for a distortion that stays invertible."""
+    """Dense (f, k1, k2) search with OpenCV fisheye PnP/projectPoints.
+
+    Used when ``fisheye.calibrate`` fails (OpenCV 5 currently errors on this
+    wrist set) or returns a folding polynomial. Focal covers ~400–900 so the
+    old coarse table that started at 700 cannot ship another f=1400 result.
+    """
     width, height = image_size
     best = None
-    for focal in (700.0, 1000.0, 1400.0, 1800.0, 2400.0):
-        for k1 in (-1.6, -1.2, -0.8, -0.4, -0.1, 0.1):
-            for k2 in (-0.5, -0.2, 0.0, 0.3, 0.8):
+    focals = np.linspace(400.0, 900.0, 26)
+    k1_values = np.linspace(-1.2, 0.2, 15)
+    k2_values = np.linspace(-0.8, 0.8, 13)
+    for focal in focals:
+        for k1 in k1_values:
+            for k2 in k2_values:
                 camera = np.array(
-                    [[focal, 0.0, width / 2.0], [0.0, focal, height / 2.0], [0.0, 0.0, 1.0]],
+                    [[float(focal), 0.0, width / 2.0], [0.0, float(focal), height / 2.0], [0.0, 0.0, 1.0]],
                     dtype=np.float64,
                 )
-                distortion = np.array([[k1], [k2], [0.0], [0.0]], dtype=np.float64)
+                distortion = np.array([[float(k1)], [float(k2)], [0.0], [0.0]], dtype=np.float64)
                 if _distortion_folds(camera, distortion, image_size):
                     continue
                 poses = [
