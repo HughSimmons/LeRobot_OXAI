@@ -72,6 +72,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grasp-offset", nargs=3, type=float, default=(-0.014, 0.002, -0.003))
     parser.add_argument("--place-offset", nargs=3, type=float, default=(-0.011, 0.002, -0.003))
     parser.add_argument("--placement-lower-steps", type=int, default=10)
+    parser.add_argument(
+        "--far-place-max-tilt", type=float, default=None,
+        help="Degrees from vertical: bend the arm so f/g/h place waypoints are at most this tilted "
+             "(sets CHESS_FAR_PLACE_MAX_TILT_DEG). Default: original far reach pose.",
+    )
+    parser.add_argument(
+        "--far-place-style", choices=("waypoint", "pivot"), default="waypoint",
+        help="waypoint: straighten every place waypoint; pivot: lower in the far pose to "
+             "--far-place-pivot-height above release, pivot once, lower with orientation locked.",
+    )
+    parser.add_argument("--far-place-pivot-height", type=float, default=0.02, help="Pivot height above release (m).")
+    parser.add_argument(
+        "--far-pickup-max-tilt", type=float, default=None,
+        help="Degrees from vertical: pivot-first pickup from f/g/h (lower in the far pose to "
+             "--far-pickup-pivot-height above the grasp point, pivot toward vertical, lower locked, grasp; "
+             "lift back along the same path). Sets CHESS_FAR_PICKUP_MAX_TILT_DEG. Default: original far pickup.",
+    )
+    parser.add_argument("--far-pickup-pivot-height", type=float, default=0.02, help="Pickup pivot height (m).")
+    parser.add_argument("--far-pickup-lift", choices=("retrace", "direct"), default="retrace",
+                        help="retrace: lift locked, un-pivot at the pivot height, then away; "
+                             "direct: lift locked, then straight to the far pose.")
     # Grip overrides; anything left unset keeps the multisim_chess_fast default.
     parser.add_argument("--soften-pinch", choices=("on", "off"), default=None)
     parser.add_argument("--soft-close-force", type=float, default=None)
@@ -84,6 +105,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--piece-friction", type=float, default=None)
     parser.add_argument("--only", nargs="+", default=None, help="Run only these sample names, e.g. r0_c1 r4_c8.")
     parser.add_argument("--tag", default=None, help="Suffix for the output directory name.")
+    parser.add_argument("--full-imports", action="store_true",
+                        help="Load the real robot driver (torch) and IK meshes in workers, as before 6 Nov.")
     parser.add_argument("--workers", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 2)))
     parser.add_argument("--output-dir", type=Path, default=None)
     return parser.parse_args()
@@ -121,9 +144,32 @@ def to_jsonable(value):
     return str(value)
 
 
-def worker_init(log_dir: str) -> None:
+def apply_far_place_env(cfg: dict) -> None:
+    """Set the chess_traj far-file place options this run was configured with (see chess_traj)."""
+    settings = {
+        "CHESS_FAR_PLACE_MAX_TILT_DEG": cfg.get("far_place_max_tilt_deg"),
+        "CHESS_FAR_PLACE_STYLE": cfg.get("far_place_style"),
+        "CHESS_FAR_PLACE_PIVOT_HEIGHT": cfg.get("far_place_pivot_height_m"),
+        "CHESS_FAR_PICKUP_MAX_TILT_DEG": cfg.get("far_pickup_max_tilt_deg"),
+        "CHESS_FAR_PICKUP_PIVOT_HEIGHT": cfg.get("far_pickup_pivot_height_m"),
+        "CHESS_FAR_PICKUP_LIFT": cfg.get("far_pickup_lift"),
+    }
+    for key, value in settings.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = str(value)
+
+
+def worker_init(log_dir: str, light_imports: bool = True) -> None:
     os.environ.update(ROOK_ENV)
     sys.path.insert(0, str(LOWLEVEL_DIR))
+    if light_imports:
+        # No real-robot driver (torch) and no IK meshes: ~600 MB less per worker, same results.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import sim_no_robot_driver
+
+        sim_no_robot_driver.install_light_sim_imports()
     os.chdir(PROJECT_DIR)
     # The sim prints heavily; keep each worker's chatter in its own log.
     log = open(Path(log_dir) / f"worker_{os.getpid()}.log", "w", buffering=1)
@@ -180,6 +226,7 @@ def run_sample(job: dict) -> dict:
     import multisim_chess_fast as sim
 
     cfg = job["config"]
+    apply_far_place_env(cfg)
     apply_grip_module_overrides(sim, cfg["grip"])
     src_x, src_y = square_center_world_xy(cfg["from_square"])
     tgt_x, tgt_y = square_center_world_xy(cfg["to_square"])
@@ -292,6 +339,15 @@ def main() -> int:
         "grasp_offset": list(args.grasp_offset),
         "place_offset": list(args.place_offset),
         "placement_lower_steps": args.placement_lower_steps,
+        "far_place_max_tilt_deg": args.far_place_max_tilt,
+        "far_place_style": args.far_place_style if args.far_place_max_tilt is not None else None,
+        "far_place_pivot_height_m": (
+            args.far_place_pivot_height
+            if args.far_place_max_tilt is not None and args.far_place_style == "pivot" else None
+        ),
+        "far_pickup_max_tilt_deg": args.far_pickup_max_tilt,
+        "far_pickup_pivot_height_m": args.far_pickup_pivot_height if args.far_pickup_max_tilt is not None else None,
+        "far_pickup_lift": args.far_pickup_lift if args.far_pickup_max_tilt is not None else None,
         "grip": {
             key: getattr(args, key)
             for key in (
@@ -300,6 +356,7 @@ def main() -> int:
             )
         },
         "only": args.only,
+        "light_sim_imports": not args.full_imports,
         "rook_environment": ROOK_ENV,
     }
     samples = sample_offsets(args)
@@ -314,7 +371,7 @@ def main() -> int:
     started = time.time()
     results = []
     ctx = mp.get_context("spawn")
-    with ctx.Pool(args.workers, initializer=worker_init, initargs=(str(log_dir),), maxtasksperchild=8) as pool:
+    with ctx.Pool(args.workers, initializer=worker_init, initargs=(str(log_dir), not args.full_imports), maxtasksperchild=8) as pool:
         for i, result in enumerate(pool.imap_unordered(run_sample, jobs), start=1):
             results.append(to_jsonable(result))
             err = result.get("error") or (

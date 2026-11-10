@@ -1,0 +1,4 @@
+### started 2026-11-06 19:13:15 on BOOK-22RI0P106T
+=== 19:13:15 known e4 -> f5 (tilt cap 11) ===
+81 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f5_bullseye_known_corr0_grid9_e4ftilt11known_20261106_191315
+--- stopped 19:54:24

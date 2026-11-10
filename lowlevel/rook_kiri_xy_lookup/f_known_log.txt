@@ -1,0 +1,22 @@
+### started 2026-11-07 12:14:07
+12:19:05 [f3->f3] place [-0.013075 0.00588 -0.003554]: 43/81 within 5 mm, 3 within 2 mm, 70 upright, missed 5
+12:19:08 [f3->f4] place [-0.013927 0.006435 -0.003587]: 37/81 within 5 mm, 3 within 2 mm, 68 upright, missed 5
+12:23:32 [f3->f5] place [-0.014701 0.006211 -0.003405]: 43/81 within 5 mm, 8 within 2 mm, 67 upright, missed 4
+12:24:00 [f4->f3] place [-0.013019 0.004683 -0.003281]: 73/81 within 5 mm, 34 within 2 mm, 81 upright, missed 0
+12:28:08 [f4->f4] place [-0.013301 0.005276 -0.00333]: 61/81 within 5 mm, 16 within 2 mm, 77 upright, missed 0
+12:28:21 [f4->f5] place [-0.013878 0.004712 -0.003093]: 70/81 within 5 mm, 22 within 2 mm, 75 upright, missed 0
+12:32:33 [f5->f3] place [-0.012091 0.005807 -0.003524]: 61/81 within 5 mm, 44 within 2 mm, 81 upright, missed 0
+12:32:48 [f5->f4] place [-0.012823 0.005495 -0.003382]: 69/81 within 5 mm, 49 within 2 mm, 81 upright, missed 0
+12:35:17 [f5->f5] place [-0.013466 0.005902 -0.003368]: 70/81 within 5 mm, 45 within 2 mm, 80 upright, missed 0
+=== 12:35:17 ALL DONE ===
+### started 2026-11-07 12:36:09
+12:40:22 fknown_cal2 [f3->f4] place [-0.015003 0.002143 -0.002617]: 65/81 within 5 mm, 27 within 2 mm, 67 upright, missed 6
+12:40:25 fknown_cal2 [f3->f3] place [-0.014271 0.002284 -0.002757]: 65/81 within 5 mm, 25 within 2 mm, 69 upright, missed 5
+12:44:34 fknown_cal2 [f3->f5] place [-0.015623 0.002741 -0.002614]: 63/81 within 5 mm, 32 within 2 mm, 69 upright, missed 4
+12:44:40 fknown_cal2 [f4->f3] place [-0.013048 0.002705 -0.002833]: 78/81 within 5 mm, 50 within 2 mm, 80 upright, missed 0
+12:48:42 fknown_cal2 [f4->f4] place [-0.013977 0.002651 -0.002737]: 76/81 within 5 mm, 49 within 2 mm, 78 upright, missed 0
+12:48:53 fknown_cal2 [f4->f5] place [-0.01485 0.002153 -0.002503]: 75/81 within 5 mm, 53 within 2 mm, 76 upright, missed 0
+12:52:55 fknown_cal2 [f5->f3] place [-0.012082 0.004139 -0.003146]: 77/81 within 5 mm, 48 within 2 mm, 81 upright, missed 0
+12:52:59 fknown_cal2 [f5->f4] place [-0.012986 0.004273 -0.003106]: 74/81 within 5 mm, 54 within 2 mm, 80 upright, missed 0
+12:55:33 fknown_cal2 [f5->f5] place [-0.013373 0.004275 -0.003008]: 79/81 within 5 mm, 58 within 2 mm, 81 upright, missed 0
+=== 12:55:33 ALL DONE ===

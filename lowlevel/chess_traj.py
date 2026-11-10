@@ -435,6 +435,128 @@ def downwardness(joints):
     return -fk_pose[2, 2]
 
 
+def far_place_max_tilt_deg():
+    """Opt-in cap on gripper tilt for far-file (f/g/h) place waypoints.
+
+    Set CHESS_FAR_PLACE_MAX_TILT_DEG (degrees from vertical) to enable; unset keeps
+    the original far reach pose. Read at call time so worker processes pick it up.
+    """
+    import os
+
+    value = os.environ.get("CHESS_FAR_PLACE_MAX_TILT_DEG", "").strip()
+    return float(value) if value else None
+
+
+def gripper_tilt_deg(joints):
+    return float(np.degrees(np.arccos(np.clip(downwardness(joints), -1.0, 1.0))))
+
+
+def straighten_toward_down(joints, frame_offset, max_tilt_deg, max_reach_error=0.001, steps=12, iters=30,
+                           return_path=False):
+    """Rotate the gripper toward vertical about the same grasp point by re-solving the arm.
+
+    The shoulder, elbow and wrist bend so the frame_offset point stays where it was.
+    Walks from the current orientation toward straight down and stops at max_tilt_deg,
+    or at the last orientation that still reaches within max_reach_error (m).
+    With return_path=True, returns the list of accepted intermediate poses (last = final).
+    """
+    from scipy.spatial.transform import Rotation, Slerp
+
+    joints = np.array(joints, dtype=float)
+    pose = kinematics.forward_kinematics(joints)
+    rot0 = pose[:3, :3]
+    tilt0 = gripper_tilt_deg(joints)
+    if tilt0 <= max_tilt_deg:
+        return [joints] if return_path else joints
+    goal = pose[:3, 3] + rot0 @ frame_offset
+    # Straight-down orientation that keeps the gripper's horizontal heading.
+    x_axis = rot0[:, 0].copy()
+    x_axis[2] = 0.0
+    x_axis /= np.linalg.norm(x_axis)
+    z_axis = np.array([0.0, 0.0, -1.0])
+    rot_down = np.column_stack([x_axis, np.cross(z_axis, x_axis), z_axis])
+    slerp = Slerp([0.0, 1.0], Rotation.from_matrix([rot0, rot_down]))
+
+    best = joints.copy()
+    path = []
+    current = joints.copy()
+    for s in np.linspace(0.0, 1.0, steps + 1)[1:]:
+        rot = slerp([s]).as_matrix()[0]
+        target = np.eye(4)
+        target[:3, :3] = rot
+        target[:3, 3] = goal - rot @ frame_offset
+        for _ in range(iters):
+            current = kinematics.inverse_kinematics(current, target, position_weight=10.0, orientation_weight=1.0)
+        if grasp_position_error(current, goal, frame_offset) > max_reach_error:
+            break
+        best = current.copy()
+        best[5] = joints[5]
+        path.append(best.copy())
+        if gripper_tilt_deg(best) <= max_tilt_deg:
+            break
+    if return_path:
+        return path or [joints]
+    return best
+
+
+def far_place_style():
+    """'waypoint' (straighten every place waypoint) or 'pivot' (lower in the far pose to
+    CHESS_FAR_PLACE_PIVOT_HEIGHT above the release point, pivot once, then lower with the
+    orientation locked). Env CHESS_FAR_PLACE_STYLE; default 'waypoint'."""
+    import os
+
+    style = os.environ.get("CHESS_FAR_PLACE_STYLE", "waypoint").strip() or "waypoint"
+    if style not in ("waypoint", "pivot"):
+        raise ValueError(f"CHESS_FAR_PLACE_STYLE must be 'waypoint' or 'pivot', got {style!r}")
+    return style
+
+
+def far_place_pivot_height():
+    import os
+
+    return float(os.environ.get("CHESS_FAR_PLACE_PIVOT_HEIGHT", "0.02") or 0.02)
+
+
+def far_pickup_max_tilt_deg():
+    """Opt-in pivot-first pickup from far files (f/g/h): lower in the far reach pose to
+    CHESS_FAR_PICKUP_PIVOT_HEIGHT above the grasp point, pivot the gripper toward vertical
+    (at most this many degrees from vertical) about the grasp point, lower with the orientation
+    locked and grasp; lift back along the same path. Env CHESS_FAR_PICKUP_MAX_TILT_DEG; unset = off."""
+    import os
+
+    value = os.environ.get("CHESS_FAR_PICKUP_MAX_TILT_DEG", "").strip()
+    return float(value) if value else None
+
+
+def far_pickup_pivot_height():
+    import os
+
+    return float(os.environ.get("CHESS_FAR_PICKUP_PIVOT_HEIGHT", "0.02") or 0.02)
+
+
+def far_pickup_lift_style():
+    """How a pivot-first far pickup lifts: 'retrace' (straight up locked to the pivot height,
+    un-pivot there, then away) or 'direct' (straight up locked to the pivot height, then straight
+    to the first far waypoint, rotating back while it rises). Env CHESS_FAR_PICKUP_LIFT."""
+    import os
+
+    style = os.environ.get("CHESS_FAR_PICKUP_LIFT", "retrace").strip() or "retrace"
+    if style not in ("retrace", "direct"):
+        raise ValueError(f"CHESS_FAR_PICKUP_LIFT must be 'retrace' or 'direct', got {style!r}")
+    return style
+
+
+def solve_locked_orientation(target_xyz, seed, rotation, frame_offset, iters=30):
+    """IK for the frame_offset point at target_xyz with the gripper held at a fixed rotation."""
+    pose = np.eye(4)
+    pose[:3, :3] = rotation
+    pose[:3, 3] = target_xyz - rotation @ frame_offset
+    current = np.array(seed, dtype=float)
+    for _ in range(iters):
+        current = kinematics.inverse_kinematics(current, pose, position_weight=10.0, orientation_weight=1.0)
+    return current
+
+
 def solve_seeded_target_xyz_prefer_down(
     target_xyz,
     solve_seed,
@@ -1320,35 +1442,92 @@ def pickupmove_traj(
     nsteps = 10
     downjnts = []
     stepcnt = 0
-    for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
+    far_pickup_max_tilt = far_pickup_max_tilt_deg() if from_file in far_rows else None
+    if far_pickup_max_tilt is not None:
+        # Pivot-first far-file pickup (mirror of the pivot-first place): (a) lower in the far reach
+        # pose to pivot_height above the grasp point, (b) pivot toward vertical about the grasp
+        # point, (c) lower with that orientation locked and grasp. downjnts is the lift path,
+        # reversed: 'retrace' keeps the whole path from the pivot down (straight up locked,
+        # un-pivot, then away); 'direct' skips the un-pivot (straight up locked, then away).
+        retrace = far_pickup_lift_style() == "retrace"
+        pivot_height = far_pickup_pivot_height()
+        fk_now = kinematics.forward_kinematics(current)
+        grasp_point_now = fk_now[:3, 3] + fk_now[:3, :3] @ GRASP_OFFSET
+        pivot_xyz = target_xyz + np.array([0, 0, pivot_height])
+        n_lock = max(2, nsteps // 3)
+        n_far = max(1, nsteps - n_lock)
+        for alpha in np.linspace(0, 1, n_far + 1)[1:]:
+            intermediate_joints = solve_xyz_for_traj(
+                (1 - alpha) * grasp_point_now + alpha * pivot_xyz,
+                current,
+                GRASP_OFFSET,
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{from_label}_far_lower_to_pickup_pivot"
+            )
+            intermediate_joints[5] = gripper_angle_open
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
+            if stepcnt == 0:
+                downjnts.append(intermediate_joints.copy())
+            stepcnt += 1
+        if retrace:
+            downjnts.append(current.copy())
+        pivot_path = straighten_toward_down(current, GRASP_OFFSET, far_pickup_max_tilt, return_path=True)
+        for k, intermediate_joints in enumerate(pivot_path):
+            intermediate_joints = intermediate_joints.copy()
+            intermediate_joints[5] = gripper_angle_open
+            jntslist.append(intermediate_joints)
+            if retrace or k == len(pivot_path) - 1:
+                downjnts.append(intermediate_joints.copy())
+            current = intermediate_joints.copy()
+        locked_rotation = kinematics.forward_kinematics(current)[:3, :3]
+        pivot_point = kinematics.forward_kinematics(current)[:3, 3] + locked_rotation @ GRASP_OFFSET
+        if traj_metrics is not None:
+            traj_metrics["far_pickup_pivot_tilt_deg"] = gripper_tilt_deg(current)
+            traj_metrics["far_pickup_pivot_point"] = pivot_point.copy()
+        lock_alphas = np.linspace(0, 1, n_lock + 1)[1:]
+        for i, alpha in enumerate(lock_alphas):
+            intermediate_joints = solve_locked_orientation(
+                (1 - alpha) * pivot_point + alpha * target_xyz, current, locked_rotation, GRASP_OFFSET
+            )
+            intermediate_joints[5] = gripper_angle_open
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
+            if i < len(lock_alphas) - 1:
+                downjnts.append(intermediate_joints.copy())
+        if traj_metrics is not None:
+            traj_metrics["far_pickup_grasp_tilt_deg"] = gripper_tilt_deg(current)
+    else:
+        for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
-        intermediate_xyz = (
-            (1 - alpha) * start_xyz
-            + alpha * target_xyz
-        )
+            intermediate_xyz = (
+                (1 - alpha) * start_xyz
+                + alpha * target_xyz
+            )
 
-        intermediate_joints = solve_xyz_for_traj(
-            intermediate_xyz,
-            current,
-            GRASP_OFFSET, 
-            downflag,
-            traj_metrics=traj_metrics,
-            stage=f"{from_label}_lower_pickup"
-        )
+            intermediate_joints = solve_xyz_for_traj(
+                intermediate_xyz,
+                current,
+                GRASP_OFFSET, 
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{from_label}_lower_pickup"
+            )
 
-        intermediate_joints[5] = gripper_angle_open
+            intermediate_joints[5] = gripper_angle_open
 
-        jntslist.append(intermediate_joints)
+            jntslist.append(intermediate_joints)
 
-        current = intermediate_joints.copy()
+            current = intermediate_joints.copy()
 
-        if stepcnt == 0:
-            downjnts.append(intermediate_joints.copy())
+            if stepcnt == 0:
+                downjnts.append(intermediate_joints.copy())
 
-        # if stepcnt == 5:
-        #     downjnts.append(intermediate_joints.copy())
+            # if stepcnt == 5:
+            #     downjnts.append(intermediate_joints.copy())
 
-        stepcnt+=1
+            stepcnt+=1
 
     ### close gripper
     grip_closed = current.copy()
@@ -1373,6 +1552,8 @@ def pickupmove_traj(
 
 
     # 3. Move to to_square (above)
+    far_place_max_tilt = far_place_max_tilt_deg() if to_file in far_rows else None
+    far_pivot = far_place_max_tilt is not None and far_place_style() == "pivot"
     if to_file in far_rows:
         downflag = False
 
@@ -1407,6 +1588,9 @@ def pickupmove_traj(
             traj_metrics=traj_metrics,
             stage=f"{to_label}_far_above_place"
         )
+        if far_place_max_tilt is not None and not far_pivot:
+            above_to = straighten_toward_down(above_to, PLACE_OFFSET, far_place_max_tilt)
+            above_to[5] = gripper_angle_closed
         current = append_joint_interpolation(
             jntslist,
             current,
@@ -1485,6 +1669,52 @@ def pickupmove_traj(
             current = intermediate_joints.copy()
 
         target_xyz = to_xyz + np.array([0, 0, 0])
+    elif far_pivot:
+        # Pivot-first far-file place: (a) lower in the far reach pose to pivot_height above the
+        # release point, (b) pivot the gripper toward vertical about the place point (one
+        # re-solve of the arm), (c) lower the rest of the way with that orientation locked.
+        pivot_height = far_place_pivot_height()
+        place_point_now = (
+            kinematics.forward_kinematics(current)[:3, 3]
+            + kinematics.forward_kinematics(current)[:3, :3] @ PLACE_OFFSET
+        )
+        pivot_xyz = target_xyz + np.array([0, 0, pivot_height])
+        n_lock = max(2, nsteps // 3)
+        n_far = max(1, nsteps - n_lock)
+        for alpha in np.linspace(0, 1, n_far + 1)[1:]:
+            intermediate_joints = solve_xyz_for_traj(
+                (1 - alpha) * place_point_now + alpha * pivot_xyz,
+                current,
+                PLACE_OFFSET,
+                downflag,
+                traj_metrics=traj_metrics,
+                stage=f"{to_label}_far_lower_to_pivot"
+            )
+            intermediate_joints[5] = gripper_angle_closed
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
+            if stepcnt == 0:
+                downjnts.append(intermediate_joints.copy())
+            stepcnt += 1
+        pivot_path = straighten_toward_down(current, PLACE_OFFSET, far_place_max_tilt, return_path=True)
+        # Every accepted pivot step is a waypoint (about 2 deg each), so the rook turns slowly in the jaws.
+        for intermediate_joints in pivot_path:
+            intermediate_joints = intermediate_joints.copy()
+            intermediate_joints[5] = gripper_angle_closed
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
+        locked_rotation = kinematics.forward_kinematics(current)[:3, :3]
+        pivot_point = kinematics.forward_kinematics(current)[:3, 3] + locked_rotation @ PLACE_OFFSET
+        if traj_metrics is not None:
+            traj_metrics["far_pivot_tilt_deg"] = gripper_tilt_deg(current)
+            traj_metrics["far_pivot_point"] = pivot_point.copy()
+        for alpha in np.linspace(0, 1, n_lock + 1)[1:]:
+            intermediate_joints = solve_locked_orientation(
+                (1 - alpha) * pivot_point + alpha * target_xyz, current, locked_rotation, PLACE_OFFSET
+            )
+            intermediate_joints[5] = gripper_angle_closed
+            jntslist.append(intermediate_joints)
+            current = intermediate_joints.copy()
     else:
         for alpha in np.linspace(0, 1, nsteps + 1)[1:]:
 
@@ -1504,6 +1734,10 @@ def pickupmove_traj(
                 traj_metrics=traj_metrics,
                 stage=f"{to_label}_lower_place"
             )
+            if far_place_max_tilt is not None:
+                intermediate_joints = straighten_toward_down(
+                    intermediate_joints, PLACE_OFFSET, far_place_max_tilt
+                )
 
             intermediate_joints[5] = gripper_angle_closed
 

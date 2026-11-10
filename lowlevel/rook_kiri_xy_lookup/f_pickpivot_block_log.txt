@@ -1,0 +1,5 @@
+### started 2026-11-07 14:27:07: sources [f3 f4 f5], 2 chains x 8 workers
+14:30:46 [f3->e5] known, start offset: 46/81 within 5 mm, 30 within 2 mm, missed 0, fell 35
+14:31:03 [f3->d5] known, start offset: 42/81 within 5 mm, 30 within 2 mm, missed 0, fell 39
+14:35:01 [f3->e5] known, calibrated [-0.021061 -0.001414 -0.001993]: 45/81 within 5 mm, 41 within 2 mm, missed 0, fell 36
+14:35:08 [f3->d5] known, calibrated [-0.020867 -0.001339 -0.00201]: 44/81 within 5 mm, 37 within 2 mm, missed 0, fell 37

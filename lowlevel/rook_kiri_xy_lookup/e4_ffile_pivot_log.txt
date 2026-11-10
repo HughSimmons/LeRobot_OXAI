@@ -1,0 +1,27 @@
+### started 2026-11-06 20:01:24 on BOOK-22RI0P106T
+=== 20:01:24 blind e4 -> f5 (tilt cap 11, 16 Oct place) ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f5_bullseye_blind_corr0_random150_e4fpivot_20261106_200125
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f5_bullseye_blind_corr0_random150_e4fpivot_20261106_200125/results.json (759s)
+=== 20:14:04 blind e4 -> f4 (tilt cap 11, 16 Oct place) ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f4_bullseye_blind_corr0_random150_e4fpivot_20261106_201404
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f4_bullseye_blind_corr0_random150_e4fpivot_20261106_201404/results.json (941s)
+=== 20:29:46 blind e4 -> f3 (tilt cap 11, 16 Oct place) ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f3_bullseye_blind_corr0_random150_e4fpivot_20261106_202946
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f3_bullseye_blind_corr0_random150_e4fpivot_20261106_202946/results.json (859s)
+pybullet build time: Oct 21 2025 10:07:17
+WARNING: Robot has the following self collisions in neutral position:
+target  landed     bias x,y (mm)   old place (mm)          ->  new place (mm)
+f5         124    +2.00,  +3.86   [ -8.75,  +2.23,  -2.67]  ->  [ -5.24,  -0.30,  -2.21]
+f4         126    +3.52,  +3.84   [ -8.75,  +2.23,  -2.67]  ->  [ -4.24,  -0.28,  -2.01]
+f3         131    +4.05,  +2.99   [ -8.75,  +2.23,  -2.67]  ->  [ -4.28,  +0.02,  -1.98]
+Saved lowlevel/rook_kiri_xy_lookup/e4_ffile_pivot_place_offsets_median.json
+=== 20:44:17 median e4 -> f5  place=[-0.005244 -0.000299 -0.00221] ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f5_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_204417
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f5_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_204417/results.json (778s)
+=== 20:57:16 median e4 -> f4  place=[-0.004238 -0.000285 -0.002009] ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f4_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_205716
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f4_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_205716/results.json (937s)
+=== 21:12:54 median e4 -> f3  place=[-0.004275 2.1e-05 -0.001979] ===
+150 samples, 6 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f3_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_211254
+Results: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/e4_to_f3_bullseye_blind_corr0_random150_e4fpivot_cal_median_20261106_211254/results.json (791s)
+=== 21:26:06 ALL DONE ===

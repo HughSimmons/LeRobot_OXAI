@@ -1,0 +1,11 @@
+### started 2026-11-07 13:18:31
+13:24:00 [f3->f3] start offset: 81/81 within 5 mm, 40 within 2 mm, missed 0, fell 0
+13:24:03 [f3->f4] start offset: 79/81 within 5 mm, 41 within 2 mm, missed 0, fell 1
+13:29:32 [f3->f4] calibrated [-0.020404 -0.001199 -0.00199]: 81/81 within 5 mm, 59 within 2 mm, missed 0, fell 0
+13:29:38 [f3->f3] calibrated [-0.021137 -0.003247 -0.001611]: 80/81 within 5 mm, 41 within 2 mm, missed 0, fell 1
+13:35:01 [f3->f5] start offset: 81/81 within 5 mm, 46 within 2 mm, missed 0, fell 0
+14:06:00 [f4->f3] start offset: 79/81 within 5 mm, 29 within 2 mm, missed 0, fell 1
+14:11:20 [f3->f5] calibrated [-0.020717 -0.001377 -0.001969]: 81/81 within 5 mm, 62 within 2 mm, missed 0, fell 0
+14:11:20 [f4->f3] calibrated [-0.02131 -0.004571 -0.001315]: 81/81 within 5 mm, 61 within 2 mm, missed 0, fell 0
+14:17:00 [f4->f4] start offset: 78/81 within 5 mm, 55 within 2 mm, missed 0, fell 2
+14:17:07 [f4->f5] start offset: 81/81 within 5 mm, 66 within 2 mm, missed 0, fell 0
