@@ -1,0 +1,3 @@
+wrist_camera: /dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0
+stationary_camera: /dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_7671151F-video-index0
+note: mounted camera left, stationary right in the click-to-3D window

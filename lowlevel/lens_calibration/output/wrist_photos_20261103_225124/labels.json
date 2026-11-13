@@ -1,0 +1,461 @@
+{
+  "camera": "wrist",
+  "device": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "v4l2_controls": "auto_exposure=3,gain=0",
+  "square_mm": 41.25,
+  "convention": "corners_px[0] is the square's corner nearest a1, then +file (toward h), +file+rank (far corner), +rank (toward rank 8): counter-clockwise in the picture. Pixels are in the raw (not undistorted) frame, origin top-left.",
+  "created": "2026-11-03T23:04:50",
+  "marked_by": "X-junctions nearest the eraser on d4 in each board direction (directions from the plan), cornerSubPix-refined, each checked by eye; shot_002 corner 3 placed by eye on the board's centre fold, then refined.",
+  "shots": [
+    {
+      "image": "shot_001.png",
+      "marked_image": "shot_001_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          353.08,
+          257.28
+        ],
+        [
+          351.82,
+          166.57
+        ],
+        [
+          262.49,
+          165.77
+        ],
+        [
+          261.54,
+          256.97
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "face-on, square centred",
+      "plan_view": 1,
+      "joints_reading_deg": [
+        1.319,
+        -35.473,
+        7.824,
+        94.901,
+        -84.352,
+        4.828
+      ],
+      "time": "2026-11-03T22:51:48"
+    },
+    {
+      "image": "shot_002.png",
+      "marked_image": "shot_002_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          178.64,
+          183.52
+        ],
+        [
+          175.4,
+          102.73
+        ],
+        [
+          95.44,
+          109.97
+        ],
+        [
+          94.19,
+          191.05
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "eye+subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "face-on, square TOP-LEFT of frame",
+      "plan_view": 2,
+      "joints_reading_deg": [
+        21.451,
+        -63.341,
+        27.077,
+        94.901,
+        -67.297,
+        4.828
+      ],
+      "time": "2026-11-03T22:52:08"
+    },
+    {
+      "image": "shot_003.png",
+      "marked_image": "shot_003_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          506.89,
+          195.57
+        ],
+        [
+          503.4,
+          114.64
+        ],
+        [
+          418.55,
+          104.64
+        ],
+        [
+          416.51,
+          186.3
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "face-on, square TOP-RIGHT of frame",
+      "plan_view": 3,
+      "joints_reading_deg": [
+        -16.44,
+        -81.626,
+        44.835,
+        92.967,
+        -98.154,
+        4.828
+      ],
+      "time": "2026-11-03T22:53:04"
+    },
+    {
+      "image": "shot_004.png",
+      "marked_image": "shot_004_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          353.46,
+          237.16
+        ],
+        [
+          319.21,
+          178.01
+        ],
+        [
+          249.39,
+          216.85
+        ],
+        [
+          276.48,
+          279.43
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 40, camera on the robot's side",
+      "plan_view": 6,
+      "joints_reading_deg": [
+        5.802,
+        -107.297,
+        53.978,
+        94.901,
+        -112.659,
+        4.828
+      ],
+      "time": "2026-11-03T22:53:40"
+    },
+    {
+      "image": "shot_005.png",
+      "marked_image": "shot_005_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          346.37,
+          266.75
+        ],
+        [
+          320.82,
+          189.4
+        ],
+        [
+          238.12,
+          213.88
+        ],
+        [
+          257.31,
+          292.63
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 45, diagonal from robot's front-right",
+      "plan_view": 9,
+      "joints_reading_deg": [
+        4.923,
+        -83.824,
+        49.143,
+        82.769,
+        -99.385,
+        4.828
+      ],
+      "time": "2026-11-03T22:54:09"
+    },
+    {
+      "image": "shot_006.png",
+      "marked_image": "shot_006_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          341.43,
+          275.18
+        ],
+        [
+          341.41,
+          202.37
+        ],
+        [
+          259.71,
+          191.56
+        ],
+        [
+          252.49,
+          264.75
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 45, diagonal from robot's front-left",
+      "plan_view": 10,
+      "joints_reading_deg": [
+        0.352,
+        -106.154,
+        56.791,
+        90.242,
+        -78.286,
+        4.828
+      ],
+      "time": "2026-11-03T22:54:51"
+    },
+    {
+      "image": "shot_007.png",
+      "marked_image": "shot_007_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          349.67,
+          288.41
+        ],
+        [
+          348.36,
+          211.48
+        ],
+        [
+          270.46,
+          209.45
+        ],
+        [
+          268.64,
+          286.73
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "far: whole board in the middle",
+      "plan_view": 12,
+      "joints_reading_deg": [
+        0.264,
+        -54.462,
+        14.154,
+        94.901,
+        -84.352,
+        4.828
+      ],
+      "time": "2026-11-03T22:55:16"
+    },
+    {
+      "image": "shot_008.png",
+      "marked_image": "shot_008_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          229.1,
+          273.38
+        ],
+        [
+          217.74,
+          196.47
+        ],
+        [
+          138.46,
+          206.32
+        ],
+        [
+          144.44,
+          284.0
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 30, square at the LEFT edge",
+      "plan_view": 13,
+      "joints_reading_deg": [
+        14.681,
+        -80.747,
+        42.022,
+        85.846,
+        -78.901,
+        4.828
+      ],
+      "time": "2026-11-03T22:55:49"
+    },
+    {
+      "image": "shot_009.png",
+      "marked_image": "shot_009_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          405.76,
+          306.37
+        ],
+        [
+          420.46,
+          230.95
+        ],
+        [
+          343.35,
+          203.39
+        ],
+        [
+          322.59,
+          278.59
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 30, square at the RIGHT edge",
+      "plan_view": 14,
+      "joints_reading_deg": [
+        -9.231,
+        -88.396,
+        48.967,
+        86.022,
+        -74.681,
+        4.828
+      ],
+      "time": "2026-11-03T22:56:20"
+    },
+    {
+      "image": "shot_010.png",
+      "marked_image": "shot_010_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          356.95,
+          265.31
+        ],
+        [
+          331.88,
+          203.47
+        ],
+        [
+          258.76,
+          229.01
+        ],
+        [
+          277.11,
+          292.99
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": "tilted 55, low view from the robot's side",
+      "plan_view": 15,
+      "joints_reading_deg": [
+        4.571,
+        -107.121,
+        50.813,
+        94.901,
+        -103.604,
+        4.828
+      ],
+      "time": "2026-11-03T22:56:49"
+    }
+  ]
+}

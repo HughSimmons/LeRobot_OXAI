@@ -1,0 +1,59 @@
+{
+  "camera": "wrist",
+  "device": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "square": "d4",
+  "square_mm": 41.25,
+  "plan": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/lens_calibration/output/wrist_pose_plan.json",
+  "joint_offsets_deg": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "note": "Raw frames. joints are motor readings; command = what was sent.",
+  "shots": [
+    {
+      "image": "shot_001.png",
+      "plan_view": 1,
+      "hint": "face-on, square centred",
+      "square": "d4",
+      "command_deg": [
+        1.9,
+        -36.06,
+        10.29,
+        95.0,
+        -87.17,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        2.022,
+        -33.626,
+        11.165,
+        94.901,
+        -87.429,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          366.9,
+          240.0
+        ],
+        [
+          359.6,
+          154.6
+        ],
+        [
+          273.8,
+          161.0
+        ],
+        [
+          279.7,
+          246.7
+        ]
+      ],
+      "time": "2026-11-03T21:36:46"
+    }
+  ]
+}

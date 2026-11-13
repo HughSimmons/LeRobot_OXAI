@@ -1,0 +1,95 @@
+{
+  "schema": "mount_run_v1",
+  "created": "2026-11-11T19:20:43",
+  "source": "robot",
+  "wrist_camera": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "fisheye_at_capture": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/click_to_3d_oliver/output/camera_mount/wrist_fisheye.yaml",
+  "urdf_at_capture": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/urdf/so101_new_calib_wrist_cam.urdf",
+  "joint_offsets_deg_at_capture": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "square_mm": 42.0,
+  "samples": [
+    {
+      "index": 1,
+      "stamp": 1794424843.4,
+      "image": "sample_01.png",
+      "square": "d4",
+      "corners_raw_px": [
+        [
+          352.128,
+          242.842
+        ],
+        [
+          341.181,
+          133.595
+        ],
+        [
+          220.307,
+          129.038
+        ],
+        [
+          210.498,
+          237.965
+        ]
+      ],
+      "corners_undistorted_px": [
+        [
+          355.0,
+          247.0
+        ],
+        [
+          345.0,
+          143.0
+        ],
+        [
+          228.0,
+          136.0
+        ],
+        [
+          221.0,
+          242.0
+        ]
+      ],
+      "joint_reading_deg": [
+        1.4945,
+        -112.6593,
+        96.2637,
+        62.1978,
+        -80.5714,
+        1.9841
+      ],
+      "T_board_camera_mm_at_capture": [
+        [
+          -0.058044,
+          -0.890435,
+          0.451395,
+          48.4054
+        ],
+        [
+          -0.984592,
+          -0.02365,
+          -0.173261,
+          159.01423
+        ],
+        [
+          0.164954,
+          -0.454496,
+          -0.875342,
+          138.780116
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  ]
+}

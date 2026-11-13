@@ -1,0 +1,23 @@
+note: Diagnostic board-in-base from mount calibration. The click tool recomputes board-in-base
+  from mount + live PnP.
+T_base_board_mm:
+- - 0.996459
+  - -0.051204
+  - -0.06669
+  - 140.803061
+- - 0.050386
+  - 0.998633
+  - -0.013903
+  - -163.346294
+- - 0.067311
+  - 0.010493
+  - 0.997677
+  - 15.309025
+- - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+sample_count: 8
+mean_residual_mm: 13.371
+board_from_runs:
+- '20261111_193315'

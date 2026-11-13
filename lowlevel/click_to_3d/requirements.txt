@@ -1,0 +1,5 @@
+numpy>=1.24
+opencv-python==4.10.0.84
+PyYAML>=6.0
+placo>=0.0.8
+draccus>=0.10

@@ -49,25 +49,20 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+import paths
 from paths import REPO_ROOT
 
 DEFAULT_OUT_ROOT = REPO_ROOT / "outputs" / "camera_pairs"
 CAMERA_NAMES = ("wrist", "stationary")
-# Innomaker U20CAM in the SO101 wrist mount; Logitech C920 on the tripod.
-DEFAULT_WRIST_CAMERA = "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0"
-DEFAULT_STATIONARY_CAMERA = "/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_7671151F-video-index0"
-# v4l2 controls set at startup (see `v4l2-ctl -d <camera> --list-ctrls`). The
-# Innomaker came up with gain=100, which blew out ~70% of the wrist image.
-# exposure_dynamic_framerate=0 stops the C920 dropping below 30 fps in dim light.
-# The C920's focus is locked so its lens calibration stays valid; 40 was the
-# sharpest setting (Laplacian variance sweep, 2026-10-22) at the tripod's
-# distance to the table. Re-check it if the tripod moves.
-DEFAULT_WRIST_CONTROLS = "auto_exposure=3,gain=0"
-DEFAULT_STATIONARY_CONTROLS = "exposure_dynamic_framerate=0,focus_automatic_continuous=0,focus_absolute=40"
+# Camera devices and their v4l2 controls are shared with click_to_3d/ (see paths.py).
+DEFAULT_WRIST_CAMERA = paths.WRIST_CAMERA
+DEFAULT_STATIONARY_CAMERA = paths.STATIONARY_CAMERA
+DEFAULT_WRIST_CONTROLS = paths.WRIST_CAMERA_CONTROLS
+DEFAULT_STATIONARY_CONTROLS = paths.STATIONARY_CAMERA_CONTROLS
 
 # Oliver's SO101 pair (see SO101 Setup notes); by-id paths stay fixed across replugs.
-DEFAULT_FOLLOWER_PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5AB9065986-if00"
-DEFAULT_FOLLOWER_ID = "orange_follower_arm"
+DEFAULT_FOLLOWER_PORT = paths.SO101_PORT
+DEFAULT_FOLLOWER_ID = paths.SO101_ID
 DEFAULT_LEADER_PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5AAF219942-if00"
 DEFAULT_LEADER_ID = "black_leader_arm"
 MOTOR_KEYS = (

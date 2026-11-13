@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ from board_coordinates import (
 from scipy.optimize import least_squares
 
 from chess_traj import DEFAULT_HOME
+from friction.joint_compensation import DEFAULT_FIT_PATH, MIN_MOVE_DEG, JointCompensator
 from testkinematics import kinematics
 
 LOWLEVEL_DIR = Path(__file__).resolve().parent
@@ -84,6 +86,14 @@ EFFECTIVE_LIMITS_DEG = tuple(
 )
 
 
+# Wrist roll range for single-target probes. Pointing straight down leaves roll
+# free, and an unconstrained solve picked +162.8 deg for the via, so the move from
+# DEFAULT_HOME (-29.8) swung the wrist camera ~230 deg round into the motors. The
+# lookup trajectories run_real_so101_from_xy_lookup.py plays keep roll on the
+# negative side of home (about -30 to -135 deg), so the probe does too.
+PROBE_ROLL_RANGE_DEG = (-150.0, float(DEFAULT_HOME[4]))
+
+
 def within_limits(joints_deg: np.ndarray, tol: float = 1e-6) -> bool:
     return all(
         lo - tol <= float(q) <= hi + tol
@@ -91,17 +101,33 @@ def within_limits(joints_deg: np.ndarray, tol: float = 1e-6) -> bool:
     )
 
 
-def limit_violations(joints_deg: np.ndarray, tol: float = 1e-6) -> list[str]:
+def motor_limits_deg(offsets_deg: np.ndarray | None = None) -> list[tuple[float, float]]:
+    """EFFECTIVE_LIMITS_DEG (URDF angles) as motor-command limits.
+
+    With calibration offsets (URDF angle = motor angle + offset) a URDF limit L is
+    the motor reading L - offset, so a compensated command is checked against the
+    shifted range. Without offsets, motor and URDF angles are taken as equal, as
+    the uncompensated probe always has.
+    """
+    shift = np.zeros(5) if offsets_deg is None else np.asarray(offsets_deg, dtype=float)[:5]
+    return [(lo - s, hi - s) for (lo, hi), s in zip(EFFECTIVE_LIMITS_DEG, shift)]
+
+
+def limit_violations(
+    joints_deg: np.ndarray, tol: float = 1e-6, offsets_deg: np.ndarray | None = None
+) -> list[str]:
     out = []
     for name, q, (lo, hi) in zip(
-        MOTOR_KEYS, np.asarray(joints_deg)[:5], EFFECTIVE_LIMITS_DEG
+        MOTOR_KEYS, np.asarray(joints_deg)[:5], motor_limits_deg(offsets_deg)
     ):
         if not (lo - tol <= float(q) <= hi + tol):
             out.append(f"{name}={float(q):.2f} outside [{lo:.2f}, {hi:.2f}]")
     return out
 
 
-def clamp_command_to_effective_limits(joints_deg: np.ndarray) -> np.ndarray:
+def clamp_command_to_effective_limits(
+    joints_deg: np.ndarray, offsets_deg: np.ndarray | None = None
+) -> np.ndarray:
     """Clamp command-only path samples to effective hardware joint limits.
 
     This is intentionally applied after solving/validating target poses. It
@@ -110,13 +136,15 @@ def clamp_command_to_effective_limits(joints_deg: np.ndarray) -> np.ndarray:
     before sending any command.
     """
     clipped = np.asarray(joints_deg, dtype=float).copy()
-    for idx, (lo, hi) in enumerate(EFFECTIVE_LIMITS_DEG):
+    for idx, (lo, hi) in enumerate(motor_limits_deg(offsets_deg)):
         clipped[idx] = np.clip(clipped[idx], lo, hi)
     return clipped
 
 
-def clamp_path_to_effective_limits(path: list[np.ndarray]) -> tuple[list[np.ndarray], float]:
-    clipped_path = [clamp_command_to_effective_limits(step) for step in path]
+def clamp_path_to_effective_limits(
+    path: list[np.ndarray], offsets_deg: np.ndarray | None = None
+) -> tuple[list[np.ndarray], float]:
+    clipped_path = [clamp_command_to_effective_limits(step, offsets_deg) for step in path]
     max_clip = 0.0
     for original, clipped in zip(path, clipped_path):
         max_clip = max(max_clip, float(np.max(np.abs(np.asarray(original) - clipped))))
@@ -230,8 +258,11 @@ def solve_down_pose(
     joint_weight: float = 0.0,
     target_tilt_deg: float = 0.0,
     tilt_azimuth_deg: float = 0.0,
+    roll_range_deg: tuple[float, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """Solve joints putting the gripper at a fixed tilt at target_xyz.
+
+    roll_range_deg, if given, narrows wrist_roll's bounds (see PROBE_ROLL_RANGE_DEG).
 
     The incremental IK used by the trajectory builder converges on position but
     leaves the wrist several degrees off the intended tilt, which makes a probe
@@ -253,6 +284,8 @@ def solve_down_pose(
 
     lo = np.array([b[0] for b in EFFECTIVE_LIMITS_DEG], dtype=float)
     hi = np.array([b[1] for b in EFFECTIVE_LIMITS_DEG], dtype=float)
+    if roll_range_deg is not None:
+        lo[4], hi[4] = roll_range_deg
 
     rng = np.random.default_rng(0)
     seeds = [np.clip(DEFAULT_HOME[:5].copy(), lo, hi)]
@@ -291,24 +324,113 @@ def build_approach_path(
     via_deg: np.ndarray,
     probe_deg: np.ndarray,
     *,
-    steps_to_via: int,
-    steps_to_probe: int,
-) -> list[np.ndarray]:
-    """current -> via (above the square) -> probe.
+    max_step_deg: float,
+) -> tuple[list[np.ndarray], int]:
+    """current -> via shape at current pan -> via (above the square) -> probe.
 
     A single interpolation from the arm's pose straight to the probe sweeps the
     wrist sideways across the board at probe height. Going up and over first
     means the only descent happens once the gripper is already above the target
-    square.
+    square. The arm also unfolds before it pans: from DEFAULT_HOME (pan ~97 deg,
+    beside the base) a straight joint interpolation to a rank-8 via dips to the
+    board surface while it folds and swings at once; unfolded first, the swing
+    happens at via height.
+
+    Each leg moves no joint more than max_step_deg per command. Returns the path
+    and the number of commands up to and including the via.
     """
-    path: list[np.ndarray] = []
-    for k in range(1, steps_to_via + 1):
-        a = k / steps_to_via
-        path.append((1.0 - a) * current_deg + a * via_deg)
-    for k in range(1, steps_to_probe + 1):
-        a = k / steps_to_probe
-        path.append((1.0 - a) * via_deg + a * probe_deg)
-    return path
+    unfolded = via_at_pan(via_deg, current_deg[0])
+    to_via = paced_steps(current_deg, unfolded, max_step_deg) + paced_steps(unfolded, via_deg, max_step_deg)
+    return to_via + paced_steps(via_deg, probe_deg, max_step_deg), len(to_via)
+
+
+def build_return_path(
+    probe_deg: np.ndarray,
+    via_deg: np.ndarray,
+    rest_deg: np.ndarray,
+    *,
+    max_step_deg: float,
+) -> list[np.ndarray]:
+    """probe -> via -> via shape at rest pan -> rest: build_approach_path in reverse."""
+    turned = via_at_pan(via_deg, rest_deg[0])
+    return (
+        paced_steps(probe_deg, via_deg, max_step_deg)
+        + paced_steps(via_deg, turned, max_step_deg)
+        + paced_steps(turned, rest_deg, max_step_deg)
+    )
+
+
+def paced_steps(start_deg: np.ndarray, end_deg: np.ndarray, max_step_deg: float) -> list[np.ndarray]:
+    """interpolated_steps with enough steps that no arm joint moves more than max_step_deg per step."""
+    largest = float(np.max(np.abs(np.asarray(end_deg, dtype=float)[:5] - np.asarray(start_deg, dtype=float)[:5])))
+    return interpolated_steps(start_deg, end_deg, int(np.ceil(largest / max_step_deg)))
+
+
+JOINT_NAMES = tuple(key.removesuffix(".pos") for key in MOTOR_KEYS)
+
+
+def print_plan(
+    target_deg: np.ndarray,
+    command_deg: np.ndarray,
+    offsets_deg: np.ndarray | None,
+    compensation: list,
+) -> None:
+    """Per joint: where it should stop, what gets sent, and the correction between them."""
+    print("\nJoint plan (deg). target = where the joint should stop (URDF angle).")
+    if offsets_deg is None:
+        print("  Not compensated: the target is sent as the command unchanged.")
+    else:
+        print("  command = what's sent = target - offset + f; f = friction/sag the joint will stop short by.")
+    print(f"  {'joint':<14}{'target':>9}{'offset':>8}{'f':>7}{'command':>10}  approach")
+    notes = {c.joint: c.note for c in compensation}
+    for i, name in enumerate(JOINT_NAMES):
+        if offsets_deg is None:
+            offset, f, note = "-", "-", "-"
+        else:
+            offset = f"{offsets_deg[i]:.2f}"
+            f = f"{command_deg[i] - (target_deg[i] - offsets_deg[i]):.2f}"
+            note = notes.get(name, "")
+        print(f"  {name:<14}{target_deg[i]:9.3f}{offset:>8}{f:>7}{command_deg[i]:10.3f}  {note}")
+
+
+def print_result(
+    target_deg: np.ndarray,
+    actual_deg: np.ndarray,
+    command_deg: np.ndarray,
+    reading_deg: np.ndarray,
+    expected_reading_deg: np.ndarray,
+    settle_s: float,
+) -> None:
+    """Per joint after settling: actual vs target, and the stop vs what the model expected."""
+    print(f"\nResult after {settle_s:.1f} s settle (deg).")
+    print("  error = actual - target, actual = reading + offset. Should be ~0 when compensated.")
+    print("  stopped = reading - command; expected = what the friction/sag model predicted for it.")
+    print(f"  {'joint':<14}{'target':>9}{'actual':>9}{'error':>8}  |{'command':>9}{'reading':>9}{'stopped':>9}{'expected':>9}")
+    for i, name in enumerate(JOINT_NAMES):
+        print(
+            f"  {name:<14}{target_deg[i]:9.3f}{actual_deg[i]:9.3f}{actual_deg[i] - target_deg[i]:+8.2f}  |"
+            f"{command_deg[i]:9.3f}{reading_deg[i]:9.3f}{reading_deg[i] - command_deg[i]:+9.2f}"
+            f"{expected_reading_deg[i] - command_deg[i]:+9.2f}"
+        )
+
+
+def approach_from(via_deg: np.ndarray, probe_motor_deg: np.ndarray, start_deg: np.ndarray) -> np.ndarray:
+    """Per joint, the command each joint last moves from on its way into the probe pose.
+
+    Joints that move on the via -> probe descent arrive from the via. Pan and roll
+    don't (the via keeps both), so their last move is the pan swing and the unfold
+    from the start pose: their friction direction comes from start -> probe.
+    """
+    via = np.asarray(via_deg, dtype=float)
+    moves_on_descent = np.abs(np.asarray(probe_motor_deg, dtype=float) - via) >= MIN_MOVE_DEG
+    return np.where(moves_on_descent, via, np.asarray(start_deg, dtype=float))
+
+
+def via_at_pan(via_deg: np.ndarray, pan_deg: float) -> np.ndarray:
+    """The via pose with shoulder_pan swapped: same height, swung to another heading."""
+    pose = np.asarray(via_deg, dtype=float).copy()
+    pose[0] = float(pan_deg)
+    return pose
 
 
 def interpolated_steps(start_deg: np.ndarray, end_deg: np.ndarray, steps: int) -> list[np.ndarray]:
@@ -1151,6 +1273,44 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--command-delay", type=float, default=1.0 / 240.0)
     parser.add_argument(
+        "--max-speed-deg-s",
+        type=float,
+        default=30.0,
+        help=(
+            "Single-target mode: fastest any arm joint moves (deg/s); each leg gets "
+            "enough steps to stay under it. Replaces --move-steps there. The default "
+            "takes ~4 s for home's 120 deg pan swing."
+        ),
+    )
+    parser.add_argument(
+        "--settle-s",
+        type=float,
+        default=1.0,
+        help=(
+            "Wait this long after the last command before reading the joints, so a "
+            "joint still moving (e.g. a long wrist-roll swing) has arrived."
+        ),
+    )
+    parser.add_argument(
+        "--compensate",
+        action="store_true",
+        help=(
+            "Single-target mode only. Command (q - offset) + f so the arm comes to rest "
+            "at the IK pose, with offsets and the M3 friction/sag error f from "
+            "--compensation-fit (see friction/joint_compensation.py). The via waypoint is "
+            "transit and stays uncompensated."
+        ),
+    )
+    parser.add_argument("--compensation-fit", type=Path, default=DEFAULT_FIT_PATH)
+    parser.add_argument(
+        "--no-return",
+        action="store_true",
+        help=(
+            "Single-target mode: release torque at the probe pose instead of first "
+            "moving (via the via waypoint) to the rest pose DEFAULT_HOME."
+        ),
+    )
+    parser.add_argument(
         "--execute",
         action="store_true",
         help="Connect to the SO101 and move. Omit for a dry-run solve.",
@@ -1172,8 +1332,14 @@ def main() -> int:
         raise ValueError("--corner-hold-s must be non-negative")
     if args.sequence_joint_weight < 0:
         raise ValueError("--sequence-joint-weight must be non-negative")
+    if args.settle_s < 0:
+        raise ValueError("--settle-s must be non-negative")
+    if args.max_speed_deg_s <= 0:
+        raise ValueError("--max-speed-deg-s must be positive")
     if sum([args.corner_coverage, args.corner_sequence, args.xy_sequence]) > 1:
         raise ValueError("Use only one of --corner-coverage, --corner-sequence, --xy-sequence")
+    if args.compensate and (args.corner_coverage or args.corner_sequence or args.xy_sequence):
+        raise ValueError("--compensate only supports a single --square / --xy target")
     if args.corner_coverage:
         if args.execute:
             raise ValueError("--corner-coverage is a dry-run report; omit --execute")
@@ -1188,27 +1354,63 @@ def main() -> int:
     z = surface_z + args.height_above_surface
     target = np.array([x, y, z], dtype=float)
 
-    joints, achieved, down_err_deg = solve_down_pose(target, restarts=args.ik_restarts)
+    # Roll kept to the lookup trajectories' side of home. The via can't point
+    # straight down at its height, and left free the solver spends roll on its
+    # tilt, so it's pinned to the probe's roll: the descent moves lift, elbow and
+    # wrist flex only.
+    joints, achieved, down_err_deg = solve_down_pose(
+        target,
+        restarts=args.ik_restarts,
+        preferred_joints_deg=DEFAULT_HOME,
+        joint_weight=args.sequence_joint_weight,
+        roll_range_deg=PROBE_ROLL_RANGE_DEG,
+    )
     via_target = np.array([x, y, surface_z + args.via_height], dtype=float)
     via_joints, via_achieved, via_tilt = solve_down_pose(
         via_target,
         restarts=args.ik_restarts,
+        preferred_joints_deg=joints,
+        joint_weight=args.sequence_joint_weight,
+        roll_range_deg=(float(joints[4]) - 0.01, float(joints[4]) + 0.01),
     )
 
-    print(f"probe target : {label}")
-    print(f"world xyz    : [{target[0]:.5f}, {target[1]:.5f}, {target[2]:.5f}]")
-    print(f"  (surface z = {surface_z:.5f}, +{args.height_above_surface:.3f} clearance)")
-    print(f"achieved xyz : [{achieved[0]:.5f}, {achieved[1]:.5f}, {achieved[2]:.5f}]")
-    print(f"ik residual  : {np.linalg.norm(achieved - target) * 1000:.2f} mm")
-    print(f"off-vertical : {down_err_deg:.2f} deg")
-    print(f"joints_deg   : {np.round(joints, 3).tolist()}")
     print(
-        f"via waypoint : z={via_target[2]:.4f}  "
-        f"residual={np.linalg.norm(via_achieved - via_target) * 1000:.1f} mm  "
-        f"tilt={via_tilt:.1f} deg (transit only, need not be vertical)"
+        f"probe {label}: fixed-jaw tip (gripper_frame_link) to world "
+        f"({target[0] * 1000:.1f}, {target[1] * 1000:.1f}, {target[2] * 1000:.1f}) mm, "
+        f"{args.height_above_surface * 1000:.0f} mm above the board surface"
     )
-    probe_bad = limit_violations(joints)
-    via_bad = limit_violations(via_joints)
+    print(
+        f"  IK: {np.linalg.norm(achieved - target) * 1000:.2f} mm residual, "
+        f"{down_err_deg:.2f} deg off vertical. Via {args.via_height * 1000:.0f} mm higher "
+        f"(transit only: {np.linalg.norm(via_achieved - via_target) * 1000:.1f} mm residual, "
+        f"{via_tilt:.1f} deg tilt)"
+    )
+    # What gets sent: the IK joints as they are, or with --compensate the motor
+    # command that should come to rest at them. The via is transit and stays
+    # uncompensated: it already sits on the wrist_flex limit, and adding the
+    # offset would push it past.
+    # The fit is loaded with or without --compensate: its offsets turn readings
+    # into actual URDF angles, and its model gives the expected stop for the
+    # results table, so a baseline run reports the same columns.
+    model = JointCompensator(args.compensation_fit)
+    command = joints
+    via_command = via_joints
+    compensator = model if args.compensate else None
+    compensation = []
+    if compensator is not None:
+        # Until connected, assume the arm starts at DEFAULT_HOME; recomputed below
+        # from the real start pose before anything moves.
+        command, compensation = compensator.compensate(
+            joints, approach_from(via_command, joints - compensator.offsets_deg, DEFAULT_HOME)
+        )
+    print_plan(joints, command, model.offsets_deg if compensator is not None else None, compensation)
+
+    # Commands are motor angles; with --compensate they're checked against the
+    # limits shifted by the offsets, so a command past a URDF limit by its offset
+    # (e.g. wrist_flex 97 deg for a 91.6 deg pose) still passes.
+    motor_offsets = None if compensator is None else compensator.offsets_deg
+    probe_bad = limit_violations(joints) + limit_violations(command, offsets_deg=motor_offsets)
+    via_bad = limit_violations(via_joints) + limit_violations(via_command, offsets_deg=motor_offsets)
     if probe_bad or via_bad:
         raise RuntimeError(
             "Solved pose exceeds joint limits: " + "; ".join(probe_bad + via_bad)
@@ -1224,6 +1426,11 @@ def main() -> int:
         "off_vertical_deg": down_err_deg,
         "joints_deg": joints.tolist(),
         "via_joints_deg": via_joints.tolist(),
+        "compensated": bool(args.compensate),
+        "compensation_fit": str(args.compensation_fit) if args.compensate else None,
+        "command_deg": np.asarray(command).tolist(),
+        "via_command_deg": np.asarray(via_command).tolist(),
+        "compensation": [asdict(d) for d in compensation],
         "via_height": args.via_height,
         "board_origin": [args.board_origin_x, args.board_origin_y, args.board_origin_z],
         "surface_z": surface_z,
@@ -1234,7 +1441,7 @@ def main() -> int:
     }
     out_path = args.output_dir / "probe_xy_pose.json"
     out_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
-    print(f"saved        : {out_path}")
+    print(f"saved: {out_path}")
 
     if down_err_deg > 1.0:
         print(
@@ -1253,31 +1460,38 @@ def main() -> int:
     try:
         observation = follower.get_observation()
         current = observation_joints_deg(observation)
+        if compensator is not None:
+            real_command, compensation = compensator.compensate(
+                joints, approach_from(via_command, joints - compensator.offsets_deg, current)
+            )
+            if not np.allclose(real_command, command):
+                command = real_command
+                print("Recomputed from the arm's real start pose:")
+                print_plan(joints, command, model.offsets_deg, compensation)
+                bad = limit_violations(command, offsets_deg=motor_offsets)
+                if bad:
+                    raise RuntimeError("Compensated command exceeds joint limits: " + "; ".join(bad))
 
-        steps_to_via = max(1, int(round(args.move_steps * 0.6)))
-        steps_to_probe = max(1, args.move_steps - steps_to_via)
-        path = build_approach_path(
+        max_step_deg = args.max_speed_deg_s * args.command_delay
+        path, steps_to_via = build_approach_path(
             current,
-            via_joints,
-            joints,
-            steps_to_via=steps_to_via,
-            steps_to_probe=steps_to_probe,
+            via_command,
+            command,
+            max_step_deg=max_step_deg,
         )
-        path, max_path_clip = clamp_path_to_effective_limits(path)
+        path, max_path_clip = clamp_path_to_effective_limits(path, motor_offsets)
 
-        bad = [v for step in path for v in limit_violations(step)]
+        bad = [v for step in path for v in limit_violations(step, offsets_deg=motor_offsets)]
         if bad:
             raise RuntimeError(
                 "Approach path exceeds joint limits: " + "; ".join(sorted(set(bad)))
             )
 
-        print("current_deg :", np.round(current, 3).tolist())
-        print("via_deg     :", np.round(via_joints, 3).tolist())
-        print("target_deg  :", np.round(joints, 3).tolist())
+        print(f"start reading: {np.round(current, 2).tolist()}")
         print(
-            f"path: {steps_to_via} steps up to via, then {steps_to_probe} down to "
-            f"probe ({len(path)} total); max joint delta "
-            f"{float(np.max(np.abs(joints - current))):.2f} deg"
+            f"path: {len(path)} steps, {len(path) * args.command_delay:.1f} s at up to "
+            f"{args.max_speed_deg_s:.0f} deg/s (unfold, swing to above the square, then "
+            f"{len(path) - steps_to_via} steps down)"
         )
         if max_path_clip > 1e-6:
             print(f"path clamp : max {max_path_clip:.3f} deg to stay within effective limits")
@@ -1297,14 +1511,62 @@ def main() -> int:
             time.sleep(args.command_delay)
             observation = follower.get_observation()
 
+        time.sleep(args.settle_s)
         settled = observation_joints_deg(follower.get_observation())
-        print("observed_deg:", np.round(settled, 3).tolist())
-        print("cmd-obs diff:", np.round(settled - joints, 3).tolist())
-        print(
-            "\nHolding probe pose. Read off which square the gripper points at, "
-            "then compare with the commanded square above."
+        expected = model.predict_rest_motor_deg(command, approach_from(via_command, command, current))
+        actual = model.resting_urdf_deg(settled)
+        print_result(joints, actual, command, settled, expected, args.settle_s)
+        record.update(
+            {
+                "command_deg": np.asarray(command).tolist(),
+                "compensation": [asdict(d) for d in compensation],
+                "start_reading_deg": current.tolist(),
+                "reading_deg": settled.tolist(),
+                "actual_urdf_deg": actual.tolist(),
+                "actual_minus_target_deg": (actual - joints).tolist(),
+                "expected_reading_deg": expected.tolist(),
+                "settle_s": args.settle_s,
+            }
         )
-        input("Press Enter to release and exit...")
+        out_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+        print(
+            f"\nHolding. Measure the fixed jaw's tip against the centre of {label} "
+            "(toward/away from the robot, left/right)."
+        )
+        if args.no_return:
+            input("Press Enter to release and exit...")
+            return 0
+
+        input("Press Enter to return to the rest pose and release...")
+        # Rest at DEFAULT_HOME, the trajectory home run_real_so101_from_xy_lookup.py
+        # starts and ends at (folded, beside the base, clear of the board); the pose
+        # the arm started from may be resting on the board. Up to the via first so
+        # the gripper leaves the board vertically, swing at via height, then fold.
+        # Starts from the command the arm is holding, so the first step doesn't jump.
+        rest = np.asarray(DEFAULT_HOME, dtype=float)
+        return_path, max_return_clip = clamp_path_to_effective_limits(
+            build_return_path(
+                command, via_command, rest, max_step_deg=max_step_deg
+            ),
+            motor_offsets,
+        )
+        bad = [v for step in return_path for v in limit_violations(step, offsets_deg=motor_offsets)]
+        if bad:
+            raise RuntimeError(
+                "Return path exceeds joint limits: " + "; ".join(sorted(set(bad)))
+            )
+        if max_return_clip > 1e-6:
+            print(f"return clamp: max {max_return_clip:.3f} deg to stay within effective limits")
+        observation = send_command_path(
+            follower,
+            observation,
+            return_path,
+            command_delay=args.command_delay,
+            progress_label="return",
+        )
+        time.sleep(args.settle_s)
+        returned = observation_joints_deg(follower.get_observation())
+        print(f"back at rest, reading - rest command: {np.round(returned - rest, 2).tolist()}")
     finally:
         follower.disconnect()
     return 0

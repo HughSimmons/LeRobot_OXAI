@@ -1,0 +1,141 @@
+{
+  "camera": "wrist",
+  "device": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "square": "d4",
+  "square_mm": 41.25,
+  "plan": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/lens_calibration/output/wrist_pose_plan.json",
+  "joint_offsets_deg": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "note": "Raw frames. joints are motor readings; command = what was sent.",
+  "shots": [
+    {
+      "image": "shot_001.png",
+      "plan_view": 1,
+      "hint": "face-on, square centred",
+      "square": "d4",
+      "command_deg": [
+        1.1,
+        -37.7,
+        6.95,
+        94.47,
+        -84.02,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        1.231,
+        -35.473,
+        7.824,
+        94.989,
+        -84.44,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          365.8,
+          283.4
+        ],
+        [
+          363.0,
+          199.3
+        ],
+        [
+          278.5,
+          200.0
+        ],
+        [
+          278.8,
+          284.6
+        ]
+      ],
+      "time": "2026-11-03T22:36:38"
+    },
+    {
+      "image": "shot_002.png",
+      "plan_view": 2,
+      "hint": "face-on, square TOP-LEFT of frame",
+      "square": "d4",
+      "command_deg": [
+        21.98,
+        -63.72,
+        26.44,
+        94.63,
+        -67.01,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        21.363,
+        -63.341,
+        27.253,
+        94.989,
+        -67.297,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          178.5,
+          202.5
+        ],
+        [
+          170.1,
+          120.7
+        ],
+        [
+          77.2,
+          124.1
+        ],
+        [
+          82.4,
+          209.6
+        ]
+      ],
+      "time": "2026-11-03T22:39:16"
+    },
+    {
+      "image": "shot_003.png",
+      "plan_view": 3,
+      "hint": "face-on, square TOP-RIGHT of frame",
+      "square": "d4",
+      "command_deg": [
+        -16.63,
+        -81.73,
+        43.96,
+        91.97,
+        -98.24,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        -16.44,
+        -81.626,
+        44.835,
+        92.967,
+        -98.154,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          543.5,
+          206.1
+        ],
+        [
+          541.5,
+          120.9
+        ],
+        [
+          446.9,
+          118.9
+        ],
+        [
+          443.6,
+          201.5
+        ]
+      ],
+      "time": "2026-11-03T22:46:02"
+    }
+  ]
+}

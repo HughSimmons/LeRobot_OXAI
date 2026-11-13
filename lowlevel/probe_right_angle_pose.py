@@ -34,7 +34,7 @@ from probe_xy_pose import (
 )
 
 LOWLEVEL_DIR = Path(__file__).resolve().parent
-URDF_PATH = paths.URDF_PATH
+URDF_PATH = str(paths.URDF_PATH)
 DEFAULT_OUTPUT_DIR = LOWLEVEL_DIR / "real_world_runs"
 DEFAULT_ROBOT_PORT = "/dev/tty.usbmodem5B7B0157051"
 DEFAULT_ROBOT_ID = "my_awesome_follower_arm"

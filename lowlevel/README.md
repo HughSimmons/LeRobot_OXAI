@@ -31,6 +31,25 @@ The vision env used for `coord_finder/` in this README is `Live2FEN`; see
 
 ## Board layout
 
+> **Board origin changed on 2026-11-03.** `DEFAULT_BOARD_ORIGIN` in `board_coordinates.py`
+> and the `SIM_BOARD_ORIGIN_X` / `SIM_BOARD_ORIGIN_Z` defaults in `multisim_chess_fast.py`
+> moved from (0.27, 0, 0.03) to x = 0.2926 m, to match the ruler-measured board on Oliver's
+> setup (z: 0.029 in `DEFAULT_BOARD_ORIGIN`, 0.024 in the sim, which puts the sim's playing
+> surface at the measured 29 mm). What that changes:
+>
+> - **Lookups built before the change are off by 22.6 mm.** They were built with the board at
+>   x = 0.27, but lookups don't record their board origin: `run_real_so101_from_xy_lookup.py`
+>   takes it from `DEFAULT_BOARD_ORIGIN`. Replayed now, an old lookup (everything under
+>   `rook_kiri_xy_lookup/`, and `real_world_runs/click_picks/` runs from before the change)
+>   aims 22.6 mm closer to the robot than it should. To replay one, set
+>   `DEFAULT_BOARD_ORIGIN` back to `(0.27, 0.0, 0.03)` first.
+> - Square names and `--frame board` coordinates now resolve around x = 0.2926, in the sim,
+>   the lookup builders and `chess_traj.py`.
+> - `two_camera/camera_rig.py` places its board, and the tripod around it, from the same
+>   constant, so its scene moved too.
+> - For the old board in the sim alone, set `SIM_BOARD_ORIGIN_X=0.27 SIM_BOARD_ORIGIN_Z=0.03`.
+>   The coordinate conversion still follows `DEFAULT_BOARD_ORIGIN`, so the two then disagree.
+
 The robot does **not** sit behind rank 1 like a player. It sits beside the
 a-file, with white on its right. `square_center_world_xy()` in
 `board_coordinates.py` maps **files to world x** (away from the robot) and
@@ -40,20 +59,21 @@ bottom:
 ```
                    +x (away from robot)
                          ^
-            h8 . . . . . . . . h1      h-file centres ~41.4 cm out
+            h8 . . . . . . . . h1      h-file centres ~43.7 cm out
             .                   .
      +y <-  .   board centre    .      rank 8 on the robot's left,
-            .   (x=0.27, y=0)   .      rank 1 (white) on its right
+            .  (x=0.2926, y=0)  .      rank 1 (white) on its right
             .                   .
-            a8 . . . . . . . . a1      a-file centres ~12.6 cm out
+            a8 . . . . . . . . a1      a-file centres ~14.8 cm out
                      [robot]
 ```
 
-- Board centre: 27 cm straight out from the robot base origin, on its
-  centreline (`DEFAULT_BOARD_ORIGIN`).
+- Board centre: 29.26 cm straight out from the robot base origin, on its
+  centreline (`DEFAULT_BOARD_ORIGIN`; 27 cm before 2026-11-03, see above).
 - Squares: 41.25 mm (`DEFAULT_SQUARE_SIZE`).
-- Playing-surface height: 3 cm in sim, 2.5 cm for the real arm
-  (`DEFAULT_REAL_BOARD_ORIGIN` in `run_real_so101_from_xy_lookup.py`).
+- Height: the z of the board origin is the centre of the 10 mm board slab, so the
+  playing surface is 5 mm higher: 2.9 cm in sim (z = 0.024), 3.0 cm for the real arm by
+  default (`DEFAULT_REAL_BOARD_ORIGIN` in `run_real_so101_from_xy_lookup.py`, z = 0.025).
 
 So a "d4→d5" lookup moves the piece one square **sideways**, to the robot's
 left. If the board is set up the player's way round (robot behind rank 1),
@@ -88,6 +108,29 @@ changing the code.
   found on real hardware: `toggle_joint_calibration.py`, `read_current_pose.py`,
   `probe_xy_pose.py`, `probe_right_angle_pose.py`, `fk_from_pose_json.py`,
   `live_calibrate_so101_offsets.py`, `run_lookup_sequence.py`.
+
+- **`friction/`** -- the joint friction and gravity-sag model: fitting it to
+  real-arm sweeps, recording the sweeps, and compensating commands so the arm
+  stops where it's sent. See [`friction/README.md`](friction/README.md).
+  The fit it loads, `real_world_runs/friction/friction_sag_fit.json`, is not
+  in git (`real_world_runs/` stays on the lab machine): without it
+  `--compensate` fails and the click tools use zero joint offsets.
+
+- **`lens_calibration/`** -- photos for recalibrating the wrist and stationary
+  camera lenses: planned, collision-checked wrist-camera arm poses, a guarded
+  script that drives the arm through them, and a tool for marking the
+  calibration square in each photo. See
+  [`lens_calibration/README.md`](lens_calibration/README.md).
+
+- **`click_to_3d/`** -- Asha's click-to-3D tool: calibrate the wrist and
+  stationary cameras to the board, click a point in the wrist image, and get
+  it in board and arm-base millimetres. See
+  [`click_to_3d/README.md`](click_to_3d/README.md).
+
+- **`click_to_3d_oliver/`** -- Oliver's working copy of `click_to_3d/`. It also
+  moves the arm to a click (`g`), picks and places between clicks (`p`), and
+  holds the scripts that replay a pick run in PyBullet and compare it with
+  the hardware. See [`click_to_3d_oliver/README.md`](click_to_3d_oliver/README.md).
 
   `capture_camera_pair.py` previews the wrist and stationary cameras side by
   side and saves synchronised image pairs (space = pair, c = calibration pair)
@@ -126,6 +169,15 @@ changing the code.
   **This is the only command in this README that moves the physical arm** --
   run it yourself, deliberately, never as part of an automated/assistant flow.
 
+  An `--execute` run writes two timelines to its output folder:
+  `timeline_hardware.json` (what the arm did, with measured send/read times)
+  and `timeline_sim.json` (the same commands on the planned schedule, one per
+  `--command-delay`, with no readings). Each file's `fields` block describes
+  its fields. The scripts that replay a run in PyBullet and compare it with
+  the hardware (one run, plots, and a summary over many runs) are in
+  `click_to_3d_oliver/`; see "Compare a run with the sim" in
+  [its README](click_to_3d_oliver/README.md).
+
   ### Example: build + verify a lookup
 
   The piece model used by the simulation is chosen via the
@@ -134,6 +186,55 @@ changing the code.
   geometry (`cylinder_proxy` default, `mesh_convex`, or `banded_hulls`). Build
   and verify must use the *same* env vars, since the replay scores against
   whatever collision geometry the lookup was built with.
+
+  The simulation includes the real arm's joint calibration offsets x (pan,
+  lift, elbow, wrist flex, wrist roll; URDF angle = motor angle + x): every
+  commanded arm angle lands x away, as on a real arm whose trajectory doesn't
+  correct for them. The defaults are `orange_follower_arm`'s, set as
+  `DEFAULT_JOINT_OFFSETS_DEG` (0, 0, -4.3, -5.2, 0) and
+  `DEFAULT_JOINT_OFFSET_SD_DEG` (0, 0, 0.7, 0.7, 0; 0.7 deg is about 2 mm at the
+  tip) in `multisim_chess_fast.py`. Each independent run draws its offsets from
+  a normal distribution with that mean and standard deviation, keeping one draw
+  across a `run_lookup_sequence.py` sequence; `SIM_JOINT_OFFSET_SEED` (default
+  0) makes the draws repeatable, and each result records the offsets it used.
+  Override them with `SIM_JOINT_OFFSETS_DEG` and `SIM_JOINT_OFFSET_SD_DEG`
+  (`"0 0 0 0 0"` for both gives exact tracking, as before). The same
+  build/verify rule applies.
+
+  It also includes joint friction, modelled as a **directional undershoot**:
+  each arm joint stops short of its target by its friction h, on the side it's
+  coming from. Moving down onto a target it stops slightly high, moving up it
+  stops slightly low. This is a consistent bias, not random noise: the arm
+  always lowers onto a piece the same way, so friction makes it stop short the
+  same way every time (roughly 2 mm per joint at the tip), and a consistent
+  miss can be corrected where noise can't.
+  - **Measured** on `orange_follower_arm` (lift, elbow and wrist flex 22 Oct
+    2026; pan and wrist roll 24 Oct 2026) with `toggle_joint_calibration.py`
+    sweeps that reach each angle from above and below (e.g.
+    `--values -90 -75 -60 -45 -30 -45 -60 -75 -90`; starting poses in
+    `real_world_runs/friction_reference_poses/`, raw files in
+    `real_world_runs/friction/`). At each angle reached both ways, h is half
+    the gap between the two readings; gravity sag is the same both ways, so it
+    cancels.
+  - **Defaults** in `multisim_chess_fast.py`: `DEFAULT_JOINT_FRICTION_DEG`
+    (0.29, 0.84, 0.76, 0.47, 0.29 for pan, lift, elbow, wrist flex, wrist roll)
+    is the average over the angles measured, and
+    `DEFAULT_JOINT_FRICTION_SD_DEG` (0.05, 0.46, 0.48, 0.11, 0.03) is their
+    spread. Friction changes with pose on the joints gravity loads; pan and
+    wrist roll carry no gravity load and barely vary.
+  - **Uncertainty:** each independent run draws h from a normal distribution
+    with that mean and standard deviation (never below 0), from the same seed
+    as the offsets. Each result records the friction it used.
+  - **Measured with LeRobot's servo I gain at 0.** A nonzero I gain keeps the
+    servo pushing until it reaches its target, which should remove most of
+    this; remeasure after changing it.
+  - Override with `SIM_JOINT_FRICTION_DEG` and `SIM_JOINT_FRICTION_SD_DEG`;
+    `"0 0 0 0 0"` for both turns friction off.
+  - **A better model** is in [`friction/`](friction/README.md): load-dependent
+    friction plus gravity sag, fitted to these and later sweeps, about 0.2-0.6
+    deg of held-out error against 2.4-3.9 deg for this fixed shift. It can also
+    compensate real-arm commands (`run_real_so101_from_xy_lookup.py
+    --compensate`).
 
   Default cylinder piece:
   ```bash

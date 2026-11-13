@@ -1,0 +1,48 @@
+parent_link: gripper_frame_link
+child_link: wrist_camera_link
+note: Fitted to every grown corner of the 3 Nov wrist lens photos (reports/2026-11-11_mount).
+T_gripper_camera_mm:
+- - -0.997574
+  - -0.049545
+  - -0.048902
+  - -5.909832
+- - 0.066029
+  - -0.895933
+  - -0.439253
+  - 64.700768
+- - -0.02205
+  - -0.441417
+  - 0.897031
+  - -86.707851
+- - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+origin_xyz_m:
+- -0.00591
+- 0.064701
+- -0.086708
+origin_rpy_rad:
+- -0.457296
+- 0.022052
+- 3.075499
+sample_count: 9
+corner_count: 290
+reprojection_rms_px: 4.615
+mount_std_rotation_deg_camera_xyz:
+- 0.286
+- 0.26
+- 0.144
+mount_std_translation_mm_camera_xyz:
+- 1.413
+- 1.561
+- 0.666
+source_urdf: /home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/urdf/so101_new_calib_wrist_cam.urdf
+fisheye: /home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/click_to_3d_oliver/output/camera_mount/wrist_fisheye.yaml
+joint_offsets_deg:
+- 2.5
+- -0.237
+- -3.947
+- -5.187
+- 0.0
+- 0.0

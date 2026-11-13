@@ -1,0 +1,428 @@
+{
+  "camera": "wrist",
+  "device": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "square": "d4",
+  "square_mm": 41.25,
+  "plan": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/lens_calibration/output/wrist_pose_plan.json",
+  "joint_offsets_deg": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "note": "Raw frames. joints are motor readings; command = what was sent.",
+  "shots": [
+    {
+      "image": "shot_001.png",
+      "plan_view": 1,
+      "hint": "face-on, square centred",
+      "square": "d4",
+      "command_deg": [
+        1.1,
+        -37.7,
+        6.95,
+        94.47,
+        -84.02,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        1.319,
+        -35.473,
+        7.824,
+        94.901,
+        -84.352,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          365.8,
+          283.4
+        ],
+        [
+          363.0,
+          199.3
+        ],
+        [
+          278.5,
+          200.0
+        ],
+        [
+          278.8,
+          284.6
+        ]
+      ],
+      "time": "2026-11-03T22:51:48"
+    },
+    {
+      "image": "shot_002.png",
+      "plan_view": 2,
+      "hint": "face-on, square TOP-LEFT of frame",
+      "square": "d4",
+      "command_deg": [
+        21.98,
+        -63.72,
+        26.44,
+        94.63,
+        -67.01,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        21.451,
+        -63.341,
+        27.077,
+        94.901,
+        -67.297,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          178.5,
+          202.5
+        ],
+        [
+          170.1,
+          120.7
+        ],
+        [
+          77.2,
+          124.1
+        ],
+        [
+          82.4,
+          209.6
+        ]
+      ],
+      "time": "2026-11-03T22:52:08"
+    },
+    {
+      "image": "shot_003.png",
+      "plan_view": 3,
+      "hint": "face-on, square TOP-RIGHT of frame",
+      "square": "d4",
+      "command_deg": [
+        -16.63,
+        -81.73,
+        43.96,
+        91.97,
+        -98.24,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        -16.44,
+        -81.626,
+        44.835,
+        92.967,
+        -98.154,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          543.5,
+          206.1
+        ],
+        [
+          541.5,
+          120.9
+        ],
+        [
+          446.9,
+          118.9
+        ],
+        [
+          443.6,
+          201.5
+        ]
+      ],
+      "time": "2026-11-03T22:53:04"
+    },
+    {
+      "image": "shot_004.png",
+      "plan_view": 6,
+      "hint": "tilted 40, camera on the robot's side",
+      "square": "d4",
+      "command_deg": [
+        6.26,
+        -106.99,
+        53.58,
+        94.98,
+        -112.75,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        5.802,
+        -107.297,
+        53.978,
+        94.901,
+        -112.659,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          369.9,
+          226.4
+        ],
+        [
+          336.2,
+          169.2
+        ],
+        [
+          267.8,
+          210.5
+        ],
+        [
+          294.7,
+          270.7
+        ]
+      ],
+      "time": "2026-11-03T22:53:40"
+    },
+    {
+      "image": "shot_005.png",
+      "plan_view": 9,
+      "hint": "tilted 45, diagonal from robot's front-right",
+      "square": "d4",
+      "command_deg": [
+        4.53,
+        -83.9,
+        48.38,
+        81.53,
+        -99.01,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        4.923,
+        -83.824,
+        49.143,
+        82.769,
+        -99.385,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          372.7,
+          280.7
+        ],
+        [
+          348.4,
+          207.0
+        ],
+        [
+          268.0,
+          231.5
+        ],
+        [
+          285.7,
+          306.9
+        ]
+      ],
+      "time": "2026-11-03T22:54:09"
+    },
+    {
+      "image": "shot_006.png",
+      "plan_view": 10,
+      "hint": "tilted 45, diagonal from robot's front-left",
+      "square": "d4",
+      "command_deg": [
+        0.12,
+        -105.93,
+        56.32,
+        88.34,
+        -77.96,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        0.352,
+        -106.154,
+        56.791,
+        90.242,
+        -78.286,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          359.9,
+          294.1
+        ],
+        [
+          359.2,
+          224.3
+        ],
+        [
+          279.2,
+          215.2
+        ],
+        [
+          272.3,
+          285.2
+        ]
+      ],
+      "time": "2026-11-03T22:54:51"
+    },
+    {
+      "image": "shot_007.png",
+      "plan_view": 12,
+      "hint": "far: whole board in the middle",
+      "square": "d4",
+      "command_deg": [
+        0.99,
+        -55.17,
+        13.41,
+        95.0,
+        -84.57,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        0.264,
+        -54.462,
+        14.154,
+        94.901,
+        -84.352,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          362.0,
+          299.6
+        ],
+        [
+          357.7,
+          226.4
+        ],
+        [
+          282.2,
+          227.5
+        ],
+        [
+          282.6,
+          301.1
+        ]
+      ],
+      "time": "2026-11-03T22:55:16"
+    },
+    {
+      "image": "shot_008.png",
+      "plan_view": 13,
+      "hint": "tilted 30, square at the LEFT edge",
+      "square": "d4",
+      "command_deg": [
+        15.31,
+        -80.85,
+        41.19,
+        84.49,
+        -78.5,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        14.681,
+        -80.747,
+        42.022,
+        85.846,
+        -78.901,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          238.3,
+          296.7
+        ],
+        [
+          226.1,
+          223.4
+        ],
+        [
+          142.6,
+          233.9
+        ],
+        [
+          149.1,
+          310.5
+        ]
+      ],
+      "time": "2026-11-03T22:55:49"
+    },
+    {
+      "image": "shot_009.png",
+      "plan_view": 14,
+      "hint": "tilted 30, square at the RIGHT edge",
+      "square": "d4",
+      "command_deg": [
+        -9.46,
+        -88.42,
+        48.27,
+        84.79,
+        -74.02,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        -9.231,
+        -88.396,
+        48.967,
+        86.022,
+        -74.681,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          421.7,
+          326.8
+        ],
+        [
+          434.3,
+          253.2
+        ],
+        [
+          357.0,
+          228.0
+        ],
+        [
+          338.1,
+          299.9
+        ]
+      ],
+      "time": "2026-11-03T22:56:20"
+    },
+    {
+      "image": "shot_010.png",
+      "plan_view": 15,
+      "hint": "tilted 55, low view from the robot's side",
+      "square": "d4",
+      "command_deg": [
+        5.07,
+        -106.7,
+        50.26,
+        94.97,
+        -103.91,
+        4.8280423280423275
+      ],
+      "joints_reading_deg": [
+        4.571,
+        -107.121,
+        50.813,
+        94.901,
+        -103.604,
+        4.828
+      ],
+      "planned_square_corners_px": [
+        [
+          374.6,
+          256.7
+        ],
+        [
+          349.5,
+          197.4
+        ],
+        [
+          277.9,
+          225.5
+        ],
+        [
+          296.2,
+          287.0
+        ]
+      ],
+      "time": "2026-11-03T22:56:49"
+    }
+  ]
+}

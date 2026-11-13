@@ -1,0 +1,696 @@
+{
+  "camera": "stationary",
+  "device": "/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_7671151F-video-index0",
+  "v4l2_controls": "exposure_dynamic_framerate=0,focus_automatic_continuous=0,focus_absolute=40",
+  "square_mm": 42.0,
+  "convention": "corners_px[0] is the square's corner nearest a1, then +file (toward h), +file+rank (far corner), +rank (toward rank 8): counter-clockwise in the picture. Pixels are in the raw (not undistorted) frame, origin top-left.",
+  "created": "2026-11-07T00:45:40",
+  "marked_by": "d4 = the dark square holding the eraser (detector grid cell, or chessboard corners picked by eye where there was no grid), sub-pixel corners; which corner is a1-near chosen as the orientation whose predicted 8x8 playing area matches the board (dark/light contrast inside, none on the frame), agreeing with the board centre in every photo with a full 7x7 grid. Checked by eye.",
+  "shots": [
+    {
+      "image": "shot_001.png",
+      "marked_image": "shot_001_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          318.2,
+          180.1
+        ],
+        [
+          316.4,
+          208.8
+        ],
+        [
+          363.3,
+          207.5
+        ],
+        [
+          362.1,
+          178.3
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:18:34"
+    },
+    {
+      "image": "shot_002.png",
+      "marked_image": "shot_002_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          12.93,
+          103.61
+        ],
+        [
+          30.75,
+          131.51
+        ],
+        [
+          72.17,
+          99.18
+        ],
+        [
+          52.68,
+          72.87
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:20:07"
+    },
+    {
+      "image": "shot_003.png",
+      "marked_image": "shot_003_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          565.52,
+          9.59
+        ],
+        [
+          549.48,
+          40.02
+        ],
+        [
+          599.9,
+          61.2
+        ],
+        [
+          614.09,
+          29.51
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:20:47"
+    },
+    {
+      "image": "shot_004.png",
+      "marked_image": "shot_004_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          78.9,
+          377.4
+        ],
+        [
+          77.7,
+          408.9
+        ],
+        [
+          128.8,
+          401.6
+        ],
+        [
+          127.2,
+          371.1
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        6,
+        5
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:24:33"
+    },
+    {
+      "image": "shot_005.png",
+      "marked_image": "shot_005_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          576.56,
+          379.07
+        ],
+        [
+          567.42,
+          408.77
+        ],
+        [
+          620.79,
+          426.7
+        ],
+        [
+          627.39,
+          395.21
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:24:50"
+    },
+    {
+      "image": "shot_006.png",
+      "marked_image": "shot_006_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          229.4,
+          286.3
+        ],
+        [
+          243.6,
+          244.0
+        ],
+        [
+          198.0,
+          213.7
+        ],
+        [
+          180.3,
+          255.3
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        6,
+        6
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:31:25"
+    },
+    {
+      "image": "shot_007.png",
+      "marked_image": "shot_007_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          376.4,
+          245.9
+        ],
+        [
+          359.1,
+          270.9
+        ],
+        [
+          400.6,
+          296.6
+        ],
+        [
+          415.8,
+          270.0
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        6
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:31:55"
+    },
+    {
+      "image": "shot_008.png",
+      "marked_image": "shot_008_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          343.03,
+          247.91
+        ],
+        [
+          392.72,
+          303.86
+        ],
+        [
+          433.67,
+          261.73
+        ],
+        [
+          386.26,
+          209.16
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        6,
+        5
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:32:47"
+    },
+    {
+      "image": "shot_009.png",
+      "marked_image": "shot_009_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          303.8,
+          253.4
+        ],
+        [
+          269.8,
+          218.7
+        ],
+        [
+          248.1,
+          239.6
+        ],
+        [
+          284.5,
+          276.4
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:33:11"
+    },
+    {
+      "image": "shot_010.png",
+      "marked_image": "shot_010_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          281.0,
+          327.6
+        ],
+        [
+          332.1,
+          311.0
+        ],
+        [
+          305.1,
+          256.7
+        ],
+        [
+          253.9,
+          269.7
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        6
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:33:47"
+    },
+    {
+      "image": "shot_011.png",
+      "marked_image": "shot_011_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          233.7,
+          125.3
+        ],
+        [
+          198.8,
+          161.6
+        ],
+        [
+          231.8,
+          172.8
+        ],
+        [
+          267.9,
+          133.8
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:34:02"
+    },
+    {
+      "image": "shot_012.png",
+      "marked_image": "shot_012_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          315.96,
+          173.58
+        ],
+        [
+          282.46,
+          217.79
+        ],
+        [
+          324.76,
+          251.95
+        ],
+        [
+          359.22,
+          207.7
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        5,
+        4
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:36:49"
+    },
+    {
+      "image": "shot_013.png",
+      "marked_image": "shot_013_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          355.2,
+          181.2
+        ],
+        [
+          336.6,
+          194.7
+        ],
+        [
+          352.8,
+          205.5
+        ],
+        [
+          371.4,
+          191.5
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:37:32"
+    },
+    {
+      "image": "shot_014.png",
+      "marked_image": "shot_014_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          551.85,
+          210.01
+        ],
+        [
+          558.61,
+          252.21
+        ],
+        [
+          622.86,
+          236.55
+        ],
+        [
+          611.69,
+          194.15
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": null,
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:38:09"
+    },
+    {
+      "image": "shot_015.png",
+      "marked_image": "shot_015_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          46.1,
+          187.8
+        ],
+        [
+          50.7,
+          248.3
+        ],
+        [
+          110.4,
+          223.5
+        ],
+        [
+          103.1,
+          162.9
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        6,
+        5
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:38:26"
+    },
+    {
+      "image": "shot_016.png",
+      "marked_image": "shot_016_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          185.3,
+          172.1
+        ],
+        [
+          184.3,
+          226.0
+        ],
+        [
+          238.0,
+          225.6
+        ],
+        [
+          238.3,
+          171.5
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:38:41"
+    },
+    {
+      "image": "shot_017.png",
+      "marked_image": "shot_017_marked.png",
+      "square": "d4",
+      "corners_px": [
+        [
+          240.1,
+          187.7
+        ],
+        [
+          240.3,
+          232.1
+        ],
+        [
+          283.2,
+          232.6
+        ],
+        [
+          282.8,
+          187.7
+        ]
+      ],
+      "corner_sources": [
+        "subpix",
+        "subpix",
+        "subpix",
+        "subpix"
+      ],
+      "detected_inner_grid": [
+        7,
+        7
+      ],
+      "image_size": [
+        640,
+        480
+      ],
+      "shot_hint": null,
+      "plan_view": null,
+      "joints_reading_deg": null,
+      "time": "2026-11-07T00:38:57"
+    }
+  ]
+}

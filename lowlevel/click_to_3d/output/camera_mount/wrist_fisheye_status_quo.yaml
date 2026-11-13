@@ -1,0 +1,31 @@
+%YAML 1.2
+---
+model: fisheye
+K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 540., 0., 320., 0., 540., 240., 0., 0., 1. ]
+D: !!opencv-matrix
+   rows: 4
+   cols: 1
+   dt: d
+   data: [ -0.10000000000000009, 0., 0., 0. ]
+K_undistorted: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 492.06858977954386, 0., 320., 0., 492.06858977954386, 240.,
+       0., 0., 1. ]
+K_undistorted_balance1: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 452.08483724998098, 0., 320., 0., 452.08483724998098, 240.,
+       0., 0., 1. ]
+balance: 0.
+reprojection_px: 0.39497416491285736
+target_reprojection_px: 1.
+square_mm: 42.
+image_width: 640
+image_height: 480

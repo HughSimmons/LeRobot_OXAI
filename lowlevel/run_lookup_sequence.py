@@ -5,6 +5,7 @@ import numpy as np
 import pybullet as p
 
 from multisim_chess_fast import (
+    JOINT_OFFSETS_RAD,
     PLACE_OFFSET,
     RECORDINGS_DIR,
     append_video_frame,
@@ -146,7 +147,7 @@ def return_robot_home(world, video_context=None):
 
     for step in range(1, HOME_RETURN_STEPS + 1):
         alpha = step / HOME_RETURN_STEPS
-        target_joints = (1.0 - alpha) * current_joints + alpha * HOME_OPEN_JOINTS
+        target_joints = (1.0 - alpha) * current_joints + alpha * (HOME_OPEN_JOINTS + JOINT_OFFSETS_RAD)
         for traj_idx, sim_idx in enumerate(SIM_JOINT_MAP):
             force = 500 if traj_idx == 5 else 50
             p.setJointMotorControl2(

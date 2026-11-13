@@ -1,0 +1,2330 @@
+{
+  "camera": "wrist",
+  "square": "d4",
+  "square_mm": 41.25,
+  "focal_px_assumed": 550.0,
+  "gripper_reading_deg": 5.0,
+  "joint_names": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper"
+  ],
+  "joint_offsets_deg": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "home_reading_deg": [
+    96.92307692307692,
+    -107.86813186813187,
+    97.36263736263736,
+    65.18681318681318,
+    -29.846153846153847
+  ],
+  "hub_reading_deg": [
+    -8.19518577767831,
+    9.163911644562647,
+    -35.481259446315384,
+    95.0,
+    -108.11746400705248
+  ],
+  "safe_limits_reading_deg": {
+    "shoulder_pan": [
+      -18.5,
+      97.5
+    ],
+    "shoulder_lift": [
+      -113.0,
+      56.0
+    ],
+    "elbow_flex": [
+      -73.5,
+      97.5
+    ],
+    "wrist_flex": [
+      45.0,
+      95.0
+    ],
+    "wrist_roll": [
+      -150.0,
+      -28.0
+    ]
+  },
+  "clearance_mm": {
+    "gripper_frame_link": {
+      "board": 25.0,
+      "table": 10.0
+    },
+    "gripper_link": {
+      "board": 40.0,
+      "table": 30.0
+    },
+    "wrist_link": {
+      "board": 45.0,
+      "table": 30.0
+    },
+    "wrist_camera_mount": {
+      "board": 35.0,
+      "table": 25.0
+    },
+    "wrist_camera_link": {
+      "board": 40.0,
+      "table": 25.0
+    }
+  },
+  "home_hub_route": {
+    "ok": true,
+    "problems": [],
+    "min_clearance_slack_mm": {
+      "gripper_frame_link": 19.5,
+      "gripper_link": 74.0,
+      "wrist_link": 117.5,
+      "wrist_camera_mount": 56.9,
+      "wrist_camera_link": 101.7
+    },
+    "largest_joint_travel_deg": 238.0
+  },
+  "note": "joints_reading_deg are motor readings (what the arm reports), not URDF angles.",
+  "views": [
+    {
+      "view": 1,
+      "hint": "face-on, square centred",
+      "asked": {
+        "hint": "face-on, square centred",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 5,
+        "azimuth_deg": null,
+        "distance_mm": 250,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        1.1,
+        -37.7,
+        6.95,
+        94.47,
+        -84.02,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 10.9,
+        "azimuth_deg": 168.2,
+        "distance_mm": 264.4,
+        "roll_deg": -91.0
+      },
+      "square_centre_px": [
+        321.7,
+        241.2
+      ],
+      "square_corners_px": [
+        [
+          365.8,
+          283.4
+        ],
+        [
+          363.0,
+          199.3
+        ],
+        [
+          278.5,
+          200.0
+        ],
+        [
+          278.8,
+          284.6
+        ]
+      ],
+      "inner_corners_visible": 35,
+      "grid": {
+        "size": 4,
+        "first_row": 0,
+        "first_col": 2,
+        "corners_px": [
+          [
+            536.9,
+            280.9
+          ],
+          [
+            529.4,
+            197.8
+          ],
+          [
+            522.2,
+            119.2
+          ],
+          [
+            515.4,
+            44.8
+          ],
+          [
+            451.8,
+            282.1
+          ],
+          [
+            446.6,
+            198.5
+          ],
+          [
+            441.7,
+            119.5
+          ],
+          [
+            437.1,
+            44.7
+          ],
+          [
+            365.8,
+            283.4
+          ],
+          [
+            363.0,
+            199.3
+          ],
+          [
+            360.4,
+            119.8
+          ],
+          [
+            357.9,
+            44.6
+          ],
+          [
+            278.8,
+            284.6
+          ],
+          [
+            278.5,
+            200.0
+          ],
+          [
+            278.2,
+            120.1
+          ],
+          [
+            278.0,
+            44.5
+          ]
+        ],
+        "min_slack_px": {
+          "550": 24.5,
+          "500": 34.5,
+          "620": -0.4
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 120.3,
+        "gripper_link": 185.5,
+        "wrist_link": 230.1,
+        "wrist_camera_mount": 178.3,
+        "wrist_camera_link": 219.8
+      },
+      "camera_base_mm": [
+        223.5,
+        -10.5,
+        288.8
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 105.1,
+          "gripper_link": 174.9,
+          "wrist_link": 222.4,
+          "wrist_camera_mount": 164.6,
+          "wrist_camera_link": 201.3
+        },
+        "largest_joint_travel_deg": 71.0
+      },
+      "safe": true
+    },
+    {
+      "view": 2,
+      "hint": "face-on, square TOP-LEFT of frame",
+      "asked": {
+        "hint": "face-on, square TOP-LEFT of frame",
+        "pixel": [
+          110,
+          105
+        ],
+        "tilt_deg": 10,
+        "azimuth_deg": null,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        21.98,
+        -63.72,
+        26.44,
+        94.63,
+        -67.01,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 20.2,
+        "azimuth_deg": -171.7,
+        "distance_mm": 269.9,
+        "roll_deg": -99.2
+      },
+      "square_centre_px": [
+        128.0,
+        163.4
+      ],
+      "square_corners_px": [
+        [
+          178.5,
+          202.5
+        ],
+        [
+          170.1,
+          120.7
+        ],
+        [
+          77.2,
+          124.1
+        ],
+        [
+          82.4,
+          209.6
+        ]
+      ],
+      "inner_corners_visible": 17,
+      "grid": {
+        "size": 4,
+        "first_row": 0,
+        "first_col": 1,
+        "corners_px": [
+          [
+            362.4,
+            270.3
+          ],
+          [
+            348.1,
+            190.0
+          ],
+          [
+            334.8,
+            114.8
+          ],
+          [
+            322.3,
+            44.5
+          ],
+          [
+            278.7,
+            280.0
+          ],
+          [
+            266.8,
+            196.0
+          ],
+          [
+            255.7,
+            117.7
+          ],
+          [
+            245.4,
+            44.5
+          ],
+          [
+            187.6,
+            290.5
+          ],
+          [
+            178.5,
+            202.5
+          ],
+          [
+            170.1,
+            120.7
+          ],
+          [
+            162.3,
+            44.6
+          ],
+          [
+            88.1,
+            301.9
+          ],
+          [
+            82.4,
+            209.6
+          ],
+          [
+            77.2,
+            124.1
+          ],
+          [
+            72.3,
+            44.6
+          ]
+        ],
+        "min_slack_px": {
+          "550": 24.5,
+          "500": 35.3,
+          "620": -0.4
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 110.1,
+        "gripper_link": 170.0,
+        "wrist_link": 254.4,
+        "wrist_camera_mount": 163.2,
+        "wrist_camera_link": 208.4
+      },
+      "camera_base_mm": [
+        167.5,
+        -35.8,
+        277.4
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked",
+        "tilt 20 not 10"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 104.0,
+          "gripper_link": 170.0,
+          "wrist_link": 222.4,
+          "wrist_camera_mount": 161.6,
+          "wrist_camera_link": 201.3
+        },
+        "largest_joint_travel_deg": 114.0
+      },
+      "safe": true
+    },
+    {
+      "view": 3,
+      "hint": "face-on, square TOP-RIGHT of frame",
+      "asked": {
+        "hint": "face-on, square TOP-RIGHT of frame",
+        "pixel": [
+          530,
+          105
+        ],
+        "tilt_deg": 10,
+        "azimuth_deg": null,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        -16.63,
+        -81.73,
+        43.96,
+        91.97,
+        -98.24,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 21.2,
+        "azimuth_deg": 164.4,
+        "distance_mm": 256.1,
+        "roll_deg": -83.7
+      },
+      "square_centre_px": [
+        493.2,
+        160.7
+      ],
+      "square_corners_px": [
+        [
+          543.5,
+          206.1
+        ],
+        [
+          541.5,
+          120.9
+        ],
+        [
+          446.9,
+          118.9
+        ],
+        [
+          443.6,
+          201.5
+        ]
+      ],
+      "inner_corners_visible": 24,
+      "grid": {
+        "size": 4,
+        "first_row": 2,
+        "first_col": 1,
+        "corners_px": [
+          [
+            545.8,
+            301.6
+          ],
+          [
+            543.5,
+            206.1
+          ],
+          [
+            541.5,
+            120.9
+          ],
+          [
+            539.7,
+            44.5
+          ],
+          [
+            439.9,
+            293.9
+          ],
+          [
+            443.6,
+            201.5
+          ],
+          [
+            446.9,
+            118.9
+          ],
+          [
+            449.9,
+            44.5
+          ],
+          [
+            340.2,
+            286.7
+          ],
+          [
+            349.2,
+            197.3
+          ],
+          [
+            357.3,
+            117.0
+          ],
+          [
+            364.5,
+            44.6
+          ],
+          [
+            246.2,
+            279.9
+          ],
+          [
+            259.9,
+            193.2
+          ],
+          [
+            272.2,
+            115.2
+          ],
+          [
+            283.3,
+            44.6
+          ]
+        ],
+        "min_slack_px": {
+          "550": 24.5,
+          "500": 32.6,
+          "620": -0.4
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 88.8,
+        "gripper_link": 142.0,
+        "wrist_link": 224.1,
+        "wrist_camera_mount": 143.6,
+        "wrist_camera_link": 184.3
+      },
+      "camera_base_mm": [
+        153.0,
+        12.7,
+        253.3
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked",
+        "tilt 21 not 10"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 88.8,
+          "gripper_link": 142.0,
+          "wrist_link": 210.5,
+          "wrist_camera_mount": 143.6,
+          "wrist_camera_link": 184.3
+        },
+        "largest_joint_travel_deg": 100.8
+      },
+      "safe": true
+    },
+    {
+      "view": 4,
+      "hint": "face-on, square BOTTOM-LEFT of frame",
+      "asked": {
+        "hint": "face-on, square BOTTOM-LEFT of frame",
+        "pixel": [
+          105,
+          335
+        ],
+        "tilt_deg": 10,
+        "azimuth_deg": null,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        25.39,
+        -2.92,
+        -8.81,
+        95.0,
+        -101.18,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 10.0,
+        "azimuth_deg": -95.2,
+        "distance_mm": 230.0,
+        "roll_deg": -131.3
+      },
+      "square_centre_px": [
+        105.0,
+        335.0
+      ],
+      "square_corners_px": [
+        [
+          179.4,
+          341.4
+        ],
+        [
+          105.0,
+          260.8
+        ],
+        [
+          31.7,
+          328.7
+        ],
+        [
+          105.0,
+          405.9
+        ]
+      ],
+      "inner_corners_visible": 15,
+      "grid": null,
+      "grid_ok": false,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 66.0,
+        "gripper_link": 144.8,
+        "wrist_link": 198.5,
+        "wrist_camera_mount": 127.0,
+        "wrist_camera_link": 156.9
+      },
+      "camera_base_mm": [
+        261.1,
+        -139.0,
+        225.9
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "no clear 4x4 grid round the square"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 66.0,
+          "gripper_link": 144.8,
+          "wrist_link": 198.5,
+          "wrist_camera_mount": 127.0,
+          "wrist_camera_link": 156.9
+        },
+        "largest_joint_travel_deg": 60.3
+      },
+      "safe": true
+    },
+    {
+      "view": 5,
+      "hint": "face-on, square BOTTOM-RIGHT of frame",
+      "asked": {
+        "hint": "face-on, square BOTTOM-RIGHT of frame",
+        "pixel": [
+          535,
+          335
+        ],
+        "tilt_deg": 10,
+        "azimuth_deg": null,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        -13.43,
+        -8.14,
+        -5.67,
+        82.63,
+        -105.08,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 10.0,
+        "azimuth_deg": 62.9,
+        "distance_mm": 230.0,
+        "roll_deg": -94.6
+      },
+      "square_centre_px": [
+        535.0,
+        335.0
+      ],
+      "square_corners_px": [
+        [
+          598.5,
+          386.7
+        ],
+        [
+          585.1,
+          277.0
+        ],
+        [
+          474.4,
+          285.6
+        ],
+        [
+          485.5,
+          392.3
+        ]
+      ],
+      "inner_corners_visible": 19,
+      "grid": null,
+      "grid_ok": false,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 88.7,
+        "gripper_link": 157.0,
+        "wrist_link": 204.7,
+        "wrist_camera_mount": 148.9,
+        "wrist_camera_link": 184.0
+      },
+      "camera_base_mm": [
+        295.9,
+        25.9,
+        253.0
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "no clear 4x4 grid round the square"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 88.7,
+          "gripper_link": 157.0,
+          "wrist_link": 204.7,
+          "wrist_camera_mount": 148.9,
+          "wrist_camera_link": 184.0
+        },
+        "largest_joint_travel_deg": 35.1
+      },
+      "safe": true
+    },
+    {
+      "view": 6,
+      "hint": "tilted 40, camera on the robot's side",
+      "asked": {
+        "hint": "tilted 40, camera on the robot's side",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 40,
+        "azimuth_deg": 180,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        6.26,
+        -106.99,
+        53.58,
+        94.98,
+        -112.75,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 36.4,
+        "azimuth_deg": -172.7,
+        "distance_mm": 271.4,
+        "roll_deg": -113.0
+      },
+      "square_centre_px": [
+        316.2,
+        218.0
+      ],
+      "square_corners_px": [
+        [
+          369.9,
+          226.4
+        ],
+        [
+          336.2,
+          169.2
+        ],
+        [
+          267.8,
+          210.5
+        ],
+        [
+          294.7,
+          270.7
+        ]
+      ],
+      "inner_corners_visible": 39,
+      "grid": {
+        "size": 5,
+        "first_row": 2,
+        "first_col": 2,
+        "corners_px": [
+          [
+            369.9,
+            226.4
+          ],
+          [
+            336.2,
+            169.2
+          ],
+          [
+            307.9,
+            121.1
+          ],
+          [
+            283.7,
+            80.0
+          ],
+          [
+            262.8,
+            44.6
+          ],
+          [
+            294.7,
+            270.7
+          ],
+          [
+            267.8,
+            210.5
+          ],
+          [
+            245.2,
+            159.8
+          ],
+          [
+            225.8,
+            116.3
+          ],
+          [
+            209.1,
+            78.8
+          ],
+          [
+            221.6,
+            313.7
+          ],
+          [
+            201.3,
+            250.7
+          ],
+          [
+            184.0,
+            197.5
+          ],
+          [
+            169.3,
+            151.9
+          ],
+          [
+            156.5,
+            112.4
+          ],
+          [
+            150.7,
+            355.5
+          ],
+          [
+            136.5,
+            289.9
+          ],
+          [
+            124.4,
+            234.3
+          ],
+          [
+            114.0,
+            186.6
+          ],
+          [
+            105.0,
+            145.2
+          ],
+          [
+            81.8,
+            396.0
+          ],
+          [
+            73.3,
+            328.0
+          ],
+          [
+            66.1,
+            270.2
+          ],
+          [
+            60.0,
+            220.5
+          ],
+          [
+            54.6,
+            177.3
+          ]
+        ],
+        "min_slack_px": {
+          "550": 1.6,
+          "500": 8.0,
+          "620": -0.3
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 90.6,
+        "gripper_link": 164.1,
+        "wrist_link": 196.7,
+        "wrist_camera_mount": 137.1,
+        "wrist_camera_link": 172.5
+      },
+      "camera_base_mm": [
+        104.5,
+        -42.0,
+        241.5
+      ],
+      "view_ok": true,
+      "view_problems": [],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 90.6,
+          "gripper_link": 161.3,
+          "wrist_link": 196.7,
+          "wrist_camera_mount": 137.1,
+          "wrist_camera_link": 172.5
+        },
+        "largest_joint_travel_deg": 130.6
+      },
+      "safe": true
+    },
+    {
+      "view": 7,
+      "hint": "tilted 30, camera to the robot's right",
+      "asked": {
+        "hint": "tilted 30, camera to the robot's right",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 30,
+        "azimuth_deg": -90,
+        "distance_mm": 210,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        1.55,
+        -0.6,
+        -6.56,
+        95.0,
+        -145.0,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 21.0,
+        "azimuth_deg": -93.4,
+        "distance_mm": 181.4,
+        "roll_deg": -151.3
+      },
+      "square_centre_px": [
+        322.1,
+        202.1
+      ],
+      "square_corners_px": [
+        [
+          409.5,
+          180.8
+        ],
+        [
+          296.6,
+          114.9
+        ],
+        [
+          241.3,
+          221.8
+        ],
+        [
+          345.6,
+          282.3
+        ]
+      ],
+      "inner_corners_visible": 18,
+      "grid": null,
+      "grid_ok": false,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 52.5,
+        "gripper_link": 132.3,
+        "wrist_link": 187.2,
+        "wrist_camera_mount": 111.5,
+        "wrist_camera_link": 133.0
+      },
+      "camera_base_mm": [
+        268.7,
+        -75.1,
+        202.0
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "tilt 21 not 30",
+        "no clear 4x4 grid round the square"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 52.5,
+          "gripper_link": 132.3,
+          "wrist_link": 187.2,
+          "wrist_camera_mount": 111.5,
+          "wrist_camera_link": 133.0
+        },
+        "largest_joint_travel_deg": 65.8
+      },
+      "safe": true
+    },
+    {
+      "view": 8,
+      "hint": "tilted 30, camera to the robot's left",
+      "asked": {
+        "hint": "tilted 30, camera to the robot's left",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 30,
+        "azimuth_deg": 90,
+        "distance_mm": 210,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        1.71,
+        -8.76,
+        -1.67,
+        95.0,
+        -35.0,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 19.5,
+        "azimuth_deg": 91.2,
+        "distance_mm": 196.2,
+        "roll_deg": -42.9
+      },
+      "square_centre_px": [
+        319.4,
+        201.3
+      ],
+      "square_corners_px": [
+        [
+          316.6,
+          278.8
+        ],
+        [
+          397.3,
+          200.8
+        ],
+        [
+          322.4,
+          117.4
+        ],
+        [
+          236.6,
+          201.7
+        ]
+      ],
+      "inner_corners_visible": 20,
+      "grid": null,
+      "grid_ok": false,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 61.7,
+        "gripper_link": 143.2,
+        "wrist_link": 197.2,
+        "wrist_camera_mount": 118.4,
+        "wrist_camera_link": 148.2
+      },
+      "camera_base_mm": [
+        270.8,
+        34.7,
+        217.2
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "tilt 19 not 30",
+        "no clear 4x4 grid round the square"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 61.7,
+          "gripper_link": 143.2,
+          "wrist_link": 197.2,
+          "wrist_camera_mount": 118.4,
+          "wrist_camera_link": 148.2
+        },
+        "largest_joint_travel_deg": 106.9
+      },
+      "safe": true
+    },
+    {
+      "view": 9,
+      "hint": "tilted 45, diagonal from robot's front-right",
+      "asked": {
+        "hint": "tilted 45, diagonal from robot's front-right",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 45,
+        "azimuth_deg": -135,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        4.53,
+        -83.9,
+        48.38,
+        81.53,
+        -99.01,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 29.3,
+        "azimuth_deg": -175.4,
+        "distance_mm": 259.8,
+        "roll_deg": -104.1
+      },
+      "square_centre_px": [
+        318.2,
+        255.1
+      ],
+      "square_corners_px": [
+        [
+          372.7,
+          280.7
+        ],
+        [
+          348.4,
+          207.0
+        ],
+        [
+          268.0,
+          231.5
+        ],
+        [
+          285.7,
+          306.9
+        ]
+      ],
+      "inner_corners_visible": 38,
+      "grid": {
+        "size": 4,
+        "first_row": 0,
+        "first_col": 2,
+        "corners_px": [
+          [
+            549.0,
+            227.7
+          ],
+          [
+            511.2,
+            157.4
+          ],
+          [
+            478.8,
+            97.0
+          ],
+          [
+            450.6,
+            44.5
+          ],
+          [
+            460.5,
+            254.4
+          ],
+          [
+            429.5,
+            182.3
+          ],
+          [
+            402.9,
+            120.4
+          ],
+          [
+            379.7,
+            66.5
+          ],
+          [
+            372.7,
+            280.7
+          ],
+          [
+            348.4,
+            207.0
+          ],
+          [
+            327.6,
+            143.6
+          ],
+          [
+            309.4,
+            88.4
+          ],
+          [
+            285.7,
+            306.9
+          ],
+          [
+            268.0,
+            231.5
+          ],
+          [
+            252.8,
+            166.6
+          ],
+          [
+            239.6,
+            110.2
+          ]
+        ],
+        "min_slack_px": {
+          "550": 8.1,
+          "500": 14.2,
+          "620": -0.4
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 98.2,
+        "gripper_link": 140.7,
+        "wrist_link": 216.1,
+        "wrist_camera_mount": 148.2,
+        "wrist_camera_link": 189.6
+      },
+      "camera_base_mm": [
+        150.8,
+        -30.4,
+        258.6
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked",
+        "tilt 29 not 45",
+        "direction -175 not -135"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 98.2,
+          "gripper_link": 140.7,
+          "wrist_link": 209.4,
+          "wrist_camera_mount": 148.2,
+          "wrist_camera_link": 189.6
+        },
+        "largest_joint_travel_deg": 105.8
+      },
+      "safe": true
+    },
+    {
+      "view": 10,
+      "hint": "tilted 45, diagonal from robot's front-left",
+      "asked": {
+        "hint": "tilted 45, diagonal from robot's front-left",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 45,
+        "azimuth_deg": 135,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        0.12,
+        -105.93,
+        56.32,
+        88.34,
+        -77.96,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 36.2,
+        "azimuth_deg": 170.6,
+        "distance_mm": 268.6,
+        "roll_deg": -88.1
+      },
+      "square_centre_px": [
+        318.0,
+        253.2
+      ],
+      "square_corners_px": [
+        [
+          359.9,
+          294.1
+        ],
+        [
+          359.2,
+          224.3
+        ],
+        [
+          279.2,
+          215.2
+        ],
+        [
+          272.3,
+          285.2
+        ]
+      ],
+      "inner_corners_visible": 39,
+      "grid": {
+        "size": 5,
+        "first_row": 1,
+        "first_col": 2,
+        "corners_px": [
+          [
+            444.9,
+            302.7
+          ],
+          [
+            437.1,
+            233.1
+          ],
+          [
+            430.4,
+            174.3
+          ],
+          [
+            424.8,
+            124.0
+          ],
+          [
+            419.9,
+            80.4
+          ],
+          [
+            359.9,
+            294.1
+          ],
+          [
+            359.2,
+            224.3
+          ],
+          [
+            358.6,
+            165.4
+          ],
+          [
+            358.1,
+            115.2
+          ],
+          [
+            357.7,
+            71.7
+          ],
+          [
+            272.3,
+            285.2
+          ],
+          [
+            279.2,
+            215.2
+          ],
+          [
+            284.9,
+            156.3
+          ],
+          [
+            289.8,
+            106.1
+          ],
+          [
+            294.1,
+            62.8
+          ],
+          [
+            182.0,
+            276.1
+          ],
+          [
+            196.9,
+            205.9
+          ],
+          [
+            209.3,
+            147.0
+          ],
+          [
+            219.9,
+            96.9
+          ],
+          [
+            229.1,
+            53.7
+          ],
+          [
+            88.9,
+            266.6
+          ],
+          [
+            112.2,
+            196.3
+          ],
+          [
+            131.7,
+            137.4
+          ],
+          [
+            148.3,
+            87.4
+          ],
+          [
+            162.6,
+            44.4
+          ]
+        ],
+        "min_slack_px": {
+          "550": 20.9,
+          "500": 25.8,
+          "620": -0.5
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 90.7,
+        "gripper_link": 164.1,
+        "wrist_link": 194.1,
+        "wrist_camera_mount": 133.2,
+        "wrist_camera_link": 180.5
+      },
+      "camera_base_mm": [
+        120.6,
+        4.5,
+        249.5
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked",
+        "tilt 36 not 45",
+        "direction 171 not 135"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 90.7,
+          "gripper_link": 146.0,
+          "wrist_link": 194.1,
+          "wrist_camera_mount": 133.2,
+          "wrist_camera_link": 180.5
+        },
+        "largest_joint_travel_deg": 145.2
+      },
+      "safe": true
+    },
+    {
+      "view": 11,
+      "hint": "face-on, camera rolled 45 about its axis",
+      "asked": {
+        "hint": "face-on, camera rolled 45 about its axis",
+        "pixel": [
+          320,
+          200
+        ],
+        "tilt_deg": 10,
+        "azimuth_deg": null,
+        "distance_mm": 240,
+        "roll_deg": 45.0
+      },
+      "joints_reading_deg": [
+        4.46,
+        -22.57,
+        3.72,
+        95.0,
+        -125.05,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 15.3,
+        "azimuth_deg": -123.0,
+        "distance_mm": 225.7,
+        "roll_deg": -132.5
+      },
+      "square_centre_px": [
+        315.4,
+        203.6
+      ],
+      "square_corners_px": [
+        [
+          386.5,
+          207.5
+        ],
+        [
+          318.4,
+          131.2
+        ],
+        [
+          248.5,
+          199.8
+        ],
+        [
+          312.5,
+          273.7
+        ]
+      ],
+      "inner_corners_visible": 26,
+      "grid": null,
+      "grid_ok": false,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 90.3,
+        "gripper_link": 163.7,
+        "wrist_link": 214.8,
+        "wrist_camera_mount": 150.8,
+        "wrist_camera_link": 178.4
+      },
+      "camera_base_mm": [
+        240.8,
+        -68.6,
+        247.4
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "no clear 4x4 grid round the square"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 90.3,
+          "gripper_link": 163.7,
+          "wrist_link": 214.8,
+          "wrist_camera_mount": 150.8,
+          "wrist_camera_link": 178.4
+        },
+        "largest_joint_travel_deg": 56.1
+      },
+      "safe": true
+    },
+    {
+      "view": 12,
+      "hint": "far: whole board in the middle",
+      "asked": {
+        "hint": "far: whole board in the middle",
+        "pixel": [
+          320,
+          220
+        ],
+        "tilt_deg": 15,
+        "azimuth_deg": null,
+        "distance_mm": 300,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        0.99,
+        -55.17,
+        13.41,
+        95.0,
+        -84.57,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 21.3,
+        "azimuth_deg": 172.4,
+        "distance_mm": 293.1,
+        "roll_deg": -91.7
+      },
+      "square_centre_px": [
+        321.2,
+        262.7
+      ],
+      "square_corners_px": [
+        [
+          362.0,
+          299.6
+        ],
+        [
+          357.7,
+          226.4
+        ],
+        [
+          282.2,
+          227.5
+        ],
+        [
+          282.6,
+          301.1
+        ]
+      ],
+      "inner_corners_visible": 41,
+      "grid": {
+        "size": 5,
+        "first_row": 0,
+        "first_col": 2,
+        "corners_px": [
+          [
+            518.0,
+            296.5
+          ],
+          [
+            506.1,
+            224.3
+          ],
+          [
+            495.4,
+            158.8
+          ],
+          [
+            485.6,
+            99.2
+          ],
+          [
+            476.7,
+            44.6
+          ],
+          [
+            440.4,
+            298.0
+          ],
+          [
+            432.3,
+            225.4
+          ],
+          [
+            425.0,
+            159.5
+          ],
+          [
+            418.3,
+            99.5
+          ],
+          [
+            412.2,
+            44.6
+          ],
+          [
+            362.0,
+            299.6
+          ],
+          [
+            357.7,
+            226.4
+          ],
+          [
+            353.9,
+            160.1
+          ],
+          [
+            350.3,
+            99.8
+          ],
+          [
+            347.1,
+            44.7
+          ],
+          [
+            282.6,
+            301.1
+          ],
+          [
+            282.2,
+            227.5
+          ],
+          [
+            281.9,
+            160.8
+          ],
+          [
+            281.6,
+            100.1
+          ],
+          [
+            281.4,
+            44.7
+          ],
+          [
+            202.2,
+            302.7
+          ],
+          [
+            205.9,
+            228.5
+          ],
+          [
+            209.2,
+            161.4
+          ],
+          [
+            212.2,
+            100.4
+          ],
+          [
+            215.0,
+            44.7
+          ]
+        ],
+        "min_slack_px": {
+          "550": 13.9,
+          "500": 19.4,
+          "620": -0.2
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 139.4,
+        "gripper_link": 192.8,
+        "wrist_link": 274.1,
+        "wrist_camera_mount": 192.7,
+        "wrist_camera_link": 237.2
+      },
+      "camera_base_mm": [
+        177.6,
+        -8.0,
+        306.2
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 105.2,
+          "gripper_link": 174.9,
+          "wrist_link": 222.4,
+          "wrist_camera_mount": 164.7,
+          "wrist_camera_link": 201.3
+        },
+        "largest_joint_travel_deg": 87.9
+      },
+      "safe": true
+    },
+    {
+      "view": 13,
+      "hint": "tilted 30, square at the LEFT edge",
+      "asked": {
+        "hint": "tilted 30, square at the LEFT edge",
+        "pixel": [
+          105,
+          230
+        ],
+        "tilt_deg": 30,
+        "azimuth_deg": 180,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        15.31,
+        -80.85,
+        41.19,
+        84.49,
+        -78.5,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 30.1,
+        "azimuth_deg": -177.2,
+        "distance_mm": 275.6,
+        "roll_deg": -102.7
+      },
+      "square_centre_px": [
+        189.6,
+        264.7
+      ],
+      "square_corners_px": [
+        [
+          238.3,
+          296.7
+        ],
+        [
+          226.1,
+          223.4
+        ],
+        [
+          142.6,
+          233.9
+        ],
+        [
+          149.1,
+          310.5
+        ]
+      ],
+      "inner_corners_visible": 29,
+      "grid": {
+        "size": 5,
+        "first_row": 0,
+        "first_col": 2,
+        "corners_px": [
+          [
+            400.0,
+            271.6
+          ],
+          [
+            378.4,
+            204.2
+          ],
+          [
+            359.3,
+            144.6
+          ],
+          [
+            342.4,
+            91.8
+          ],
+          [
+            327.3,
+            44.4
+          ],
+          [
+            321.7,
+            283.7
+          ],
+          [
+            304.5,
+            213.5
+          ],
+          [
+            289.4,
+            151.7
+          ],
+          [
+            276.1,
+            97.0
+          ],
+          [
+            264.1,
+            48.2
+          ],
+          [
+            238.3,
+            296.7
+          ],
+          [
+            226.1,
+            223.4
+          ],
+          [
+            215.5,
+            159.2
+          ],
+          [
+            206.1,
+            102.5
+          ],
+          [
+            197.7,
+            52.1
+          ],
+          [
+            149.1,
+            310.5
+          ],
+          [
+            142.6,
+            233.9
+          ],
+          [
+            137.0,
+            167.1
+          ],
+          [
+            132.1,
+            108.4
+          ],
+          [
+            127.7,
+            56.3
+          ],
+          [
+            53.5,
+            325.3
+          ],
+          [
+            53.6,
+            245.1
+          ],
+          [
+            53.7,
+            175.5
+          ],
+          [
+            53.8,
+            114.5
+          ],
+          [
+            53.9,
+            60.7
+          ]
+        ],
+        "min_slack_px": {
+          "550": 18.3,
+          "500": 23.5,
+          "620": -0.5
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 111.4,
+        "gripper_link": 154.4,
+        "wrist_link": 228.9,
+        "wrist_camera_mount": 158.6,
+        "wrist_camera_link": 205.5
+      },
+      "camera_base_mm": [
+        146.8,
+        -26.7,
+        274.5
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 104.8,
+          "gripper_link": 154.4,
+          "wrist_link": 222.4,
+          "wrist_camera_mount": 158.6,
+          "wrist_camera_link": 201.3
+        },
+        "largest_joint_travel_deg": 119.6
+      },
+      "safe": true
+    },
+    {
+      "view": 14,
+      "hint": "tilted 30, square at the RIGHT edge",
+      "asked": {
+        "hint": "tilted 30, square at the RIGHT edge",
+        "pixel": [
+          535,
+          230
+        ],
+        "tilt_deg": 30,
+        "azimuth_deg": 180,
+        "distance_mm": 230,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        -9.46,
+        -88.42,
+        48.27,
+        84.79,
+        -74.02,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 30.9,
+        "azimuth_deg": 160.6,
+        "distance_mm": 269.9,
+        "roll_deg": -75.3
+      },
+      "square_centre_px": [
+        388.2,
+        275.5
+      ],
+      "square_corners_px": [
+        [
+          421.7,
+          326.8
+        ],
+        [
+          434.3,
+          253.2
+        ],
+        [
+          357.0,
+          228.0
+        ],
+        [
+          338.1,
+          299.9
+        ]
+      ],
+      "inner_corners_visible": 39,
+      "grid": {
+        "size": 5,
+        "first_row": 0,
+        "first_col": 2,
+        "corners_px": [
+          [
+            586.3,
+            379.7
+          ],
+          [
+            586.4,
+            302.9
+          ],
+          [
+            586.5,
+            236.8
+          ],
+          [
+            586.5,
+            179.4
+          ],
+          [
+            586.6,
+            129.0
+          ],
+          [
+            504.5,
+            353.4
+          ],
+          [
+            510.7,
+            278.2
+          ],
+          [
+            516.1,
+            213.5
+          ],
+          [
+            520.8,
+            157.4
+          ],
+          [
+            524.8,
+            108.1
+          ],
+          [
+            421.7,
+            326.8
+          ],
+          [
+            434.3,
+            253.2
+          ],
+          [
+            445.1,
+            190.0
+          ],
+          [
+            454.4,
+            135.2
+          ],
+          [
+            462.6,
+            87.1
+          ],
+          [
+            338.1,
+            299.9
+          ],
+          [
+            357.0,
+            228.0
+          ],
+          [
+            373.3,
+            166.3
+          ],
+          [
+            387.5,
+            112.8
+          ],
+          [
+            399.9,
+            65.9
+          ],
+          [
+            253.5,
+            272.7
+          ],
+          [
+            279.0,
+            202.5
+          ],
+          [
+            301.0,
+            142.3
+          ],
+          [
+            320.0,
+            90.1
+          ],
+          [
+            336.6,
+            44.5
+          ]
+        ],
+        "min_slack_px": {
+          "550": 15.1,
+          "500": 20.3,
+          "620": -0.5
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 97.7,
+        "gripper_link": 141.0,
+        "wrist_link": 215.2,
+        "wrist_camera_mount": 144.0,
+        "wrist_camera_link": 191.5
+      },
+      "camera_base_mm": [
+        141.1,
+        25.4,
+        260.5
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 97.7,
+          "gripper_link": 141.0,
+          "wrist_link": 215.2,
+          "wrist_camera_mount": 144.0,
+          "wrist_camera_link": 191.5
+        },
+        "largest_joint_travel_deg": 131.7
+      },
+      "safe": true
+    },
+    {
+      "view": 15,
+      "hint": "tilted 55, low view from the robot's side",
+      "asked": {
+        "hint": "tilted 55, low view from the robot's side",
+        "pixel": [
+          320,
+          180
+        ],
+        "tilt_deg": 55,
+        "azimuth_deg": 180,
+        "distance_mm": 220,
+        "roll_deg": null
+      },
+      "joints_reading_deg": [
+        5.07,
+        -106.7,
+        50.26,
+        94.97,
+        -103.91,
+        5.0
+      ],
+      "achieved": {
+        "tilt_deg": 37.4,
+        "azimuth_deg": -176.7,
+        "distance_mm": 282.3,
+        "roll_deg": -105.9
+      },
+      "square_centre_px": [
+        324.0,
+        240.3
+      ],
+      "square_corners_px": [
+        [
+          374.6,
+          256.7
+        ],
+        [
+          349.5,
+          197.4
+        ],
+        [
+          277.9,
+          225.5
+        ],
+        [
+          296.2,
+          287.0
+        ]
+      ],
+      "inner_corners_visible": 41,
+      "grid": {
+        "size": 5,
+        "first_row": 1,
+        "first_col": 2,
+        "corners_px": [
+          [
+            454.0,
+            226.0
+          ],
+          [
+            422.0,
+            169.0
+          ],
+          [
+            395.0,
+            121.0
+          ],
+          [
+            372.0,
+            80.0
+          ],
+          [
+            352.1,
+            44.6
+          ],
+          [
+            374.6,
+            256.7
+          ],
+          [
+            349.5,
+            197.4
+          ],
+          [
+            328.4,
+            147.4
+          ],
+          [
+            310.3,
+            104.7
+          ],
+          [
+            294.7,
+            67.7
+          ],
+          [
+            296.2,
+            287.0
+          ],
+          [
+            277.9,
+            225.5
+          ],
+          [
+            262.4,
+            173.5
+          ],
+          [
+            249.2,
+            129.1
+          ],
+          [
+            237.8,
+            90.7
+          ],
+          [
+            218.8,
+            316.9
+          ],
+          [
+            207.1,
+            253.2
+          ],
+          [
+            197.2,
+            199.4
+          ],
+          [
+            188.8,
+            153.4
+          ],
+          [
+            181.4,
+            113.5
+          ],
+          [
+            142.3,
+            346.4
+          ],
+          [
+            137.1,
+            280.6
+          ],
+          [
+            132.7,
+            225.0
+          ],
+          [
+            128.9,
+            177.3
+          ],
+          [
+            125.6,
+            136.1
+          ]
+        ],
+        "min_slack_px": {
+          "550": -0.9,
+          "500": 5.1,
+          "620": -0.4
+        }
+      },
+      "grid_ok": true,
+      "clearance_slack_mm": {
+        "gripper_frame_link": 100.9,
+        "gripper_link": 170.9,
+        "wrist_link": 200.7,
+        "wrist_camera_mount": 145.4,
+        "wrist_camera_link": 184.7
+      },
+      "camera_base_mm": [
+        101.5,
+        -30.5,
+        253.7
+      ],
+      "view_ok": false,
+      "view_problems": [
+        "square not where asked",
+        "tilt 37 not 55",
+        "distance 282 not 220"
+      ],
+      "pose_safety_problems": [],
+      "route_from_hub": {
+        "ok": true,
+        "problems": [],
+        "min_clearance_slack_mm": {
+          "gripper_frame_link": 100.9,
+          "gripper_link": 170.4,
+          "wrist_link": 200.7,
+          "wrist_camera_mount": 145.4,
+          "wrist_camera_link": 184.7
+        },
+        "largest_joint_travel_deg": 129.1
+      },
+      "safe": true
+    }
+  ]
+}

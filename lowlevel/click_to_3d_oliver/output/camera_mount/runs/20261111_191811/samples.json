@@ -1,0 +1,171 @@
+{
+  "schema": "mount_run_v1",
+  "created": "2026-11-11T19:18:11",
+  "source": "robot",
+  "wrist_camera": "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0",
+  "fisheye_at_capture": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/click_to_3d_oliver/output/camera_mount/wrist_fisheye.yaml",
+  "urdf_at_capture": "/home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/urdf/so101_new_calib_wrist_cam.urdf",
+  "joint_offsets_deg_at_capture": [
+    2.5,
+    -0.237,
+    -3.947,
+    -5.187,
+    0.0,
+    0.0
+  ],
+  "square_mm": 42.0,
+  "samples": [
+    {
+      "index": 1,
+      "stamp": 1794424691.662,
+      "image": "sample_01.png",
+      "square": "d4",
+      "corners_raw_px": [
+        [
+          89.279,
+          391.4
+        ],
+        [
+          138.763,
+          329.822
+        ],
+        [
+          87.673,
+          267.92
+        ],
+        [
+          31.746,
+          327.808
+        ]
+      ],
+      "corners_undistorted_px": [
+        [
+          81.0,
+          401.0
+        ],
+        [
+          145.0,
+          332.0
+        ],
+        [
+          87.0,
+          271.0
+        ],
+        [
+          8.0,
+          337.0
+        ]
+      ],
+      "joint_reading_deg": [
+        -2.5495,
+        -35.7363,
+        13.4505,
+        68.967,
+        -29.1429,
+        4.6958
+      ],
+      "T_board_camera_mm_at_capture": [
+        [
+          0.489109,
+          -0.657373,
+          0.573266,
+          93.427549
+        ],
+        [
+          -0.492448,
+          -0.750597,
+          -0.440567,
+          215.924567
+        ],
+        [
+          0.719908,
+          -0.066818,
+          -0.690845,
+          248.018341
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "index": 2,
+      "stamp": 1794424727.423,
+      "image": "sample_02.png",
+      "square": "d4",
+      "corners_raw_px": [
+        [
+          365.228,
+          223.916
+        ],
+        [
+          345.529,
+          132.217
+        ],
+        [
+          255.012,
+          151.933
+        ],
+        [
+          274.163,
+          243.191
+        ]
+      ],
+      "corners_undistorted_px": [
+        [
+          367.214,
+          229.373
+        ],
+        [
+          349.131,
+          141.616
+        ],
+        [
+          263.024,
+          160.076
+        ],
+        [
+          282.444,
+          247.243
+        ]
+      ],
+      "joint_reading_deg": [
+        0.0,
+        -18.9451,
+        -8.3516,
+        102.9011,
+        -97.011,
+        4.828
+      ],
+      "T_board_camera_mm_at_capture": [
+        [
+          -0.206228,
+          -0.971959,
+          -0.112985,
+          140.629746
+        ],
+        [
+          -0.978502,
+          0.205096,
+          0.021682,
+          137.508909
+        ],
+        [
+          0.002098,
+          0.115027,
+          -0.99336,
+          242.460764
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  ]
+}

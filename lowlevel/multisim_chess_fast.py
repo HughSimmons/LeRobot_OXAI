@@ -24,9 +24,9 @@ from board_coordinates import location_label, location_world_xy
 from testkinematics import kinematics
 BOARD_SQUARE_SIZE = float(os.environ.get("SIM_BOARD_SQUARE_SIZE", "0.04125"))
 board_origin = (
-    float(os.environ.get("SIM_BOARD_ORIGIN_X", "0.27")),
+    float(os.environ.get("SIM_BOARD_ORIGIN_X", "0.2926")),
     float(os.environ.get("SIM_BOARD_ORIGIN_Y", "0")),
-    float(os.environ.get("SIM_BOARD_ORIGIN_Z", "0.03")),
+    float(os.environ.get("SIM_BOARD_ORIGIN_Z", "0.024")),
 )
 BOARD_BASE_HALF_HEIGHT = 0.005
 BOARD_TOP_Z = board_origin[2] + BOARD_BASE_HALF_HEIGHT
@@ -109,6 +109,80 @@ PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 renderfreq = 50
 WIDTH, HEIGHT = 640, 360
+
+
+def env_joint_vector(name, default):
+    """5 floats (pan, lift, elbow, wrist_flex, wrist_roll) from an env var, or the default if unset."""
+    raw = os.environ.get(name, "").strip()
+    values = np.array(raw.replace(",", " ").split() if raw else default, dtype=float)
+    if values.shape != (5,):
+        raise ValueError(f"{name} needs 5 values: pan, lift, elbow, wrist_flex, wrist_roll")
+    return values
+
+
+# Real-arm joint calibration offsets x (deg; pan, lift, elbow, wrist_flex,
+# wrist_roll), where URDF angle = motor angle + x: every commanded arm angle M
+# lands at M + x in simulation, i.e. how the real arm executes a trajectory
+# that doesn't correct for its offsets. Defaults are orange_follower_arm's,
+# fitted 16 Oct 2026 from 8 table marks touched with the arm and measured with
+# a ruler; lift, pan and roll weren't fitted. Each independent run (one that
+# restores the saved world) draws its offsets from N(mean, sd), seeded so a
+# run sequence is reproducible. The sd is the ruler's ~2 mm turned into
+# degrees at the tip (about 3 mm per degree for elbow and wrist flex).
+# Override with SIM_JOINT_OFFSETS_DEG / SIM_JOINT_OFFSET_SD_DEG /
+# SIM_JOINT_OFFSET_SEED; "0 0 0 0 0" for both gives exact tracking. Build and
+# verify must use the same values, as with LOOKUP_PIECE_MODEL.
+#NOTE: old values are (0.0, 0.0, -4.3, -5.2, 0.0)
+DEFAULT_JOINT_OFFSETS_DEG = (2.6, 2.0, -3.0, -4.6, 0.0)
+DEFAULT_JOINT_OFFSET_SD_DEG = (0.0, 0.0, 0.7, 0.7, 0.0)
+JOINT_OFFSETS_DEG = env_joint_vector("SIM_JOINT_OFFSETS_DEG", DEFAULT_JOINT_OFFSETS_DEG)
+JOINT_OFFSET_SD_DEG = env_joint_vector("SIM_JOINT_OFFSET_SD_DEG", DEFAULT_JOINT_OFFSET_SD_DEG)
+JOINT_OFFSET_SEED = int(os.environ.get("SIM_JOINT_OFFSET_SEED", "").strip() or "0")
+JOINT_OFFSET_RNG = np.random.default_rng(JOINT_OFFSET_SEED)
+# Radians in trajectory order (5 arm joints, then the gripper, never offset).
+# The saved world's home pose uses the mean.
+JOINT_OFFSETS_MEAN_RAD = np.append(np.deg2rad(JOINT_OFFSETS_DEG), 0.0)
+# Offsets in effect for the current run. Updated in place by
+# sample_joint_offsets(), so modules that imported it see the current sample.
+JOINT_OFFSETS_RAD = JOINT_OFFSETS_MEAN_RAD.copy()
+
+
+def sample_joint_offsets():
+    """Draw this run's offsets from N(mean, sd); returns them in degrees."""
+    sample_deg = JOINT_OFFSETS_DEG + JOINT_OFFSET_SD_DEG * JOINT_OFFSET_RNG.standard_normal(5)
+    JOINT_OFFSETS_RAD[:5] = np.deg2rad(sample_deg)
+    return sample_deg
+
+
+# Joint friction h (deg, same joint order): each arm joint stops h short of its
+# target on the side it's coming from (moving down onto a target, it stops
+# high). Defaults are orange_follower_arm's, measured with
+# toggle_joint_calibration.py up/down sweeps (real_world_runs/friction/; lift,
+# elbow and wrist flex 22 Oct 2026, pan and roll 24 Oct 2026) as half the gap
+# between the readings coming down and coming up at the same angle, with
+# LeRobot's I_Coefficient = 0; expect less with a nonzero I gain. The mean is
+# the average over the angles measured, the sd their spread (friction changes
+# with pose on the gravity-loaded joints; pan and roll carry no gravity load and
+# barely vary). Each independent run draws h from N(mean, sd), floored at 0,
+# from its own stream of the same seed (so adding friction didn't change the
+# offset draws). Override with SIM_JOINT_FRICTION_DEG /
+# SIM_JOINT_FRICTION_SD_DEG; "0 0 0 0 0" turns it off.
+DEFAULT_JOINT_FRICTION_DEG = (0.29, 0.84, 0.76, 0.47, 0.29)
+DEFAULT_JOINT_FRICTION_SD_DEG = (0.05, 0.46, 0.48, 0.11, 0.03)
+JOINT_FRICTION_DEG = env_joint_vector("SIM_JOINT_FRICTION_DEG", DEFAULT_JOINT_FRICTION_DEG)
+JOINT_FRICTION_SD_DEG = env_joint_vector("SIM_JOINT_FRICTION_SD_DEG", DEFAULT_JOINT_FRICTION_SD_DEG)
+JOINT_FRICTION_RNG = np.random.default_rng((JOINT_OFFSET_SEED, 1))
+# Friction in effect for the current run (radians, trajectory order, gripper 0).
+JOINT_FRICTION_RAD = np.append(np.deg2rad(JOINT_FRICTION_DEG), 0.0)
+
+
+def sample_joint_friction():
+    """Draw this run's friction from N(mean, sd), floored at 0; returns it in degrees."""
+    sample_deg = np.maximum(0.0, JOINT_FRICTION_DEG + JOINT_FRICTION_SD_DEG * JOINT_FRICTION_RNG.standard_normal(5))
+    JOINT_FRICTION_RAD[:5] = np.deg2rad(sample_deg)
+    return sample_deg
+
+
 PIECE_MODEL = os.environ.get("LOOKUP_PIECE_MODEL", "cylinder").strip() or "cylinder"
 if PIECE_MODEL not in {"cylinder", "rook_kiri"}:
     raise ValueError(
@@ -818,14 +892,14 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
             p.resetJointState(
                 robot_id,
                 sim_idx,
-                active_home_rad[traj_idx],
+                active_home_rad[traj_idx] + JOINT_OFFSETS_MEAN_RAD[traj_idx],
                 targetVelocity=0.0,
             )
             p.setJointMotorControl2(
                 robot_id,
                 sim_idx,
                 p.POSITION_CONTROL,
-                targetPosition=active_home_rad[traj_idx],
+                targetPosition=active_home_rad[traj_idx] + JOINT_OFFSETS_MEAN_RAD[traj_idx],
                 force=50,
             )
 
@@ -1018,6 +1092,16 @@ def run_sim_move(
 
     if restore_state:
         p.restoreState(world["state_id"])
+        # An independent run is a different possible real arm: draw its offsets
+        # and friction, and shift the arm from the saved home (mean offsets) to
+        # this arm's home.
+        sample_joint_offsets()
+        sample_joint_friction()
+        if world["robot_id"] is not None:
+            for traj_idx, sim_idx in enumerate(CONTROL_JOINTS):
+                shift = JOINT_OFFSETS_RAD[traj_idx] - JOINT_OFFSETS_MEAN_RAD[traj_idx]
+                angle = p.getJointState(world["robot_id"], sim_idx)[0]
+                p.resetJointState(world["robot_id"], sim_idx, angle + shift)
     p.setPhysicsEngineParameter(
         numSolverIterations=solver_iterations,
         numSubSteps=solver_substeps
@@ -1159,10 +1243,11 @@ def run_sim_move(
 
     SIM_JOINT_MAP = [0, 1, 2, 3, 4, 6]
     if not restore_state and robot_id is not None and moves:
+        # Back from the simulated (offset) angles to the command that produced them.
         current_joints = np.array([
             p.getJointState(robot_id, sim_idx)[0]
             for sim_idx in SIM_JOINT_MAP
-        ])
+        ]) - JOINT_OFFSETS_RAD
         moves.insert(
             0,
             (
@@ -1212,6 +1297,10 @@ def run_sim_move(
     premature_drop_z = None
     min_pre_release_piece_z = np.inf
     soft_gripper_hold_position = None
+    # Direction each joint's command last moved in (+1 / -1, 0 before it has
+    # moved), for the friction undershoot.
+    motion_dir = np.zeros(len(SIM_JOINT_MAP))
+    previous_target_joints = None
 
     try:
 
@@ -1243,6 +1332,11 @@ def run_sim_move(
                 move_idx,
                 alpha
             )
+            if previous_target_joints is not None:
+                command_step = target_joints - previous_target_joints
+                moving = np.abs(command_step) > 1e-9
+                motion_dir[moving] = np.sign(command_step[moving])
+            previous_target_joints = target_joints.copy()
 
             # print("Target joints:", target_joints)
             # sys.exit()
@@ -1291,7 +1385,11 @@ def run_sim_move(
                         robot_id,
                         sim_idx,
                         p.POSITION_CONTROL,
-                        targetPosition=target_joints[traj_idx],
+                        targetPosition=(
+                            target_joints[traj_idx]
+                            + JOINT_OFFSETS_RAD[traj_idx]
+                            - JOINT_FRICTION_RAD[traj_idx] * motion_dir[traj_idx]
+                        ),
                         force=force
                     )
 
@@ -1432,6 +1530,13 @@ def run_sim_move(
             "z_error": z_error,
             "final_tilt_deg": final_tilt_deg,
             "final_euler_deg": final_euler_deg,
+            "joint_offsets_deg": np.rad2deg(JOINT_OFFSETS_RAD[:5]).tolist(),
+            "joint_offset_mean_deg": JOINT_OFFSETS_DEG.tolist(),
+            "joint_offset_sd_deg": JOINT_OFFSET_SD_DEG.tolist(),
+            "joint_offset_seed": JOINT_OFFSET_SEED,
+            "joint_friction_deg": np.rad2deg(JOINT_FRICTION_RAD[:5]).tolist(),
+            "joint_friction_mean_deg": JOINT_FRICTION_DEG.tolist(),
+            "joint_friction_sd_deg": JOINT_FRICTION_SD_DEG.tolist(),
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
             "move_steps_per_waypoint": move_steps_per_waypoint,

@@ -1,0 +1,18 @@
+%YAML:1.0
+---
+model: assumed_pinhole
+note: "C920 assumed 70 deg horizontal FOV at 640x480; zero distortion; principal point at image centre."
+image_width: 640
+image_height: 480
+hfov_deg: 70.0
+focal_length_px: 457.007
+K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 457.007, 0., 320., 0., 457.007, 240., 0., 0., 1. ]
+distortion: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ 0., 0., 0., 0., 0. ]
