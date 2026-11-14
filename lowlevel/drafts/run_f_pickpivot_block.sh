@@ -3,13 +3,13 @@
 # lift 'direct') and the pivot-first place on f targets. Place offset calibrated in KNOWN mode, then
 # tested blind. Per (source, target) pair:
 #   1. known 9x9 (+-10 mm), place offset P0 = f3->f3 calibrated offset      tag fpp
-#   2. median place calibration from 1                                       fpickpiv_offsets/<src>_to_<dst>_median.json
+#   2. median place calibration from 1                                       place_offsets/f_pivot_pickup_known_median/<src>_to_<dst>_median.json
 #   3. known 9x9 with the calibrated offset (check that known mode is good)  tag fpp_cal
 #   4. blind 150, sigma 3.3 mm, seed 0, calibrated offset                    tag fpp_blind
 # Steps 1-3 for f->f pairs are shared with run_f_known_pickpivot.sh (same tags/files), so they are reused.
 # Resumable: steps whose results exist are skipped.
 # Usage: run_f_pickpivot_block.sh [sources...]   (default f3)   CHAINS=2 WORKERS=8
-# Log: lowlevel/rook_kiri_xy_lookup/f_pickpivot_block_log.txt
+# Log: lowlevel/rook_kiri_xy_lookup/2026-11-07_block_d3-f5/logs/f_pickpivot_block_log.txt
 cd /home/vince/LeRobot_OXAI
 export PY=/home/vince/miniforge3/envs/IKsim_mj/bin/python LOOK=lowlevel/rook_kiri_xy_lookup
 export BULL=lowlevel/drafts/run_rook_offset_bullseye.py CALPY=lowlevel/drafts/calibrate_place_offset_from_bullseye.py
@@ -22,8 +22,8 @@ export BLIND="--mode blind --random-samples 150 --noise-sigma 0.0033 --seed 0"
 CHAINS=${CHAINS:-2}
 SOURCES=${*:-f3}
 TARGETS="d5 e5 f5 d4 e4 f4 d3 e3 f3"
-mkdir -p $LOOK/fpickpiv_offsets
-exec > >(tee -a $LOOK/f_pickpivot_block_log.txt) 2>&1
+mkdir -p $LOOK/place_offsets/f_pivot_pickup_known_median
+exec > >(tee -a $LOOK/2026-11-07_block_d3-f5/logs/f_pickpivot_block_log.txt) 2>&1
 echo "### started $(date "+%F %T"): sources [$SOURCES], $CHAINS chains x $WORKERS workers"
 score() { $PY -c "
 import json; s=[x for x in json.load(open('$1'))['samples'] if 'error' not in x]; up=[x for x in s if x.get('landed_upright')]; m=sum(not x.get('pickup_success') for x in s)
@@ -37,7 +37,7 @@ chain() {
   [ -z "$r" ] && { run "$KNOWN" "$P0" fpp; r=$(newest known_corr0_grid9_fpp); }
   [ -z "$r" ] && { echo "$(date +%T) [$S->$T] known start: FAILED"; return; }
   echo "$(date +%T) [$S->$T] known, start offset: $(score $r)"
-  cal=$LOOK/fpickpiv_offsets/${S}_to_${T}_median.json
+  cal=$LOOK/place_offsets/f_pivot_pickup_known_median/${S}_to_${T}_median.json
   [ -f $cal ] || $PY -B $CALPY "$(dirname $r)" --estimator median --output $cal > /dev/null 2>&1
   P=$($PY -c "import json;d=json.load(open('$cal'));print(*d['$T']['new_place_offset']) if '$T' in d else None" 2>/dev/null)
   if [ -z "$P" ] || [ "$P" = "None" ]; then echo "$(date +%T) [$S->$T] calibration skipped (too few upright)"; return; fi

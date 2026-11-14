@@ -1,15 +1,15 @@
 #!/bin/bash
 # f3/f4/f5 -> f3/f4/f5, KNOWN mode (robot told the true start offset), 9x9 grid within +-10 mm,
 # grasp (-20,-1,-3) mm, pivot-first place on f, place offset = that pair's blind median calibration
-# (block_place_offsets/<src>_to_<dst>_median.json). Tag fknown_cal. Resumable.
-# Second pass: OFFDIR=block_place_offsets_known TAG=fknown_cal2 (offsets recalibrated from the known runs).
-# Log: lowlevel/rook_kiri_xy_lookup/f_known_log.txt
+# (place_offsets/block_blind_median/<src>_to_<dst>_median.json). Tag fknown_cal. Resumable.
+# Second pass: OFFDIR=place_offsets/block_f_to_f_known_median TAG=fknown_cal2 (offsets recalibrated from the known runs).
+# Log: lowlevel/rook_kiri_xy_lookup/2026-11-07_block_d3-f5/logs/f_known_log.txt
 cd /home/vince/LeRobot_OXAI
 export PY=/home/vince/miniforge3/envs/IKsim_mj/bin/python LOOK=lowlevel/rook_kiri_xy_lookup
 export BULL=lowlevel/drafts/run_rook_offset_bullseye.py
-export OFFDIR=${OFFDIR:-block_place_offsets} TAG=${TAG:-fknown_cal}
+export OFFDIR=${OFFDIR:-place_offsets/block_blind_median} TAG=${TAG:-fknown_cal}
 export FAR="--far-place-max-tilt 11 --far-place-style pivot --far-place-pivot-height 0.02"
-exec > >(tee -a $LOOK/f_known_log.txt) 2>&1
+exec > >(tee -a $LOOK/2026-11-07_block_d3-f5/logs/f_known_log.txt) 2>&1
 echo "### started $(date "+%F %T")"
 one() {
   local S=$1 T=$2

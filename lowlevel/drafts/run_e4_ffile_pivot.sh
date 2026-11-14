@@ -6,10 +6,10 @@
 #   1. (known 9x9 skipped; known-mode 3x3 smoke tests: ..._fpivot2cm_slow_smoke_20261106_200003, 9/9 upright)
 #   2. blind 150 (sigma 3.3 mm, seed 0), 16 Oct place     tag e4fpivot          ("before calibration")
 #   3. median place calibration from step 2, blind 150    tag e4fpivot_cal_median ("after")
-# Log: lowlevel/rook_kiri_xy_lookup/e4_ffile_pivot_log.txt
+# Log: lowlevel/rook_kiri_xy_lookup/2026-11-06_e4_neighbourhood/logs/e4_ffile_pivot_log.txt
 cd /home/vince/LeRobot_OXAI
 PY=/home/vince/miniforge3/envs/IKsim_mj/bin/python
-exec > >(tee -a lowlevel/rook_kiri_xy_lookup/e4_ffile_pivot_log.txt) 2>&1
+exec > >(tee -a lowlevel/rook_kiri_xy_lookup/2026-11-06_e4_neighbourhood/logs/e4_ffile_pivot_log.txt) 2>&1
 echo "### started $(date "+%F %T") on $(hostname)"
 LOOK=lowlevel/rook_kiri_xy_lookup
 CALPY=lowlevel/drafts/calibrate_place_offset_from_bullseye.py
@@ -31,7 +31,7 @@ for T in $TARGETS; do
   BEFORE+=("$(newest "e4_to_${T}_bullseye_blind_corr0_random150_e4fpivot_2026*")")
 done
 
-CAL=$LOOK/e4_ffile_pivot_place_offsets_median.json
+CAL=$LOOK/place_offsets/e4_to_f_pivot_place_median.json
 $PY -B $CALPY "${BEFORE[@]}" --estimator median --output $CAL 2>&1 | grep -vi collid
 for T in $TARGETS; do
   P=$($PY -c "import json;d=json.load(open('$CAL'));print(*d['$T']['new_place_offset']) if '$T' in d else None")

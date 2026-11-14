@@ -1,0 +1,85 @@
+2026-11-13 22:46:11 keep-awake pid 28313
+2026-11-13 22:46:11 stage 0: FK bound
+Traceback (most recent call last):
+ModuleNotFoundError: No module named 'board_coordinates'
+2026-11-13 22:46:11 stage 1: e4 grasp search, k=2, 40 draws
+125 grasps x 1 k x 40 draws; 0 done, 5000 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_search
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_search/results.jsonl (2544s)
+2026-11-13 23:28:36 best grasp (mm): -17.0 -1.0 -9.0
+2026-11-13 23:28:36 stage 2: e4 error-scale curve (new draws, seed 1)
+/home/vince/miniforge3/envs/IKsim_mj/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+2 grasps x 4 k x 64 draws; 0 done, 512 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_scale
+=== 2026-11-13 23:30:59 relaunch after selector fix (smoothed ranking) ===
+2026-11-13 23:30:59 keep-awake pid 38697
+2026-11-13 23:30:59 stage 0: FK bound
+2026-11-13 23:30:59 stage 1: e4 grasp search, k=2, 40 draws
+125 grasps x 1 k x 40 draws; 5000 done, 0 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_search
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_search/results.jsonl (0s)
+2026-11-13 23:30:59 best grasp (mm): -20.0 -1.0 -6.0
+2026-11-13 23:30:59 stage 2: e4 error-scale curve (new draws, seed 1)
+2 grasps x 4 k x 64 draws; 134 done, 378 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_scale
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/e4_scale/results.jsonl (216s)
+2026-11-13 23:34:35 stage 3: squares
+2026-11-13 23:34:35   d4 -> d5
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d4
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d4/results.jsonl (176s)
+2026-11-13 23:37:32   e4 -> e5
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e4
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e4/results.jsonl (153s)
+2026-11-13 23:40:05   d5 -> d6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d5
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d5/results.jsonl (37250s)
+2026-11-14 10:00:57   e5 -> e6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e5
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e5/results.jsonl (186s)
+2026-11-14 10:04:03   c4 -> c5
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c4
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c4/results.jsonl (174s)
+2026-11-14 10:06:57   c5 -> c6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c5
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c5/results.jsonl (182s)
+2026-11-14 10:09:59   d3 -> d4
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d3
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d3/results.jsonl (1568s)
+2026-11-14 10:36:08   e3 -> e4
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e3
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e3/results.jsonl (162s)
+2026-11-14 10:38:50   d6 -> d7
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d6
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d6/results.jsonl (168s)
+2026-11-14 10:41:38   e6 -> e7
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e6
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e6/results.jsonl (171s)
+2026-11-14 10:44:30   c3 -> c4
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c3
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c3/results.jsonl (197s)
+2026-11-14 10:47:47   c6 -> c7
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c6
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c6/results.jsonl (206s)
+2026-11-14 10:51:14   c2 -> c3
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c2
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c2/results.jsonl (197s)
+2026-11-14 10:54:31   d2 -> d3
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d2
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d2/results.jsonl (173s)
+2026-11-14 10:57:25   e2 -> e3
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e2
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e2/results.jsonl (170s)
+2026-11-14 11:00:15   c7 -> c6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c7
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/c7/results.jsonl (183s)
+2026-11-14 11:03:18   d7 -> d6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d7
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/d7/results.jsonl (167s)
+2026-11-14 11:06:06   e7 -> e6
+2 grasps x 2 k x 64 draws; 0 done, 256 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e7
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/squares/e7/results.jsonl (169s)
+2026-11-14 11:08:55 stage 4: report
+wrote /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/report/PICKUP_TOLERANCE.md
+2026-11-14 11:09:00 stage 5: d4 grasp search (does the e4 optimum transfer?)
+125 grasps x 1 k x 40 draws; 0 done, 5000 to run -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/d4_search
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/d4_search/results.jsonl (2879s)
+wrote /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup_tolerance/report/PICKUP_TOLERANCE.md
+2026-11-14 11:57:05 ALL DONE
+(0 per-sample progress lines removed in cleanup, 2026-11-14)

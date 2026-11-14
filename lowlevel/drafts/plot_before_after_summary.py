@@ -9,7 +9,7 @@ condition are drawn.
 
 Example:
   python lowlevel/drafts/plot_before_after_summary.py \
-      lowlevel/rook_kiri_xy_lookup/e4_neighbourhood_before_after.csv
+      lowlevel/rook_kiri_xy_lookup/2026-11-06_e4_neighbourhood/tables/summary_before_vs_after_all_calibrations.csv
 """
 
 from __future__ import annotations

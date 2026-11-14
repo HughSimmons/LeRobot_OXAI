@@ -868,6 +868,8 @@ def run_sim_move(
     lift_height=None,
     lower_place_path_bias=None,
     trajectory_home_joints=None,
+    step_callback=None,
+    joint_offset_deg=None,
 ):
     if restore_state and from_square != world["from_square"]:
         raise ValueError(f"world was initialized for {world['from_square']}, not {from_square}")
@@ -1103,6 +1105,12 @@ def run_sim_move(
                 alpha
             )
 
+            # Opt-in execution error (tolerance tests): the arm is driven to plan + offset on joints
+            # 0-4 (deg) for the whole move, while the plan itself is unchanged. Default None = unchanged.
+            if joint_offset_deg is not None:
+                target_joints = np.array(target_joints, dtype=float).copy()
+                target_joints[:5] = target_joints[:5] + np.deg2rad(np.asarray(joint_offset_deg, dtype=float)[:5])
+
             # print("Target joints:", target_joints)
             # sys.exit()
 
@@ -1162,6 +1170,9 @@ def run_sim_move(
 
             p.stepSimulation()
 
+            # Opt-in observer (stability tests): reads state only; returning True ends the move early.
+            if step_callback is not None and step_callback(global_step, move_idx):
+                break
 
             piece_pos, _ = p.getBasePositionAndOrientation(piece_ids[0])  # Get position of the first piece
             piece_z = piece_pos[2]

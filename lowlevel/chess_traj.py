@@ -517,6 +517,15 @@ def far_place_pivot_height():
     return float(os.environ.get("CHESS_FAR_PLACE_PIVOT_HEIGHT", "0.02") or 0.02)
 
 
+def place_release_clearance():
+    """Height (m) above the pickup height at which the place lowering ends and the gripper opens.
+    Env CHESS_PLACE_RELEASE_CLEARANCE; unset keeps the original 0.02 ("wiggle room for drop")."""
+    import os
+
+    value = os.environ.get("CHESS_PLACE_RELEASE_CLEARANCE", "").strip()
+    return 0.02 if not value else float(value)
+
+
 def far_pickup_max_tilt_deg():
     """Opt-in pivot-first pickup from far files (f/g/h): lower in the far reach pose to
     CHESS_FAR_PICKUP_PIVOT_HEIGHT above the grasp point, pivot the gripper toward vertical
@@ -1630,7 +1639,7 @@ def pickupmove_traj(
 
     ### lower to board
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
-    target_xyz = to_xyz + np.array([0, 0, 0.02]) #wiggle room for drop
+    target_xyz = to_xyz + np.array([0, 0, place_release_clearance()]) #wiggle room for drop (default 0.02)
     # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]

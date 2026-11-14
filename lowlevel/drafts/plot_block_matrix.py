@@ -24,7 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plot_rook_offset_bullseye import INK, INK_2, MUTED, SURFACE  # noqa: E402
 
 LOOK = Path(__file__).resolve().parents[1] / "rook_kiri_xy_lookup"
-OUT = LOOK / "block_results"
+OUT = LOOK / "2026-11-07_block_d3-f5" / "figures"
+TAB = LOOK / "2026-11-07_block_d3-f5" / "tables"
 SQUARES = "d5 e5 f5 d4 e4 f4 d3 e3 f3".split()
 BLUE = ["#f4f8fd", "#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
 
@@ -32,8 +33,8 @@ BLUE = ["#f4f8fd", "#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f
 def load() -> dict[tuple[str, str, str], dict]:
     data = {}
     for src in SQUARES:
-        path = (LOOK / "e4_neighbourhood_FINAL_before_after.csv" if src == "e4"
-                else OUT / f"{src}_to_blocke4_before_after.csv")
+        path = (LOOK / "2026-11-06_e4_neighbourhood/tables/FINAL_summary_before_vs_after.csv" if src == "e4"
+                else TAB / f"from_{src}__summary_before_vs_after.csv")
         for r in csv.DictReader(path.open(encoding="utf-8")):
             data[(src, r["target"], "before" if r["condition"] == "before" else "after")] = r
     return data
@@ -78,10 +79,10 @@ def main() -> int:
              "far pose (no pickup fix yet): 16–20% of their grasps miss. e4 row: earlier sweep (before = old far place).",
              fontsize=8.5, color=MUTED)
     fig.subplots_adjust(left=0.05, right=0.9, top=0.84, bottom=0.07, wspace=0.12)
-    png = OUT / "block_9x9_within5mm.png"
+    png = OUT / "ALL_81_pairs__within_5mm__before_vs_after.png"
     fig.savefig(png, dpi=150, facecolor=SURFACE)
 
-    with open(OUT / "block_9x9_within5mm.csv", "w", newline="", encoding="utf-8") as fh:
+    with open(TAB / "ALL_81_pairs__within_5mm__before_vs_after.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["source", "target", "condition", "n", "within_5mm", "within_2mm", "missed", "fell", "median_err_mm", "run"])
         for s in SQUARES:
@@ -100,7 +101,7 @@ def main() -> int:
         fell = sum(int(data[(s, t, "after")]["fell"]) for t in SQUARES)
         lines.append(f"| **{s}** | " + " | ".join(f"{x} → {y}" for x, y in zip(b, a))
                      + f" | {sum(b)} → **{sum(a)}** ({100 * sum(a) / 1350:.0f}%) | {miss} | {fell} |")
-    (OUT / "block_9x9_within5mm.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (TAB / "ALL_81_pairs__within_5mm__before_vs_after.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"Saved {png} (+ .csv, .md)")
     return 0
 

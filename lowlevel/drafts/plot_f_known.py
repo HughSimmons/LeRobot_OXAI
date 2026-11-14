@@ -35,7 +35,7 @@ TARGETS = ["f5", "f4", "f3"]
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tag", default="fknown_cal")
-    parser.add_argument("--output", type=Path, default=LOOKUP_DIR / "block_results" / "f_to_f_known.png")
+    parser.add_argument("--output", type=Path, default=LOOKUP_DIR / "2026-11-07_block_d3-f5" / "figures" / "f_to_f__robot_knows_start__calibration_pass1.png")
     parser.add_argument("--offset-note", default="place offset = that pair's blind median calibration")
     args = parser.parse_args()
 

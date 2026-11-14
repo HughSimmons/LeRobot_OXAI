@@ -1,0 +1,6 @@
+81 settings x 81 starts = 6561; 0 done, 6561 to run; 16 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup/e4_to_e5_pickup_pilot
+/home/vince/miniforge3/envs/IKsim_mj/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+81 settings x 81 starts = 6561; 132 done, 6429 to run; 16 workers -> /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup/e4_to_e5_pickup_pilot
+Done: /home/vince/LeRobot_OXAI/lowlevel/rook_kiri_xy_lookup/stability/pickup/e4_to_e5_pickup_pilot/results.jsonl (3814s)
+(6808 per-sample progress lines removed in cleanup, 2026-11-14)

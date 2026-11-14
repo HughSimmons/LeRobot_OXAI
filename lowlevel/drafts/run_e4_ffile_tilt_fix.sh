@@ -6,10 +6,10 @@
 #   1. known 9x9 (+-10 mm), 16 Oct place offset           tag e4ftilt11known
 #   2. blind 150 (sigma 3.3 mm, seed 0), 16 Oct place     tag e4ftilt11          ("before calibration")
 #   3. median place calibration from step 2, blind 150    tag e4ftilt11_cal_median ("after")
-# Log: lowlevel/rook_kiri_xy_lookup/e4_ffile_tilt_fix_log.txt
+# Log: lowlevel/rook_kiri_xy_lookup/2026-11-06_e4_neighbourhood/logs/e4_ffile_tilt_fix_log.txt
 cd /home/vince/LeRobot_OXAI
 PY=/home/vince/miniforge3/envs/IKsim_mj/bin/python
-exec > >(tee -a lowlevel/rook_kiri_xy_lookup/e4_ffile_tilt_fix_log.txt) 2>&1
+exec > >(tee -a lowlevel/rook_kiri_xy_lookup/2026-11-06_e4_neighbourhood/logs/e4_ffile_tilt_fix_log.txt) 2>&1
 echo "### started $(date "+%F %T") on $(hostname)"
 LOOK=lowlevel/rook_kiri_xy_lookup
 CALPY=lowlevel/drafts/calibrate_place_offset_from_bullseye.py
