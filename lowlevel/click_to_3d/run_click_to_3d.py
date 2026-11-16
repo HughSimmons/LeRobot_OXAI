@@ -7,9 +7,20 @@ Keys:
   u      launch mount calibration (separate process)
   v      launch 3D scene visualiser
   space  freeze and click on the wrist view
+  g      gold-mask: type square name, then SAM FG/BG on prism crops
   r      resume live preview
   y / n  after a wrist click: on the board / above the board
   q      quit
+
+Gold-mask (after calib PnP, from ready):
+  g        ask for square name only (poses reused; no re-calib)
+  Enter    accept name → freeze + prism-crop both views
+  LMB/RMB  foreground / background on the panel under the cursor
+  u / r    undo / reset points on the active view
+  t        toggle active wrist/side
+  Enter/s  save active view under output/gold_masks/
+  p        save both masks, two-view grasp, return to ready like a click
+  Esc      back to ready
 
 Use --demo-pair for offline stills. Use --smoke for a headless math check.
 """
@@ -64,6 +75,19 @@ from click3d_shared import (
     undistort_wrist,
     ResolvedAsset,
 )
+from gold_mask_session import (
+    GoldViewState,
+    PANEL_W as GOLD_PANEL_W,
+    add_point,
+    build_square_crop,
+    compose_crop_panel,
+    gold_save_dir,
+    map_panel_click,
+    new_session_id,
+    rerun,
+    run_gold_two_view,
+    save_gold,
+)
 
 WINDOW = "click_to_3d"
 PANEL_W = 480
@@ -107,6 +131,13 @@ class App:
         self.menu_category = "fisheye"
         self.menu_index = 0
         self.menu_categories = ["fisheye", "stationary", "urdf", "mount"]
+        self.gold_session_id: str | None = None
+        self.gold_square: str | None = None
+        self.gold_square_buffer = ""
+        self.gold_active: str = "wrist"
+        self.gold_wrist: GoldViewState | None = None
+        self.gold_side: GoldViewState | None = None
+        self.gold_layouts: dict = {}
         self.wrist_index, self.stationary_index = load_session_camera_indices(
             getattr(args, "wrist_index", None),
             getattr(args, "stationary_index", None),
@@ -280,7 +311,227 @@ class App:
         self.status = "calib ok — space to click"
         self.help_lines = []
 
+    def start_gold_square_prompt(self) -> None:
+        """Ask only for a square name; poses come from existing calib PnP."""
+        if self.T_board_wrist is None or self.T_board_side is None:
+            self.status = "calibrate first (c)"
+            return
+        if self.frozen_wrist is None or self.frozen_side is None:
+            self.frozen_wrist, self.frozen_side = self.grab_live()
+            self.frozen_joints = list(self.joints or [])
+        if self.K_wrist is None:
+            self.status = "wrist intrinsics missing — grab a frame first"
+            return
+        self.gold_square = None
+        # Always start empty so the user must type a name (including demo / d6 calib).
+        self.gold_square_buffer = ""
+        self.mode = "enter_gold_square"
+        self.status = "gold square? type name (e.g. e4) then Enter"
+        self.help_lines = [
+            "type square name only — poses from calib, no corner clicks",
+            "Backspace edit  Esc cancel",
+        ]
+        if self.label_square:
+            self.help_lines.append(f"calib square was {self.label_square} (not auto-selected)")
+
+    def enter_gold_mask(self) -> None:
+        if self.T_board_wrist is None or self.T_board_side is None:
+            self.status = "calibrate first (c)"
+            return
+        if not self.gold_square:
+            self.status = "no gold square — press g and type a name"
+            return
+        if self.K_wrist is None:
+            self.status = "wrist intrinsics missing — grab a frame first"
+            return
+        if self.frozen_wrist is None or self.frozen_side is None:
+            self.frozen_wrist, self.frozen_side = self.grab_live()
+            self.frozen_joints = list(self.joints or [])
+        wrist_built = build_square_crop(
+            self.frozen_wrist, self.gold_square, self.T_board_wrist, self.K_wrist, SQUARE_MM
+        )
+        side_built = build_square_crop(
+            self.frozen_side, self.gold_square, self.T_board_side, self.K_side, SQUARE_MM
+        )
+        if not wrist_built["ok"] or not side_built["ok"]:
+            self.status = (
+                f"gold crop failed — wrist={wrist_built.get('fail')} "
+                f"side={side_built.get('fail')}"
+            )
+            self.mode = "enter_gold_square"
+            return
+        self.gold_session_id = new_session_id()
+        self.gold_active = "wrist"
+        self.gold_wrist = GoldViewState(
+            view="wrist",
+            crop=wrist_built["crop"],
+            window=tuple(wrist_built["window"]),
+        )
+        self.gold_side = GoldViewState(
+            view="side",
+            crop=side_built["crop"],
+            window=tuple(side_built["window"]),
+        )
+        self.gold_layouts = {}
+        self.mode = "gold_mask"
+        self.status = f"gold mask {self.gold_square} — LMB FG / RMB BG  (session {self.gold_session_id})"
+        self.help_lines = [
+            "CONTROLS",
+            "LMB = FG point   RMB = BG point",
+            "u = undo point   r = reset view",
+            "t = toggle active view (wrist/side)",
+            "Enter / s = save active view mask",
+            "p = save both + run coord → ready",
+            "Esc = cancel gold mode",
+            f"saves -> output/gold_masks/{self.gold_session_id}/",
+        ]
+        print(self.status)
+        for line in self.help_lines:
+            print(f"  {line}")
+
+    def run_gold_pipeline(self) -> None:
+        """Save both gold masks, run two-view grasp, return to ready like a click (`p`)."""
+        if (
+            self.gold_wrist is None
+            or self.gold_side is None
+            or self.frozen_wrist is None
+            or self.frozen_side is None
+            or self.gold_square is None
+            or self.gold_session_id is None
+            or self.T_board_wrist is None
+            or self.T_board_side is None
+            or self.K_wrist is None
+        ):
+            self.status = "gold pipeline needs session + poses"
+            return
+        if self.gold_wrist.mask is None or not self.gold_wrist.ok:
+            self.status = "refine wrist mask first (need ok mask)"
+            return
+        if self.gold_side.mask is None or not self.gold_side.ok:
+            self.status = "refine side mask first (need ok mask)"
+            return
+        result = run_gold_two_view(
+            wrist_bgr=self.frozen_wrist,
+            side_bgr=self.frozen_side,
+            wrist_state=self.gold_wrist,
+            side_state=self.gold_side,
+            square=self.gold_square,
+            T_board_wrist=self.T_board_wrist,
+            T_board_side=self.T_board_side,
+            K_wrist=self.K_wrist,
+            K_side=self.K_side,
+            square_mm=SQUARE_MM,
+        )
+        if not result["ok"]:
+            self.status = f"gold two-view failed: {result.get('fail')}"
+            print(self.status)
+            return
+
+        meta = {
+            "session": self.gold_session_id,
+            "square": self.gold_square,
+            "calib_square": self.label_square,
+            "square_mm": SQUARE_MM,
+        }
+        for state in (self.gold_wrist, self.gold_side):
+            dest = gold_save_dir(self.gold_session_id, self.gold_square, state.view)
+            save_gold(dest, state, meta)
+            print(f"saved {dest.relative_to(ROOT)}")
+
+        board = np.asarray(result["board_mm"], dtype=np.float64)
+        joints = self.frozen_joints or self.joints or [0.0] * 6
+        T_bb = T_base_board_mm(self.T_board_wrist, joints, self.mount)
+        point_base = point_board_to_base(board, T_bb)
+        z_note = result.get("z_mm")
+        square = self.gold_square
+        self.last_result = {
+            "method": "gold_two_view",
+            "wrist_px": result.get("wrist_px"),
+            "side_px": result.get("side_px"),
+            "board_mm": [round(float(v), 3) for v in board],
+            "base_mm": [round(float(v), 3) for v in point_base],
+            "square": square,
+            "calib_square": self.label_square,
+            "ray_gap_mm": 0.0,
+            "side_used": result.get("side_used"),
+            "yaw_deg": result.get("yaw_deg"),
+            "shadow_pixels_dropped": result.get("shadow_pixels_dropped"),
+            "fuse_mode": result.get("fuse_mode") or "overhead_ray",
+            "z_mm": None if z_note is None else round(float(z_note), 3),
+            "mount": self.mount.kind,
+            "mount_urdf_source": self.mount.urdf_source,
+            "session": self.gold_session_id,
+        }
+        append_session_log(self.last_result)
+        print(json.dumps(self.last_result, indent=2))
+        # Same status shape as report_point so ready HUD feels identical.
+        self.status = (
+            f"board {self.last_result['board_mm']}  "
+            f"base {self.last_result['base_mm']}  {square}"
+        )
+        self.mode = "ready"
+        self.gold_wrist = None
+        self.gold_side = None
+        self.gold_layouts = {}
+        self.help_lines = []
+        self.wrist_click = None
+        self.polyline = None
+
+    def exit_gold_mask(self) -> None:
+        dirty = False
+        if self.gold_wrist is not None and self.gold_wrist.dirty:
+            dirty = True
+        if self.gold_side is not None and self.gold_side.dirty:
+            dirty = True
+        if dirty:
+            self.status = "left gold mask (discarded unsaved points)"
+            print("Warning: discarding unsaved gold-mask points")
+        else:
+            self.status = "left gold mask"
+        self.mode = "ready"
+        self.gold_wrist = None
+        self.gold_side = None
+        self.gold_layouts = {}
+        self.help_lines = []
+
+    def _gold_active_state(self) -> GoldViewState | None:
+        if self.gold_active == "side":
+            return self.gold_side
+        return self.gold_wrist
+
     def on_mouse(self, event, x, y, flags, param) -> None:
+        if self.mode == "gold_mask":
+            if event not in (cv2.EVENT_LBUTTONDOWN, cv2.EVENT_RBUTTONDOWN):
+                return
+            if self.gold_wrist is None or self.gold_side is None:
+                return
+            if x < GOLD_PANEL_W:
+                view = "wrist"
+                state = self.gold_wrist
+                layout = self.gold_layouts.get("wrist")
+                px, py = float(x), float(y)
+            elif x < 2 * GOLD_PANEL_W:
+                view = "side"
+                state = self.gold_side
+                layout = self.gold_layouts.get("side")
+                px, py = float(x - GOLD_PANEL_W), float(y)
+            else:
+                return
+            if layout is None:
+                return
+            mapped = map_panel_click(px, py, layout)
+            if mapped is None:
+                self.status = "click inside the crop"
+                return
+            self.gold_active = view
+            label = 1 if event == cv2.EVENT_LBUTTONDOWN else 0
+            add_point(state, mapped[0], mapped[1], label)
+            px_count = int(np.count_nonzero(state.mask)) if state.mask is not None else 0
+            self.status = (
+                f"{view} points={len(state.points)} px={px_count} "
+                f"ok={state.ok} fail={state.fail}"
+            )
+            return
         if event != cv2.EVENT_LBUTTONDOWN:
             return
         free = bool(flags & cv2.EVENT_FLAG_SHIFTKEY)
@@ -449,6 +700,46 @@ class App:
         self.mode = "live" if self.T_board_wrist is None else "ready"
 
     def compose(self) -> np.ndarray:
+        if self.mode == "gold_mask" and self.gold_wrist is not None and self.gold_side is not None:
+            sq = self.gold_square or "-"
+            wrist, lay_w = compose_crop_panel(
+                self.gold_wrist, f"wrist {sq}", self.gold_active == "wrist"
+            )
+            side, lay_s = compose_crop_panel(
+                self.gold_side, f"side {sq}", self.gold_active == "side"
+            )
+            self.gold_layouts = {"wrist": lay_w, "side": lay_s}
+            backup = self.banner()
+            lines = [
+                f"mode: {self.mode}",
+                f"status: {self.status}",
+                f"gold square: {sq}",
+                f"calib square: {self.label_square or '-'}",
+                f"active: {self.gold_active}",
+                f"session: {self.gold_session_id or '-'}",
+                "",
+            ]
+            # Prefer the full CONTROLS block from enter_gold_mask; fall back if cleared.
+            if self.help_lines:
+                lines.extend(self.help_lines)
+            else:
+                lines.extend(
+                    [
+                        "CONTROLS",
+                        "LMB = FG point   RMB = BG point",
+                        "u = undo point   r = reset view",
+                        "t = toggle active view (wrist/side)",
+                        "Enter / s = save active view mask",
+                        "p = save both + run coord → ready",
+                        "Esc = cancel gold mode",
+                    ]
+                )
+            if backup:
+                lines.insert(0, backup)
+            panel = panel_text(lines, width=PANEL_W, height=480)
+            panel = draw_backup_banner(panel, backup)
+            return np.hstack([wrist, side, panel])
+
         frozen_modes = (
             "click_wrist",
             "ask_plane",
@@ -456,6 +747,7 @@ class App:
             "label_wrist",
             "label_side",
             "enter_square",
+            "enter_gold_square",
             "ready",
             "asset_menu",
         )
@@ -499,10 +791,13 @@ class App:
             f"assets: {'BACKUP' if backup else 'local'}",
             f"cams: wrist={self.wrist_index} side={self.stationary_index}",
             "c calib  m assets  u mount  v 3d",
-            "x swap cams  space click  r live  q quit",
+            "g gold-mask  x swap  space click  r live  q",
         ]
         if self.mode == "enter_square":
             lines.append(f"buffer: {self.square_buffer or '_'}")
+        if self.mode == "enter_gold_square":
+            lines.append(f"gold buffer: {self.gold_square_buffer or '_'}")
+            lines.append(f"calib square: {self.label_square or '-'}")
         lines.extend(self.help_lines)
         if self.mode == "asset_menu":
             lines.append(f"category: {self.menu_category}")
@@ -521,6 +816,85 @@ class App:
         return np.hstack([wrist, side, panel])
 
     def handle_key(self, key: int) -> bool:
+        if self.mode == "gold_mask":
+            if key in (ord("q"),):
+                return False
+            if key == 27:
+                self.exit_gold_mask()
+                return True
+            if key == ord("u"):
+                state = self._gold_active_state()
+                if state is not None:
+                    state.undo()
+                    rerun(state)
+                    self.status = f"{self.gold_active} undo → {len(state.points)} points"
+                return True
+            if key == ord("r"):
+                state = self._gold_active_state()
+                if state is not None:
+                    state.reset_points()
+                    self.status = f"{self.gold_active} reset"
+                return True
+            if key == ord("t"):
+                self.gold_active = "side" if self.gold_active == "wrist" else "wrist"
+                self.status = f"active view: {self.gold_active}"
+                return True
+            if key == ord("p"):
+                self.run_gold_pipeline()
+                return True
+            if key in (13, 10, ord("s")):
+                state = self._gold_active_state()
+                if state is None or self.gold_session_id is None or not self.gold_square:
+                    return True
+                if not state.points:
+                    self.status = "nothing to save — add FG clicks"
+                    return True
+                if state.mask is None or not state.ok:
+                    self.status = "mask not ok — refine before saving"
+                    return True
+                dest = gold_save_dir(self.gold_session_id, self.gold_square, state.view)
+                save_gold(
+                    dest,
+                    state,
+                    {
+                        "session": self.gold_session_id,
+                        "square": self.gold_square,
+                        "calib_square": self.label_square,
+                        "square_mm": SQUARE_MM,
+                    },
+                )
+                self.status = f"saved {dest.relative_to(ROOT)}"
+                print(self.status)
+                return True
+            return True
+        if self.mode == "enter_gold_square":
+            if key in (ord("q"),):
+                return False
+            if key == 27:
+                self.mode = "ready"
+                self.gold_square_buffer = ""
+                self.status = "cancelled gold square"
+                self.help_lines = []
+                return True
+            if key in (8, 127):
+                self.gold_square_buffer = self.gold_square_buffer[:-1]
+                return True
+            if key in (13, 10):
+                name = parse_square_name(self.gold_square_buffer)
+                if name is None:
+                    self.status = "invalid square — try e4"
+                    self.gold_square_buffer = ""
+                    return True
+                self.gold_square = name
+                self.enter_gold_mask()
+                return True
+            ch = chr(key) if 32 <= key < 127 else ""
+            if ch.lower() in "abcdefgh12345678":
+                if len(self.gold_square_buffer) >= 2:
+                    self.gold_square_buffer = ch.lower()
+                else:
+                    self.gold_square_buffer += ch.lower()
+            return True
         if self.mode == "enter_square":
             if key in (ord("q"),):
                 return False
@@ -585,6 +959,11 @@ class App:
             self.help_lines = []
         elif key == ord("x") and self.mode in ("live", "ready"):
             self.swap_cameras()
+        elif key == ord("g") and self.mode in ("ready", "live"):
+            if self.T_board_wrist is None or self.T_board_side is None:
+                self.status = "calibrate first (c)"
+            else:
+                self.start_gold_square_prompt()
         elif key == ord(" "):
             if self.T_board_wrist is None or self.T_board_side is None:
                 self.status = "calibrate first (c)"

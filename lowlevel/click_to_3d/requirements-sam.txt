@@ -1,0 +1,9 @@
+# Optional add-on for gold-mask mode (g / p) in click_to_3d.
+# Install into the same .venv after requirements.txt:
+#   pip install -r requirements-sam.txt
+#
+# For dataset labeling without the robot UI, prefer ../gold_mask_batch instead.
+torch>=2.1
+transformers>=4.45
+Pillow>=10.0
+scikit-learn>=1.3

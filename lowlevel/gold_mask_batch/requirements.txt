@@ -1,0 +1,6 @@
+# Full SAM labeling stack for gold_mask_batch (own .venv — no helk required).
+numpy>=1.24
+opencv-python>=4.8
+torch>=2.1
+transformers>=4.45
+Pillow>=10.0
