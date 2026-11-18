@@ -1,0 +1,16 @@
+{"stem": "im1_b7", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im1_b7.png", "pixels": 2832, "n_pieces": 1, "saved_at": "2026-11-18T01:34:44.654227+00:00"}
+{"stem": "im2_c1", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im2_c1.png", "pixels": 7308, "n_pieces": 1, "saved_at": "2026-11-18T01:35:00.811591+00:00"}
+{"stem": "im2_c2", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im2_c2.png", "pixels": 4538, "n_pieces": 1, "saved_at": "2026-11-18T01:35:06.536466+00:00"}
+{"stem": "im3_c8", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im3_c8.png", "pixels": 4615, "n_pieces": 1, "saved_at": "2026-11-18T01:35:28.556711+00:00"}
+{"stem": "im4_c1", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im4_c1.png", "pixels": 7876, "n_pieces": 1, "saved_at": "2026-11-18T01:35:50.658790+00:00"}
+{"stem": "im5_c8", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im5_c8.png", "pixels": 4604, "n_pieces": 1, "saved_at": "2026-11-18T01:36:02.704948+00:00"}
+{"stem": "im5_d5", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im5_d5.png", "pixels": 3575, "n_pieces": 1, "saved_at": "2026-11-18T01:38:21.183801+00:00"}
+{"stem": "im7_a1", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im7_a1.png", "pixels": 7065, "n_pieces": 1, "saved_at": "2026-11-18T01:38:35.064433+00:00"}
+{"stem": "pair03_stationary_crop", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/pair03_stationary_crop.png", "pixels": 1464, "n_pieces": 1, "saved_at": "2026-11-18T01:38:43.823545+00:00"}
+{"stem": "pair03_wrist_crop", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/pair03_wrist_crop.png", "pixels": 5344, "n_pieces": 1, "saved_at": "2026-11-18T01:38:49.482000+00:00"}
+{"stem": "im1_a2", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im1_a2.png", "pixels": 4483, "n_pieces": 1, "saved_at": "2026-11-18T01:38:53.522316+00:00"}
+{"stem": "im1_a7", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im1_a7.png", "pixels": 3095, "n_pieces": 1, "saved_at": "2026-11-18T01:39:02.319952+00:00"}
+{"stem": "hugh_im1", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/boards/hugh_im1.jpeg", "pixels": 68063, "n_pieces": 32, "saved_at": "2026-11-18T01:45:05.049063+00:00"}
+{"stem": "hugh_im2", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/boards/hugh_im2.jpeg", "pixels": 69315, "n_pieces": 32, "saved_at": "2026-11-18T01:47:33.296866+00:00"}
+{"stem": "hugh_im3", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/boards/hugh_im3.jpeg", "pixels": 68545, "n_pieces": 32, "saved_at": "2026-11-18T01:50:00.062387+00:00"}
+{"stem": "hugh_im4", "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/boards/hugh_im4.jpeg", "pixels": 67829, "n_pieces": 32, "saved_at": "2026-11-18T01:52:22.294447+00:00"}

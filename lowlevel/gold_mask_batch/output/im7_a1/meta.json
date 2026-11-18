@@ -1,0 +1,18 @@
+{
+  "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/im7_a1.png",
+  "source_relative": "im7_a1.png",
+  "stem": "im7_a1",
+  "model_id": "facebook/sam2.1-hiera-tiny",
+  "n_pieces": 1,
+  "points_xy": [],
+  "labels": [],
+  "score": null,
+  "ok": true,
+  "fail": null,
+  "pixels": 7065,
+  "image_hw": [
+    186,
+    186
+  ],
+  "saved_at": "2026-11-18T01:38:35.064433+00:00"
+}

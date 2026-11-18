@@ -38,5 +38,9 @@ venv/
 !lowlevel/cleanup_cylinder/
 !lowlevel/cleanup_cylinder/**
 
+# Gold-mask dataset output (meta.json per labeled image + index.jsonl)
+!lowlevel/gold_mask_batch/output/**/*.json
+!lowlevel/gold_mask_batch/output/**/*.jsonl
+
 # Hardware corner-calibration run data (large, regenerable/raw capture data)
 corner_runs/
