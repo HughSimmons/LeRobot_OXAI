@@ -37,3 +37,6 @@ venv/
 # Cylinder-era cleanup bundle
 !lowlevel/cleanup_cylinder/
 !lowlevel/cleanup_cylinder/**
+
+# Hardware corner-calibration run data (large, regenerable/raw capture data)
+corner_runs/
