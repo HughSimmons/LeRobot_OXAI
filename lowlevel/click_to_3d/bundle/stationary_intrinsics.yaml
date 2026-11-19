@@ -1,18 +1,35 @@
 %YAML:1.0
 ---
-model: assumed_pinhole
-note: "C920 assumed 70 deg horizontal FOV at 640x480; zero distortion; principal point at image centre."
+model: measured_pinhole
+note: "C920 stationary pinhole from CALIBPICS/stationary_20261107_001628 (square_mm=42.0, RMS=0.4941 px)."
 image_width: 640
 image_height: 480
-hfov_deg: 70.0
-focal_length_px: 457.007
+square_mm: 42.
+reprojection_px: 0.49412000814497103
+focal_length_px: 619.706175481831
 K: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 457.007, 0., 320., 0., 457.007, 240., 0., 0., 1. ]
+   data: [ 617.56047128879777, 0., 312.16176289075599, 0.,
+       621.85187967486411, 254.33472507084699, 0., 0., 1. ]
 distortion: !!opencv-matrix
    rows: 5
    cols: 1
    dt: d
-   data: [ 0., 0., 0., 0., 0. ]
+   data: [ 0.04087513415720697, -0.19669767095353555,
+       0.0064497326667040875, -0.00056664238156525271,
+       0.10277690853966814 ]
+dist: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ 0.04087513415720697, -0.19669767095353555,
+       0.0064497326667040875, -0.00056664238156525271,
+       0.10277690853966814 ]
+K_undistorted: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 606.55116473829821, 0., 311.45244107219202, 0.,
+       613.50340014575659, 257.79009627331834, 0., 0., 1. ]

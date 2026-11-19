@@ -38,7 +38,7 @@ def _project_world(
     height: int,
 ) -> np.ndarray:
     """Z-up orbit camera looking at board centre."""
-    centre = np.array([4 * 41.75 / 2, 4 * 41.75 / 2, 0.0], dtype=np.float64)
+    centre = np.array([4 * 42.0 / 2, 4 * 42.0 / 2, 0.0], dtype=np.float64)
     eye = _orbit_eye(centre, yaw, pitch, distance)
     forward = centre - eye
     forward = forward / (np.linalg.norm(forward) + 1e-9)
@@ -85,7 +85,7 @@ def _px(point: np.ndarray) -> tuple[int, int]:
 
 def build_scene_geometry(scene: dict) -> dict:
     """World-space points that do not change with the orbit camera."""
-    square_mm = float(scene.get("square_mm", 41.75))
+    square_mm = float(scene.get("square_mm", 42.0))
     board = 8.0 * square_mm
     grid = []
     for i in range(9):

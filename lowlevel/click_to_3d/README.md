@@ -26,11 +26,13 @@ LeRobot_OXAI/lowlevel/click_to_3d/
 The parent directory must contain `paths.py` (standard OXAI `lowlevel` layout).
 That is how forward kinematics and `--robot` find the arm API.
 
-## Install
+## Environments
 
-No `helk` env is required. From this folder:
+Own `.venv` in this folder (no `helk` required). Light stack for calib / click /
+mount; SAM gold mode is optional.
 
 ```bash
+cd click_to_3d
 python3 -m venv .venv
 source .venv/bin/activate          # Linux and macOS
 # Windows: .venv\Scripts\activate
@@ -40,10 +42,20 @@ pip install -r requirements.txt
 `--smoke` and `--demo-pair` need the packages above (including `placo` and
 `draccus` for forward kinematics through OXAI `paths.py`).
 
+**Gold-mask mode (`g` / `p`)** needs the same venv plus the SAM add-on:
+
+```bash
+pip install -r requirements-sam.txt
+```
+
+For dataset labeling without the robot UI, use sibling `gold_mask_batch/` with
+its own heavier `.venv` instead.
+
 `--robot` also needs the OXAI lowlevel lerobot checkout already present beside
 this folder (`import paths` / SO-101 follower). Power the arm and use the same
 USB port file as any other OXAI hardware script. Allow this program camera
-access in the operating system's privacy settings.
+access in the operating system's privacy settings. Shared grasp / SAM helpers
+live in `../coord_finder/` when this app sits under OXAI `lowlevel/`.
 
 ## Checklist (first run)
 
@@ -79,7 +91,10 @@ access in the operating system's privacy settings.
 8. Press `c` again, then `space`, click a point, `y` (on the board) or `n`
    (above — then click the ray on the stationary view).
 
-Do not zoom the C920. The bundled stationary matrix assumes the full 640×480 view (about 70° horizontal).
+Do not zoom the C920. Keep 640×480 MJPG and the locked focus used for lens calibration.
+The stationary matrix is a measured pinhole (`stationary_intrinsics.yaml` under
+`output/lens_calib/`, `output/camera_mount/`, and `bundle/`). Regenerate with
+`python run_stationary_lens_calib.py` from `CALIBPICS/stationary_20261107_001628/`.
 
 A yellow **BACKUP IN USE** banner for the bundled lens files is normal on a correct install.
 
@@ -90,6 +105,16 @@ were yours.
 ## What a click stores
 
 The board frame has its origin at the a1 corner, +x toward the h-file, +y toward rank 8, and +z up. Squares are 42.0 mm (33.6 cm / 8).
+
+## Stationary lens calibration
+
+```bash
+python ../run_stationary_lens_calib.py
+```
+
+Reads `../CALIBPICS/stationary_20261107_001628/` (d4-labeled multi-views, 42.0 mm
+squares). Writes the same measured `stationary_intrinsics.yaml` to
+`../output/lens_calib/`, `output/camera_mount/`, and `bundle/`.
 
 ## Wrist lens calibration
 
@@ -125,9 +150,28 @@ Pixels are in that view’s undistorted image, origin at the top-left, rounded t
 | `u` | Launch mount calibration |
 | `v` | Open 3D scene visualiser |
 | `space` | Freeze and click on the undistorted wrist view |
+| `g` | Gold-mask: type a square name, then SAM FG/BG on prism crops |
 | `y` / `n` | After click: on the board / above the board |
 | `r` | Live preview |
 | `q` | Quit |
+
+### Gold-mask mode (`g`)
+
+Requires finished board calib (`c`) so `T_board_*` poses already exist. Press `g`, then **type only the square name** (e.g. `e4`) and Enter — no corner re-clicks and no new PnP. The buffer starts empty (the calib square is shown as a hint only, not auto-selected). Both frozen views are cropped with the same rectangular-prism window as the two-view grasp pipeline (`side_crop_window`), then you refine with SAM clicks.
+
+| Key / click | Action |
+| --- | --- |
+| (name entry) | Type file+rank; Backspace edits; Enter accepts; Esc cancels |
+| LMB / RMB | Foreground / background point on the panel under the cursor |
+| `u` / `r` | Undo / reset points on the **active** view (not mount / live) |
+| `t` | Toggle active wrist ↔ side |
+| Enter / `s` | Save active view if the mask is `ok` |
+| `p` | Save **both** masks, run two-view grasp, return to `ready` like a click |
+| Esc | Return to `ready` (warns if unsaved) |
+
+Saves under `output/gold_masks/<session>/<square>_<view>/` as `crop.png`, `mask.png`, `overlay.png`, and `meta.json` (points, labels, window, model id, gold square, calib square). These are human-accepted SAM masks for later comparison—not auto pipeline output.
+
+**`p` (coordinate):** requires wrist and side masks both `ok`. Saves both gold bundles, pastes masks into the frozen full frames, runs `grasp_from_views` with the champion 3D fuse `fuse_mode=overhead_ray` (empty occupancy; see `../two_view_pipeline_champions.md`), logs `method: gold_two_view` and `fuse_mode` to `session_log.jsonl`, then leaves gold-mask UI for the normal wrist|stationary|panel `ready` view. The grasp point is projected as white dots on both cameras and listed as `board […]  base […]` exactly like a space-click result.
 
 ## Mount calibration
 
