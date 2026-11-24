@@ -13,7 +13,11 @@ in URDF degrees:
   --error                 plot hardware - sim instead of both series (the replay's error_deg or
                           vel_error_deg_s)
 With --align index, stretches where the plan holds the arm still are shaded and named from the
-gripper target: the grasp (gripper closing) and the release (gripper open).
+gripper target: the grasp (gripper closing) and the release (gripper open). The angle plots by
+index also give the pick's accuracy at the middle of the grasp hold (dashed line), while the
+gripper closes: each joint's hardware - plan (reading_urdf_deg - target_deg) beside its panel,
+and the gripper tip's (gripper_frame_link, by PyBullet FK in the replay's URDF) in mm under the
+title.
 The gripper is left out, as in the comparison: the real gripper reads LeRobot's 0-100 range, not
 degrees.
 
@@ -77,6 +81,61 @@ def held_spans(run_dir: Path) -> list[tuple[int, int, str]]:
             spans.append((int(index[row]), int(index[end]), label))
         row = end
     return spans
+
+
+TIP_FRAME = "gripper_frame_link"  # the fixed-jaw tip, the frame the lookups plan
+
+
+def tip_positions_mm(urdf_path: str, joint_names: list[str], poses_deg: list[np.ndarray]) -> list[np.ndarray]:
+    """TIP_FRAME's base-frame position (mm) at each pose (URDF deg, joint_names order), by PyBullet FK."""
+    import pybullet as p
+
+    client = p.connect(p.DIRECT)
+    try:
+        robot = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True, physicsClientId=client)
+        by_name, tip = {}, None
+        for i in range(p.getNumJoints(robot, physicsClientId=client)):
+            info = p.getJointInfo(robot, i, physicsClientId=client)
+            by_name[info[1].decode()] = i
+            if info[12].decode() == TIP_FRAME:
+                tip = i
+        if tip is None:
+            raise ValueError(f"{urdf_path} has no {TIP_FRAME}")
+        out = []
+        for pose in poses_deg:
+            for name, angle in zip(joint_names, pose):
+                p.resetJointState(robot, by_name[name], float(np.deg2rad(angle)), physicsClientId=client)
+            state = p.getLinkState(robot, tip, computeForwardKinematics=True, physicsClientId=client)
+            out.append(np.asarray(state[4]) * 1000.0)
+        return out
+    finally:
+        p.disconnect(client)
+
+
+def grasp_error(run_dir: Path, replay: dict, spans: list[tuple[int, int, str]]) -> dict | None:
+    """Hardware - plan in the middle of the grasp hold: per joint (deg) and at the gripper tip (mm).
+
+    reading_urdf_deg - target_deg at the hold's middle command, while the gripper is closing on
+    the piece (summarise_pybullet_replays.py's 'at rest' table uses the hold's last command
+    instead). The tip error is the FK of the reading minus the FK of the plan, in the replay's
+    URDF. None if the run has no grasp hold.
+    """
+    hold = next(((first, last) for first, last, label in spans if label.startswith("grasp")), None)
+    if hold is None:
+        return None
+    timeline = json.loads((run_dir / "timeline_hardware.json").read_text(encoding="utf-8"))
+    index = np.asarray(timeline["index"])
+    row = int(np.argmin(np.abs(index - (hold[0] + hold[1]) / 2)))
+    names = list(timeline["joints"])
+    reading = np.asarray(timeline["reading_urdf_deg"][row], dtype=float)
+    planned = np.asarray(timeline["target_deg"][row], dtype=float)
+    planned_mm, reached_mm = tip_positions_mm(replay["urdf"], names, [planned, reading])
+    by_joint = dict(zip(names, reading - planned))
+    return {
+        "index": int(index[row]),
+        "joint_deg": [float(by_joint[name]) for name in replay["compared_joints"]],
+        "tip_mm": reached_mm - planned_mm,
+    }
 
 
 def rows(values: list) -> np.ndarray:
@@ -145,6 +204,14 @@ def main() -> int:
         spans = held_spans(run_dir)
     hw_deg = np.asarray(aligned["hardware_deg"])
     subtitle = run_dir.name
+    # The pick's accuracy, on the angle plots by index (the grasp hold is only marked there).
+    grasp = grasp_error(run_dir, replay, spans) if spans and not args.velocity else None
+    if grasp is not None:
+        dx, dy, dz = grasp["tip_mm"]
+        subtitle += (
+            f"  ·  mid-grasp (command {grasp['index']}, dashed), gripper tip hardware - plan: "
+            f"x {dx:+.1f}, y {dy:+.1f}, z {dz:+.1f} mm, total {float(np.linalg.norm(grasp['tip_mm'])):.1f} mm"
+        )
     if args.velocity:
         sim_vals = sim_vel
         hw_vals = rows(aligned["hardware_vel_deg_s"])
@@ -207,6 +274,20 @@ def main() -> int:
                     color=TEXT_SECONDARY,
                     fontsize=8,
                 )
+        if grasp is not None:
+            # A tick where it was taken, and the value in the right margin, clear of the lines.
+            ax.axvline(grasp["index"], color=TEXT_MUTED, lw=0.5, ls=(0, (2, 2)))
+            ax.annotate(
+                f"mid-grasp\n{grasp['joint_deg'][j]:+.2f} {unit}",
+                xy=(1.0, 0.5),
+                xycoords="axes fraction",
+                xytext=(8, 0),
+                textcoords="offset points",
+                ha="left",
+                va="center",
+                color=TEXT_PRIMARY,
+                fontsize=8,
+            )
         if vline_x is not None:
             ax.axvline(vline_x, color=AXIS, lw=0.5)
         ax.set_ylabel(f"{name}\n({unit})", color=TEXT_SECONDARY, rotation=0, ha="right", va="center", labelpad=8)
@@ -261,7 +342,8 @@ def main() -> int:
     fig.suptitle(title, x=0.11, y=0.988, ha="left", color=TEXT_PRIMARY, fontsize=10, fontweight="bold")
     fig.text(0.11, 0.968, subtitle, ha="left", va="top", color=TEXT_SECONDARY, fontsize=8)
     # Room above the panels for the title and run name, plus the legend when there is one.
-    fig.tight_layout(rect=(0, 0, 1, 0.95 if args.error else 0.925))
+    # With the grasp error, a right margin for its per-joint values.
+    fig.tight_layout(rect=(0, 0, 0.92 if grasp is not None else 1, 0.95 if args.error else 0.925))
 
     output = (args.output or run_dir / default_name).expanduser().resolve()
     fig.savefig(output, facecolor=SURFACE)

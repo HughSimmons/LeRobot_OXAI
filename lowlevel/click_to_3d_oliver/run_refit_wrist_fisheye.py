@@ -230,7 +230,7 @@ def run(photos_dir: Path, out_dir: Path, square_mm: float) -> dict:
         "calibrated": True,
         "yaml": str(yaml_path),
         "square_mm": square_mm,
-        "square_mm_source": "33.6 cm / 8 (Oliver tape)",
+        "square_mm_source": "click3d_shared.SQUARE_MM (41.25 mm, board_coordinates.DEFAULT_SQUARE_SIZE)",
         "dropped_shots": sorted(DROP_SHOTS),
         "dropped_outlier_view": dropped_file,
         "views_used": per_view,

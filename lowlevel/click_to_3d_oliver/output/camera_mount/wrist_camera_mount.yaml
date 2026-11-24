@@ -2,32 +2,32 @@ parent_link: gripper_frame_link
 child_link: wrist_camera_link
 note: T maps camera points into gripper_frame_link (FK target used during calibration).
 T_gripper_camera_mm:
-- - -0.997376
-  - -0.065748
-  - -0.030314
-  - -11.57709
-- - 0.072283
-  - -0.88049
-  - -0.468521
-  - 75.369081
-- - 0.004113
-  - -0.469482
-  - 0.882932
-  - -91.712936
+- - -0.997424
+  - -0.066318
+  - -0.027343
+  - -12.017185
+- - 0.071386
+  - -0.880202
+  - -0.4692
+  - 74.979161
+- - 0.007049
+  - -0.469943
+  - 0.882669
+  - -90.412328
 - - 0.0
   - 0.0
   - 0.0
   - 1.0
 origin_xyz_m:
-- -0.011577
-- 0.075369
-- -0.091713
+- -0.012017
+- 0.074979
+- -0.090412
 origin_rpy_rad:
-- -0.488709
-- -0.004113
-- 3.069246
+- -0.489239
+- -0.007049
+- 3.070144
 sample_count: 8
-mean_residual_mm: 13.371
+mean_residual_mm: 15.326
 source_urdf: /home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/urdf/so101_new_calib_wrist_cam.urdf
 joint_offsets_deg:
 - 2.5
@@ -37,16 +37,16 @@ joint_offsets_deg:
 - 0.0
 - 0.0
 fit: reprojection (Koide & Menegatti 2019), start hand_eye
-reprojection_rms_px: 5.204
+reprojection_rms_px: 5.626
 runs:
 - '20261111_193315'
 board_pose: one for all runs
 mount_std_rotation_deg_camera_xyz:
-- 0.313
-- 0.338
-- 0.341
+- 0.335
+- 0.361
+- 0.367
 mount_std_translation_mm_camera_xyz:
-- 1.201
-- 1.144
-- 1.792
+- 1.271
+- 1.215
+- 1.923
 fisheye: /home/oliver/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/click_to_3d_oliver/output/camera_mount/wrist_fisheye.yaml

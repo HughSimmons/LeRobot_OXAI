@@ -51,8 +51,9 @@ from calib_intrinsics import (  # noqa: E402
     undistort_fisheye,
 )
 
-# Oliver tape: 33.6 cm across 8 squares (playing surface).
-SQUARE_MM = 42.0
+# Same as the sim and lookup tables (board_coordinates.DEFAULT_SQUARE_SIZE, 33.0 cm across 8);
+# 42.0 mm (Oliver tape, 33.6 cm) before 2026-11-23.
+SQUARE_MM = 41.25
 # Board in the robot base, ruler-measured (Oliver's project notes, "Robot origin"): centre at
 # (29.26, 0) cm from the robot origin, edges along the base x / y axes. The board is 2.9 cm
 # thick and sits on the table the robot stands on, so the playing surface is at z = 29 mm.
@@ -587,7 +588,7 @@ def solve_hand_eye_mount(
     residual of ||(A X)[:3,3] - (Y B)[:3,3]||.
     """
     if len(samples) < 3:
-        raise ValueError("need at least 3 samples for hand–eye")
+        raise ValueError("need at least 3 samples for hand-eye")
     r_gripper2base = []
     t_gripper2base = []
     r_target2cam = []
@@ -639,7 +640,7 @@ def solve_hand_eye_mount(
             best = (X_try, Y_try, residual)
     if best is None or best[2] > 50.0:
         raise RuntimeError(
-            "Hand–eye failed — use larger arm rotations between captures "
+            "Hand-eye failed - use larger arm rotations between captures "
             f"(best residual {None if best is None else round(best[2], 2)} mm)."
         )
     return best
@@ -886,10 +887,20 @@ def algebraic_from_xy(x_mm: float, y_mm: float, square_mm: float = SQUARE_MM) ->
     return "abcdefgh"[file_i] + str(rank_i + 1)
 
 
-def acceptable_pose(pose: np.ndarray | None) -> bool:
+def acceptable_pose(pose: np.ndarray | None, *, upright: bool = False) -> bool:
+    """Camera above the board, looking down. ``upright`` (tripod only) also needs image-down
+    (the camera's y axis, column 1) to point down at the table, i.e. roll within +-90 deg.
+
+    One square's four corners fit two poses almost equally well (planar ambiguity): the real
+    one and one on the far side of the board rolled 180 deg. From a diagonal tripod view on
+    2026-11-24 they differed by 0.8 px and the rolled one was kept. The wrist camera can be
+    rolled any way, so it doesn't get this check.
+    """
     if pose is None or not np.isfinite(pose).all():
         return False
-    return float(pose[2, 3]) > 0.0 and float(pose[2, 2]) < 0.0
+    if not (float(pose[2, 3]) > 0.0 and float(pose[2, 2]) < 0.0):
+        return False
+    return not upright or float(pose[2, 1]) < 0.0
 
 
 def square_corner_points_board(square: str, square_mm: float = SQUARE_MM) -> np.ndarray:
@@ -911,8 +922,14 @@ def pose_from_square_corners(
     square: str,
     camera_matrix: np.ndarray,
     square_mm: float = SQUARE_MM,
+    *,
+    upright: bool = False,
 ) -> np.ndarray | None:
-    """Four corners of one square: index 0 is nearest a1, then +file, +file+rank, +rank."""
+    """Four corners of one square: index 0 is nearest a1, then +file, +file+rank, +rank.
+
+    ``upright=True`` (tripod) rejects poses with the camera rolled past 90 deg; see
+    ``acceptable_pose``. If the first solve gives one, IPPE's other solution is tried.
+    """
     object_points = square_corner_points_board(square, square_mm)
     dist = np.zeros(5, dtype=np.float64)
     ok, rvec, tvec = cv2.solvePnP(
@@ -926,7 +943,7 @@ def pose_from_square_corners(
         return None
     rotation = cv2.Rodrigues(np.asarray(rvec, dtype=np.float64))[0]
     pose = invert(se3(rotation, np.asarray(tvec, dtype=np.float64).reshape(3)))
-    if acceptable_pose(pose):
+    if acceptable_pose(pose, upright=upright):
         return pose
     ok, rvecs, tvecs, _ = cv2.solvePnPGeneric(
         object_points,
@@ -940,7 +957,7 @@ def pose_from_square_corners(
     for rv, tv in zip(rvecs, tvecs):
         rotation = cv2.Rodrigues(np.asarray(rv, dtype=np.float64))[0]
         candidate = invert(se3(rotation, np.asarray(tv, dtype=np.float64).reshape(3)))
-        if acceptable_pose(candidate):
+        if acceptable_pose(candidate, upright=upright):
             return candidate
     return None
 
@@ -1021,7 +1038,7 @@ def detect_grid_for_view(
     ``restrict_to_board`` gates the search to a coarse board AABB (stationary only).
 
     Returns ``(grid, source_tag)`` where source_tag is one of
-    ``\"undistorted\"``, ``\"image\"``, ``\"raw→undistort\"``, ``\"none\"``.
+    ``\"undistorted\"``, ``\"image\"``, ``\"raw->undistort\"``, ``\"none\"``.
     """
     grid = detect_grid(image_bgr, restrict_to_board=restrict_to_board)
     if grid is not None:
@@ -1029,7 +1046,7 @@ def detect_grid_for_view(
     if raw_bgr is not None and fisheye_calib is not None:
         raw_grid = detect_grid(raw_bgr, restrict_to_board=False)
         if raw_grid is not None:
-            return map_fisheye_grid_to_undistorted(raw_grid, fisheye_calib), "raw→undistort"
+            return map_fisheye_grid_to_undistorted(raw_grid, fisheye_calib), "raw->undistort"
     return None, "none"
 
 
@@ -1074,10 +1091,10 @@ def resolve_label_click(
 def corner_click_mode_line(grid: np.ndarray | None, manual: bool) -> str:
     """First help line while labelling corners: manual, snapping, or nothing detected."""
     if manual:
-        return "MANUAL corners (f: snap) — click exactly on each corner"
+        return "MANUAL corners (f: snap) - click exactly on each corner"
     if grid is not None:
-        return "Rings = detected corners — clicks snap (Shift+click: free; f: manual)"
-    return "no corners detected — click carefully"
+        return "Rings = detected corners - clicks snap (Shift+click: free; f: manual)"
+    return "no corners detected - click carefully"
 
 
 def draw_detected_corners(
@@ -1092,6 +1109,45 @@ def draw_detected_corners(
         return image
     for pt in np.asarray(grid, dtype=np.float64).reshape(-1, 2):
         cv2.circle(image, (int(round(pt[0])), int(round(pt[1]))), radius, color, 1, lineType=cv2.LINE_AA)
+    return image
+
+
+def draw_board_overlay(
+    image: np.ndarray,
+    T_board_camera: np.ndarray,
+    camera_matrix: np.ndarray,
+    square_mm: float = SQUARE_MM,
+    alpha: float = 0.5,
+) -> np.ndarray:
+    """Draw the 8x8 board grid the pose predicts, half transparent, with a1 / h8 labelled
+    (mutates ``image``). If the lines don't sit on the real squares, or a1 is at the wrong
+    corner, the pose is wrong or the camera moved since it was solved."""
+    n = np.arange(9, dtype=np.float64) * square_mm
+    lattice = np.array([[x, y, 0.0] for y in n for x in n], dtype=np.float64)
+    pix, depth = project_points(lattice, T_board_camera, camera_matrix)
+    pix = pix.reshape(9, 9, 2)  # [rank line, file line]
+    front = depth.reshape(9, 9) > 1.0
+    layer = image.copy()
+
+    def segment(a: tuple[int, int], b: tuple[int, int], edge: bool) -> None:
+        if front[a] and front[b]:
+            p, q = pix[a], pix[b]
+            if np.all(np.abs(np.r_[p, q]) < 1e5):
+                colour, width = ((0, 255, 255), 2) if edge else ((255, 255, 0), 1)
+                cv2.line(layer, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), colour, width, cv2.LINE_AA)
+
+    for i in range(9):
+        for j in range(8):
+            segment((i, j), (i, j + 1), i in (0, 8))  # along a rank line, a -> h
+            segment((j, i), (j + 1, i), i in (0, 8))  # along a file line, rank 1 -> 8
+    cv2.addWeighted(layer, alpha, image, 1.0 - alpha, 0.0, dst=image)
+    labels = np.array([[0.5 * square_mm, 0.5 * square_mm, 0.0], [7.5 * square_mm, 7.5 * square_mm, 0.0]])
+    label_pix, label_depth = project_points(labels, T_board_camera, camera_matrix)
+    for (x, y), d, text in zip(label_pix.reshape(-1, 2), label_depth, ("a1", "h8")):
+        if d > 1.0 and abs(x) < 1e5 and abs(y) < 1e5:
+            org = (int(x) - 10, int(y) + 6)
+            cv2.putText(image, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(image, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 1, cv2.LINE_AA)
     return image
 
 
@@ -1349,7 +1405,7 @@ def snap_ray_click(
         dist = np.linalg.norm(deltas, axis=1)
         index = int(np.argmin(dist))
         if float(dist[index]) <= max_dist_px:
-            return None, "point is beneath the board — click again on the line"
+            return None, "point is beneath the board - click again on the line"
     if all_pts is not None and len(all_pts) > 0:
         snapped = snap_to_polyline(pixel, all_pts, max_dist_px)
         if snapped is None:

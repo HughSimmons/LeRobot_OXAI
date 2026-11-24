@@ -85,15 +85,18 @@ from friction.fit_servo_model_to_sweeps import (
     held_out_folds,
     joint_offsets_deg,
     load_sweeps,
-    read_constant_from_source,
     rmse,
 )
 
 GRAVITY_JOINTS = ["shoulder_lift", "elbow_flex", "wrist_flex"]
 NO_GRAVITY_JOINTS = ["shoulder_pan", "wrist_roll"]
 
-# Prior uncertainty (deg) for an offset multisim_chess_fast.py lists with sd 0, i.e. one
-# that was never measured.
+# Prior uncertainty (deg) of multisim_chess_fast.py's DEFAULT_JOINT_OFFSETS_DEG (pan, lift,
+# elbow, wrist flex, wrist roll): the ruler's ~2 mm at the tip for the two fitted joints
+# (about 3 mm per degree), 0 for the ones never measured. Moved here from the sim's
+# DEFAULT_JOINT_OFFSET_SD_DEG when the sim stopped drawing random offsets (2026-11-19).
+OFFSET_PRIOR_SD_DEG = (0.0, 0.0, 0.7, 0.7, 0.0)
+# Prior uncertainty (deg) for an offset listed above with sd 0, i.e. one that was never measured.
 UNMEASURED_OFFSET_SD_DEG = 5.0
 # How far a fitted offset may move from the sim's value (deg).
 OFFSET_SEARCH_RANGE_DEG = 15.0
@@ -301,10 +304,9 @@ class OffsetPrior:
 
 
 def offset_prior(base_offsets_deg: np.ndarray) -> OffsetPrior:
-    """The sim's offsets, with multisim_chess_fast.py's stated uncertainty (or a loose
-    one where it lists none)."""
-    sd = read_constant_from_source(paths.LOWLEVEL_DIR / "multisim_chess_fast.py", "DEFAULT_JOINT_OFFSET_SD_DEG")
-    sd = np.array([*sd, 0.0], dtype=float)
+    """The sim's offsets, with OFFSET_PRIOR_SD_DEG's uncertainty (or a loose one where it
+    lists none)."""
+    sd = np.array([*OFFSET_PRIOR_SD_DEG, 0.0], dtype=float)
     sd[sd <= 0] = UNMEASURED_OFFSET_SD_DEG
     return OffsetPrior(base_offsets_deg.copy(), sd)
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """OpenCV wireframe view of the board, cameras, and selected point.
 
+The last click's nearest square is outlined in green, with a cross at its centre and a yellow
+line from there to the click, labelled with the distance (x / y offset at the top).
+
 Mouse drag orbits about board +z. + / - zoom. q quits.
 """
 
@@ -105,11 +108,24 @@ def build_scene_geometry(scene: dict) -> dict:
     )
     chunks = [grid, a1, wrist, side]
     has_point = scene.get("point_board_mm") is not None
+    error = None
     if has_point:
         point = np.asarray(scene["point_board_mm"], dtype=np.float64).reshape(1, 3)
         foot = point.copy()
         foot[0, 2] = 0.0
-        chunks.extend([point, foot])
+        # The nearest square (an edge square when off the board): its centre and outline, and the
+        # click's x / y offset from that centre. For a piece centred on its square, the click's error.
+        file_i = min(7, max(0, int(math.floor(foot[0, 0] / square_mm))))
+        rank_i = min(7, max(0, int(math.floor(foot[0, 1] / square_mm))))
+        centre = np.array([[(file_i + 0.5) * square_mm, (rank_i + 0.5) * square_mm, 0.0]], dtype=np.float64)
+        x0, y0 = file_i * square_mm, rank_i * square_mm
+        outline = np.array(
+            [[x0, y0, 0.0], [x0 + square_mm, y0, 0.0], [x0 + square_mm, y0 + square_mm, 0.0], [x0, y0 + square_mm, 0.0]],
+            dtype=np.float64,
+        )
+        dx, dy = (foot[0, :2] - centre[0, :2]).tolist()
+        error = {"square": "abcdefgh"[file_i] + str(rank_i + 1), "dx": dx, "dy": dy, "dist": math.hypot(dx, dy)}
+        chunks.extend([point, foot, centre, outline])
     world = np.vstack(chunks)
     n_grid = len(grid)
     i = n_grid
@@ -120,12 +136,16 @@ def build_scene_geometry(scene: dict) -> dict:
         "side": slice(i + 6, i + 11),
         "point": None,
         "foot": None,
+        "centre": None,
+        "outline": None,
     }
     i += 11
     if has_point:
         slices["point"] = slice(i, i + 1)
         slices["foot"] = slice(i + 1, i + 2)
-    return {"world": world, "slices": slices}
+        slices["centre"] = slice(i + 2, i + 3)
+        slices["outline"] = slice(i + 3, i + 7)
+    return {"world": world, "slices": slices, "error": error}
 
 
 def draw_scene(
@@ -171,11 +191,41 @@ def draw_scene(
         )
 
     if slices["point"] is not None:
-        centre = _px(proj[slices["point"]][0])
+        # Nearest square: outline, centre cross, and a line from the centre to the click's foot.
+        outline = [_px(p) for p in proj[slices["outline"]]]
+        for k in range(4):
+            cv2.line(canvas, outline[k], outline[(k + 1) % 4], (0, 200, 0), 1, line_type)
+        square_centre = _px(proj[slices["centre"]][0])
         foot = _px(proj[slices["foot"]][0])
-        cv2.circle(canvas, centre, 7, (0, 0, 255), -1, line_type)
+        centre = _px(proj[slices["point"]][0])
+        # The click is a ring, so the centre cross and error line drawn over it stay visible.
+        cv2.circle(canvas, centre, 7, (0, 0, 255), 2, line_type)
         cv2.circle(canvas, centre, 10, (255, 255, 255), 1, line_type)
         cv2.line(canvas, centre, foot, (0, 0, 180), 1, line_type)
+        cv2.drawMarker(canvas, square_centre, (0, 255, 0), cv2.MARKER_CROSS, 12, 2, line_type)
+        cv2.line(canvas, square_centre, foot, (0, 255, 255), 2, line_type)
+        error = geometry["error"]
+        cv2.putText(
+            canvas,
+            f"{error['dist']:.1f} mm",
+            (foot[0] + 12, foot[1] + 18),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 255),
+            1,
+            line_type,
+        )
+        cv2.putText(
+            canvas,
+            f"click vs {error['square']} centre: dx {error['dx']:+.1f}  dy {error['dy']:+.1f}  = {error['dist']:.1f} mm"
+            "  (+x toward h, +y toward rank 8)",
+            (12, height - 42),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 255),
+            1,
+            line_type,
+        )
 
     cv2.putText(
         canvas,

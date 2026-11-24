@@ -48,3 +48,11 @@ CLAUDE.local.md
 
 # Hardware corner-calibration run data (large, regenerable/raw capture data)
 corner_runs/
+
+# Real-arm run data (GBs; stays on the lab machine, see lowlevel/README.md)
+lowlevel/real_world_runs/
+
+# click_to_3d_oliver runtime captures and scratch copies
+lowlevel/click_to_3d_oliver/output/sessions/fk_repose/
+lowlevel/click_to_3d_oliver/output/gold_masks/
+lowlevel/.click3d_smoke_tmp/

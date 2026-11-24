@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Click-to-3D Quick Start</title>
+<!-- Printable A4 guide for run_click_to_3d.py. Keep in step with README.md (keys table). -->
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #555;
+    --rule: #c8c8c8;
+    --accent: #0b5cad;
+    --warn-bg: #fdecea;
+    --warn-ink: #8a1c12;
+    --tip-bg: #eef4fb;
+    --key-bg: #f2f2f2;
+    --green: #1f8f3a;
+    --orange: #c46a00;
+  }
+  @page { size: A4; margin: 14mm 14mm 12mm; }
+  * { box-sizing: border-box; }
+  html { background: #fff; }
+  body {
+    margin: 0 auto;
+    max-width: 182mm;
+    padding: 16px;
+    background: #fff;
+    color: var(--ink);
+    font: 9.5pt/1.3 "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  }
+  @media print { body { padding: 0; max-width: none; } }
+  h1 { font-size: 20pt; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 10px; }
+  h2 {
+    font-size: 12.5pt;
+    margin: 10px 0 4px;
+    padding-bottom: 3px;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 5px;
+    border: 1px solid #999;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--key-bg);
+    font: 600 9.5pt/1.45 ui-monospace, Consolas, monospace;
+    text-align: center;
+  }
+  code { font: 9pt ui-monospace, Consolas, monospace; background: var(--key-bg); padding: 0 3px; border-radius: 3px; }
+  pre {
+    margin: 4px 0 0;
+    padding: 6px 8px;
+    background: var(--key-bg);
+    border-radius: 4px;
+    font: 9pt ui-monospace, Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .safety {
+    border: 2px solid var(--warn-ink);
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin: 6px 0 4px;
+  }
+  .safety strong { display: block; font-size: 11pt; margin-bottom: 2px; }
+  .safety ul { margin: 2px 0 0; padding-left: 18px; }
+  ol.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+  ol.steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 4px 0 4px 34px;
+    border-bottom: 1px solid var(--rule);
+    break-inside: avoid;
+  }
+  ol.steps > li:last-child { border-bottom: 0; }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    line-height: 24px;
+  }
+  .step-title { font-weight: 700; font-size: 11pt; }
+  ol.steps ul { margin: 3px 0 0; padding-left: 16px; }
+  ol.steps li li { margin: 1px 0; }
+  .tip { background: var(--tip-bg); border-left: 3px solid var(--accent); padding: 3px 8px; margin-top: 4px; }
+  .corner-row { display: flex; gap: 14px; align-items: center; margin-top: 4px; }
+  .corner-row svg { flex: none; }
+  .corner-row p { margin: 0; }
+  .page-break { break-before: page; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 2px 5px; border-bottom: 1px solid var(--rule); }
+  th { font-size: 8.5pt; color: var(--muted); font-weight: 600; border-bottom: 1.5px solid var(--ink); }
+  table.keys td:first-child { white-space: nowrap; width: 1%; }
+  table.trouble td:first-child { width: 38%; }
+  tr.arm td { background: var(--warn-bg); }
+  tr.arm td:first-child::after { content: " ⚠"; color: var(--warn-ink); }
+  .group td { background: none; font-weight: 700; padding-top: 9px; border-bottom: 1px solid var(--ink); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 640px) {
+    body { padding: 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .corner-row { flex-direction: column; align-items: flex-start; }
+  }
+  .foot { margin-top: 10px; color: var(--muted); font-size: 8.5pt; }
+</style>
+</head>
+<body>
+
+<h1>Click-to-3D: Quick Start</h1>
+<p class="sub">Click a chess piece on screen and the SO-101 arm picks it up and puts it on another square.</p>
+
+<div class="safety">
+  <strong>⚠ Safety: three keys move the real arm</strong>
+  <ul>
+    <li><kbd>k</kbd> <b>pick and place</b>: after about 35 s of planning, the arm <b>moves straight away, with no further prompt</b>.</li>
+    <li><kbd>a</kbd> moves to a click (asks for Enter in the terminal first); <kbd>w</kbd> drives to the viewing pose <b>with no prompt</b>.</li>
+    <li><kbd>h</kbd> releases the arm (torque off): <b>hold it first</b>, or it drops. Keep the area around the arm clear.
+      <b>To stop a move, switch off the arm's power</b>: keys are ignored while it moves.</li>
+  </ul>
+</div>
+
+<p style="margin:8px 0 0"><b>The window:</b> left = <b>wrist camera</b> (on the gripper), middle = <b>tripod camera</b>,
+right = <b>status panel</b>. Some moves ask questions in the <b>terminal</b> instead: if the window says
+<i>"keys ignored until done"</i>, look there.</p>
+
+<h2>Steps</h2>
+<ol class="steps">
+  <li>
+    <span class="step-title">Start the app</span> (power on the arm and plug in both cameras first)
+    <pre>cd ~/OXAI_hardware_lab/LeRobot_OXAI/lowlevel/click_to_3d_oliver
+~/venvs/click3d/bin/python run_click_to_3d.py --robot --fk-repose</pre>
+    <div class="tip">Wrong way round (tripod on the left)? Press <kbd>x</kbd> to swap the cameras.</div>
+  </li>
+  <li>
+    <span class="step-title">Put the arm in the viewing pose:</span> press <kbd>w</kbd>
+    <ul>
+      <li>The arm drives to a saved pose where the wrist camera sees the board. <b>It moves immediately.</b></li>
+      <li>No pose saved yet? Hold the arm where the wrist camera sees most of the board, press <kbd>h</kbd> to hold it, then <kbd>e</kbd> to save that pose.</li>
+    </ul>
+  </li>
+  <li>
+    <span class="step-title">Calibrate the cameras to the board:</span> press <kbd>c</kbd>
+    <ul>
+      <li>Type a square both cameras can see in full (e.g. <kbd>d</kbd> <kbd>4</kbd>) and press <kbd>Enter</kbd>. It doesn't need a piece on it.</li>
+      <li>Click that square's 4 corners on the <b>wrist view (left)</b>, then again on the <b>tripod view (middle)</b>.</li>
+    </ul>
+    <div class="corner-row">
+      <svg width="106" height="84" viewBox="0 0 132 104" role="img" aria-label="Corner order: 1 nearest a1, then counter-clockwise">
+        <rect x="26" y="14" width="76" height="76" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
+        <path d="M44 90 A 18 18 0 0 0 26 72" fill="none" stroke="#999" stroke-width="1"/>
+        <circle cx="26" cy="90" r="9" fill="#1f8f3a"/><text x="26" y="94" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">1</text>
+        <circle cx="102" cy="90" r="9" fill="#c46a00"/><text x="102" y="94" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">2</text>
+        <circle cx="102" cy="14" r="9" fill="#c46a00"/><text x="102" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">3</text>
+        <circle cx="26" cy="14" r="9" fill="#c46a00"/><text x="26" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">4</text>
+        <text x="4" y="103" font-size="9" fill="#555">to a1</text>
+        <path d="M64 90 L 64 90" />
+        <text x="64" y="104" text-anchor="middle" font-size="9" fill="#555">→ h-file</text>
+        <text x="122" y="56" text-anchor="middle" font-size="9" fill="#555" transform="rotate(-90 122 56)">→ rank 8</text>
+      </svg>
+      <p><b>Corner 1 (green)</b> is the corner <b>nearest a1</b>. Then go <b>counter-clockwise as it looks on screen</b>:
+        2 = toward the h-file, 3 = the far corner, 4 = toward rank 8.<br>
+        Clicks snap to the detected corners. Hold <b>Shift</b> while clicking to place one exactly where you click.</p>
+    </div>
+    <div class="tip"><b>Check it worked:</b> a cyan grid is drawn over the tripod view. It must sit on the real squares, with
+      <b>a1</b> and <b>h8</b> labels in the right corners. If not, press <kbd>c</kbd> again.</div>
+  </li>
+  <li>
+    <span class="step-title">Click the piece to move</span>
+    <ul>
+      <li>Press <kbd>space</kbd>, then click <b>where the piece touches the board</b> (its base, not its top) on the <b>wrist view</b>, then press <kbd>y</kbd> (on the board).</li>
+      <li>Or click it on the <b>tripod view</b> instead (no <kbd>y</kbd> needed).</li>
+      <li>An orange <b>1</b> marks it on both views.</li>
+    </ul>
+  </li>
+  <li>
+    <span class="step-title">Click the destination square</span>: <kbd>space</kbd>, click anywhere on that square, then <kbd>y</kbd>.
+    A white <b>2</b> marks it. The panel shows <i>"piece 1 (c6) → square 2 (c4 centre)"</i>: check those squares are right.
+  </li>
+  <li>
+    <span class="step-title">Pick and place:</span> press <kbd>k</kbd> ⚠
+    <ul>
+      <li>It plans in simulation (about 35 s; watch the terminal), then <b>the arm moves on its own</b>: picks piece 1, places it on the centre of square 2, and returns.</li>
+      <li>If the plan fails, nothing moves and the terminal says why.</li>
+    </ul>
+  </li>
+  <li>
+    <span class="step-title">Next move:</span> press <kbd>w</kbd> to go back to the viewing pose, then repeat from step 4.
+    <div class="tip">Redo step 3 (<kbd>c</kbd>) only if the <b>board, the robot or the tripod</b> has moved, or the grid stops lining up.</div>
+  </li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2>Keys</h2>
+<div class="two-col">
+<table class="keys">
+  <tbody>
+    <tr class="group"><td colspan="2">Calibrate &amp; view</td></tr>
+    <tr><td><kbd>c</kbd></td><td>Calibrate both cameras to the board (step 3)</td></tr>
+    <tr><td><kbd>l</kbd></td><td>Grid overlay on the tripod view on / off: check it sits on the real squares</td></tr>
+    <tr><td><kbd>x</kbd></td><td>Swap the cameras (wrist must be on the left)</td></tr>
+    <tr><td><kbd>f</kbd></td><td>Corner clicks: snap to detected corners / exactly where you click</td></tr>
+    <tr><td><kbd>v</kbd></td><td>3D view of board, cameras and last click, with the click's distance from the square centre</td></tr>
+    <tr><td><kbd>r</kbd></td><td>Live preview of both cameras</td></tr>
+
+    <tr class="group"><td colspan="2">Click points</td></tr>
+    <tr><td><kbd>space</kbd></td><td>Start a click (then click the wrist or tripod view)</td></tr>
+    <tr><td><kbd>y</kbd> / <kbd>n</kbd></td><td>After a wrist click: the point is <b>on</b> the board / <b>above</b> it (<kbd>n</kbd>: then click the same point on the line drawn in the tripod view)</td></tr>
+    <tr><td><kbd>g</kbd></td><td>Gold-mask: outline a piece with SAM on both views to find its grasp point (advanced)</td></tr>
+  </tbody>
+</table>
+<table class="keys">
+  <tbody>
+    <tr class="group"><td colspan="2">Move the arm</td></tr>
+    <tr class="arm"><td><kbd>k</kbd></td><td>Pick the piece at click 1, place it on click 2's square. <b>Moves without asking</b> after planning</td></tr>
+    <tr class="arm"><td><kbd>a</kbd></td><td>Move the gripper tip to the last click (confirm with Enter in the terminal)</td></tr>
+    <tr class="arm"><td><kbd>w</kbd></td><td>Drive to the saved viewing pose. <b>Moves without asking</b></td></tr>
+    <tr class="arm"><td><kbd>h</kbd></td><td>Hold the arm (torque on) / release it (torque off: <b>support it first</b>)</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Save the arm's current pose as the viewing pose (twice within 3 s to replace one)</td></tr>
+
+    <tr class="group"><td colspan="2">Settings (current value shown in the panel)</td></tr>
+    <tr><td><kbd>o</kbd></td><td>Joint compensation for <kbd>a</kbd> / <kbd>k</kbd>: off → baseline → on</td></tr>
+    <tr><td><kbd>b</kbd></td><td>Where board positions come from: tape-measured board (ruler) / camera-detected (cv)</td></tr>
+    <tr><td><kbd>m</kbd></td><td>Lens / URDF / mount file menu</td></tr>
+    <tr><td><kbd>u</kbd></td><td>Wrist camera mount calibration (separate window; see README)</td></tr>
+    <tr><td><kbd>q</kbd></td><td>Quit</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>If something goes wrong</h2>
+<table class="trouble">
+  <thead><tr><th>You see</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Grid doesn't sit on the squares, or a1 / h8 in the wrong corner</td><td>Press <kbd>c</kbd> again. The tripod may have moved, or the saved calibration is old.</td></tr>
+    <tr><td><i>"pose rejected"</i> after the 4 corners</td><td>Wrong corner order. Start at the corner nearest a1, go counter-clockwise on screen, and check you typed the right square.</td></tr>
+    <tr><td>Rings don't snap to a corner</td><td>Hold <b>Shift</b> while clicking, or press <kbd>f</kbd> for exact clicks.</td></tr>
+    <tr><td><i>"keys ignored until done"</i> / window frozen</td><td>The terminal is waiting for an answer. Look there.</td></tr>
+    <tr><td><i>"hit outside board"</i></td><td>The click missed the board. Click again, on the board.</td></tr>
+    <tr><td><i>"RAY GAP … mm"</i></td><td>The wrist and tripod clicks don't meet: click the same point in both, or redo <kbd>c</kbd>.</td></tr>
+    <tr><td>Yellow <b>BACKUP IN USE</b> banner</td><td>Normal for the tripod camera. For the wrist camera it means its lens file is missing: ask a teammate.</td></tr>
+    <tr><td>Arm goes somewhere unexpected</td><td>Switch off the arm's power. Keys are ignored while it moves, so <kbd>h</kbd> won't stop it.</td></tr>
+  </tbody>
+</table>
+
+<p class="foot">Click-to-3D (<code>lowlevel/click_to_3d_oliver/</code>). Full details: <code>README.md</code> in that folder. Guide written 2026-11-24.</p>
+
+</body>
+</html>

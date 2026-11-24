@@ -30,6 +30,11 @@ board_origin = (
 )
 BOARD_BASE_HALF_HEIGHT = 0.005
 BOARD_TOP_Z = board_origin[2] + BOARD_BASE_HALF_HEIGHT
+# Measured 2026-11-16 with tilt tests (friction = tan of the angle where sliding
+# starts, mean of 6 runs). PyBullet multiplies the two bodies' values and the piece
+# stays at lateralFriction 1.0, so these are the contact values themselves.
+BOARD_LATERAL_FRICTION = 0.29  # rook's felt base on the chessboard
+JAW_LATERAL_FRICTION = 0.24    # printed jaw on the rook's plastic side
 BASE_ORIGIN_AXIS_LENGTH = 0.06
 BASE_ORIGIN_AXIS_RADIUS = 0.002
 BASE_FAR_EDGE_MARKER_RADIUS = 0.008
@@ -107,7 +112,7 @@ GRASP_OFFSET = SOURCE_GRASP_OFFSET.copy()
 PLACE_OFFSET = np.array([-0.01845, 0.00115, -0.005])
 
 
-renderfreq = 50
+renderfreq = 8
 WIDTH, HEIGHT = 640, 360
 
 
@@ -125,33 +130,14 @@ def env_joint_vector(name, default):
 # lands at M + x in simulation, i.e. how the real arm executes a trajectory
 # that doesn't correct for its offsets. Defaults are orange_follower_arm's,
 # fitted 16 Oct 2026 from 8 table marks touched with the arm and measured with
-# a ruler; lift, pan and roll weren't fitted. Each independent run (one that
-# restores the saved world) draws its offsets from N(mean, sd), seeded so a
-# run sequence is reproducible. The sd is the ruler's ~2 mm turned into
-# degrees at the tip (about 3 mm per degree for elbow and wrist flex).
-# Override with SIM_JOINT_OFFSETS_DEG / SIM_JOINT_OFFSET_SD_DEG /
-# SIM_JOINT_OFFSET_SEED; "0 0 0 0 0" for both gives exact tracking. Build and
-# verify must use the same values, as with LOOKUP_PIECE_MODEL.
+# a ruler; lift, pan and roll weren't fitted. Every run uses these exact values
+# (no random draw). Override with SIM_JOINT_OFFSETS_DEG; "0 0 0 0 0" gives exact
+# tracking. Build and verify must use the same values, as with LOOKUP_PIECE_MODEL.
 #NOTE: old values are (0.0, 0.0, -4.3, -5.2, 0.0)
 DEFAULT_JOINT_OFFSETS_DEG = (2.6, 2.0, -3.0, -4.6, 0.0)
-DEFAULT_JOINT_OFFSET_SD_DEG = (0.0, 0.0, 0.7, 0.7, 0.0)
 JOINT_OFFSETS_DEG = env_joint_vector("SIM_JOINT_OFFSETS_DEG", DEFAULT_JOINT_OFFSETS_DEG)
-JOINT_OFFSET_SD_DEG = env_joint_vector("SIM_JOINT_OFFSET_SD_DEG", DEFAULT_JOINT_OFFSET_SD_DEG)
-JOINT_OFFSET_SEED = int(os.environ.get("SIM_JOINT_OFFSET_SEED", "").strip() or "0")
-JOINT_OFFSET_RNG = np.random.default_rng(JOINT_OFFSET_SEED)
 # Radians in trajectory order (5 arm joints, then the gripper, never offset).
-# The saved world's home pose uses the mean.
-JOINT_OFFSETS_MEAN_RAD = np.append(np.deg2rad(JOINT_OFFSETS_DEG), 0.0)
-# Offsets in effect for the current run. Updated in place by
-# sample_joint_offsets(), so modules that imported it see the current sample.
-JOINT_OFFSETS_RAD = JOINT_OFFSETS_MEAN_RAD.copy()
-
-
-def sample_joint_offsets():
-    """Draw this run's offsets from N(mean, sd); returns them in degrees."""
-    sample_deg = JOINT_OFFSETS_DEG + JOINT_OFFSET_SD_DEG * JOINT_OFFSET_RNG.standard_normal(5)
-    JOINT_OFFSETS_RAD[:5] = np.deg2rad(sample_deg)
-    return sample_deg
+JOINT_OFFSETS_RAD = np.append(np.deg2rad(JOINT_OFFSETS_DEG), 0.0)
 
 
 # Joint friction h (deg, same joint order): each arm joint stops h short of its
@@ -161,26 +147,64 @@ def sample_joint_offsets():
 # elbow and wrist flex 22 Oct 2026, pan and roll 24 Oct 2026) as half the gap
 # between the readings coming down and coming up at the same angle, with
 # LeRobot's I_Coefficient = 0; expect less with a nonzero I gain. The mean is
-# the average over the angles measured, the sd their spread (friction changes
-# with pose on the gravity-loaded joints; pan and roll carry no gravity load and
-# barely vary). Each independent run draws h from N(mean, sd), floored at 0,
-# from its own stream of the same seed (so adding friction didn't change the
-# offset draws). Override with SIM_JOINT_FRICTION_DEG /
-# SIM_JOINT_FRICTION_SD_DEG; "0 0 0 0 0" turns it off.
+# the average over the angles measured (friction changes with pose on the
+# gravity-loaded joints, by sd 0.46-0.48 deg on lift and elbow; pan and roll
+# carry no gravity load and barely vary). Every run uses these exact values (no
+# random draw). Override with SIM_JOINT_FRICTION_DEG; "0 0 0 0 0" turns it off.
 DEFAULT_JOINT_FRICTION_DEG = (0.29, 0.84, 0.76, 0.47, 0.29)
-DEFAULT_JOINT_FRICTION_SD_DEG = (0.05, 0.46, 0.48, 0.11, 0.03)
 JOINT_FRICTION_DEG = env_joint_vector("SIM_JOINT_FRICTION_DEG", DEFAULT_JOINT_FRICTION_DEG)
-JOINT_FRICTION_SD_DEG = env_joint_vector("SIM_JOINT_FRICTION_SD_DEG", DEFAULT_JOINT_FRICTION_SD_DEG)
-JOINT_FRICTION_RNG = np.random.default_rng((JOINT_OFFSET_SEED, 1))
-# Friction in effect for the current run (radians, trajectory order, gripper 0).
+# Radians, trajectory order, gripper 0.
 JOINT_FRICTION_RAD = np.append(np.deg2rad(JOINT_FRICTION_DEG), 0.0)
 
 
-def sample_joint_friction():
-    """Draw this run's friction from N(mean, sd), floored at 0; returns it in degrees."""
-    sample_deg = np.maximum(0.0, JOINT_FRICTION_DEG + JOINT_FRICTION_SD_DEG * JOINT_FRICTION_RNG.standard_normal(5))
-    JOINT_FRICTION_RAD[:5] = np.deg2rad(sample_deg)
-    return sample_deg
+# How the sim gripper is shaped and driven. Build and verify must use the same value, as with
+# LOOKUP_PIECE_MODEL.
+#
+# "legacy" (default, what every lookup so far used): PyBullet collides with each gripper mesh's
+# convex hull, and the hull of the gripper body (which includes the fixed jaw) fills in the gap
+# between the jaws, so on the c3->d6 click pick (2026-11-16) the fixed jaw touched the rook
+# 12-15 mm from any real plastic. The gripper is driven to the trajectory's angle with torque caps
+# of 20-500 N*m, and grips because the moving jaw's friction was tuned to 2.0.
+#
+# "realistic": loads paths.URDF_VHACD_GRIPPER_PATH, whose gripper body and moving jaw are split
+# into convex parts that follow the real surfaces (build it with urdf/build_vhacd_gripper_urdf.py),
+# and drives the gripper like the real one: the trajectory's gripper value is sent to the real arm
+# as LeRobot's 0-100 scale, where "closed" (gripper_angle_closed = 5) is nearly shut, so the real
+# jaw keeps closing until the piece stops it (it reads ~8.7 while holding a rook) and squeezes at
+# its torque limit. Here "closed" maps to the joint's lower limit and the torque is capped at
+# REALISTIC_GRIPPER_TORQUE_NM. With the measured jaw friction (0.24) the c3->d6 replay picked
+# and placed (6 mm from target, upright); the same settings on the legacy gripper knock it over.
+SIM_GRIPPER_MODEL = os.environ.get("SIM_GRIPPER_MODEL", "realistic").strip().lower() or "realistic"
+if SIM_GRIPPER_MODEL not in {"legacy", "realistic"}:
+    raise ValueError(
+        "SIM_GRIPPER_MODEL must be one of legacy or realistic, "
+        f"got {SIM_GRIPPER_MODEL!r}"
+    )
+# Real gripper torque cap: LeRobot sets the gripper's Max_Torque_Limit to 50% of the STS3215's
+# (so_follower.py). ~1.5 N*m assumes a ~3 N*m stall torque; check the servo's datasheet.
+REALISTIC_GRIPPER_TORQUE_NM = 1.5
+# Where "closed" sends the sim jaw: the URDF gripper joint's lower limit (-10 deg).
+REALISTIC_GRIPPER_CLOSED_TARGET_DEG = -10.0
+
+
+def realistic_gripper_target_rad(trajectory_rad):
+    """Map the trajectory's gripper angle (open..closed) onto open..the joint's lower limit."""
+    open_rad = np.deg2rad(gripper_angle_open)
+    closed_rad = np.deg2rad(gripper_angle_closed)
+    limit_rad = np.deg2rad(REALISTIC_GRIPPER_CLOSED_TARGET_DEG)
+    return limit_rad + (trajectory_rad - closed_rad) * (open_rad - limit_rad) / (open_rad - closed_rad)
+
+
+def sim_urdf_path():
+    """URDF the sim loads, per SIM_GRIPPER_MODEL."""
+    if SIM_GRIPPER_MODEL == "realistic":
+        if not paths.URDF_VHACD_GRIPPER_PATH.is_file():
+            raise FileNotFoundError(
+                f"SIM_GRIPPER_MODEL=realistic but {paths.URDF_VHACD_GRIPPER_PATH} is missing; "
+                "run lowlevel/urdf/build_vhacd_gripper_urdf.py"
+            )
+        return paths.URDF_VHACD_GRIPPER_PATH
+    return paths.URDF_PATH
 
 
 PIECE_MODEL = os.environ.get("LOOKUP_PIECE_MODEL", "cylinder").strip() or "cylinder"
@@ -885,32 +909,37 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
     active_home_rad = np.deg2rad(active_home)
 
     robot_id = None
+    # Outside the try: a missing vhacd URDF must stop the run, not leave the sim without an arm.
+    urdf_path = str(sim_urdf_path())
     try:
-        urdf_path = str(paths.URDF_PATH)
         robot_id = p.loadURDF(urdf_path, [0, 0, 0], useFixedBase=True)
         for traj_idx, sim_idx in enumerate(CONTROL_JOINTS):
             p.resetJointState(
                 robot_id,
                 sim_idx,
-                active_home_rad[traj_idx] + JOINT_OFFSETS_MEAN_RAD[traj_idx],
+                active_home_rad[traj_idx] + JOINT_OFFSETS_RAD[traj_idx],
                 targetVelocity=0.0,
             )
             p.setJointMotorControl2(
                 robot_id,
                 sim_idx,
                 p.POSITION_CONTROL,
-                targetPosition=active_home_rad[traj_idx] + JOINT_OFFSETS_MEAN_RAD[traj_idx],
+                targetPosition=active_home_rad[traj_idx] + JOINT_OFFSETS_RAD[traj_idx],
                 force=50,
             )
 
         p.changeDynamics(
             robot_id,
             6,
-            lateralFriction=2.0,
+            lateralFriction=JAW_LATERAL_FRICTION,
             spinningFriction=0.2,
             contactStiffness=10000,
             contactDamping=100
         )
+        
+        p.changeDynamics(robot_id, 4, lateralFriction=JAW_LATERAL_FRICTION)
+        #change both moving and stationary gripper to actual friction values
+
         print(f"✓ Loaded SO101 from URDF")
         print(f"✓ Number of joints: {p.getNumJoints(robot_id)}")
         create_base_origin_marker()
@@ -921,6 +950,8 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
     board_x, board_y, board_z = board_origin
     square_size = BOARD_SQUARE_SIZE
     board_size = 8 * square_size
+
+    
 
     board_base_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, BOARD_BASE_HALF_HEIGHT])
     board_base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[board_size/2, board_size/2, BOARD_BASE_HALF_HEIGHT], 
@@ -934,6 +965,9 @@ def setup_sim_world(from_square, edge_support_margin=0.0, home_joints=None):
         square_size=square_size,
         margin=edge_support_margin,
     )
+
+    for board_body_id in [board_base_id, *edge_support_ids]:
+        p.changeDynamics(board_body_id, -1, lateralFriction=BOARD_LATERAL_FRICTION)
 
     for row in range(8):
         for col in range(8):
@@ -1092,16 +1126,6 @@ def run_sim_move(
 
     if restore_state:
         p.restoreState(world["state_id"])
-        # An independent run is a different possible real arm: draw its offsets
-        # and friction, and shift the arm from the saved home (mean offsets) to
-        # this arm's home.
-        sample_joint_offsets()
-        sample_joint_friction()
-        if world["robot_id"] is not None:
-            for traj_idx, sim_idx in enumerate(CONTROL_JOINTS):
-                shift = JOINT_OFFSETS_RAD[traj_idx] - JOINT_OFFSETS_MEAN_RAD[traj_idx]
-                angle = p.getJointState(world["robot_id"], sim_idx)[0]
-                p.resetJointState(world["robot_id"], sim_idx, angle + shift)
     p.setPhysicsEngineParameter(
         numSolverIterations=solver_iterations,
         numSubSteps=solver_substeps
@@ -1351,7 +1375,12 @@ def run_sim_move(
 
                     force = 50
 
-                    if traj_idx == 5:
+                    if traj_idx == 5 and SIM_GRIPPER_MODEL == "realistic":
+                        # Like the real gripper: commanded closed, it keeps closing until the
+                        # piece stops it, and squeezes at its torque cap the whole time.
+                        target_joints[5] = realistic_gripper_target_rad(target_joints[5])
+                        force = REALISTIC_GRIPPER_TORQUE_NM
+                    elif traj_idx == 5:
                         force = GRIPPER_CLOSE_FORCE
 
                         if SOFTEN_GRIPPER_PINCH and move_idx == closeidx:
@@ -1530,13 +1559,9 @@ def run_sim_move(
             "z_error": z_error,
             "final_tilt_deg": final_tilt_deg,
             "final_euler_deg": final_euler_deg,
-            "joint_offsets_deg": np.rad2deg(JOINT_OFFSETS_RAD[:5]).tolist(),
-            "joint_offset_mean_deg": JOINT_OFFSETS_DEG.tolist(),
-            "joint_offset_sd_deg": JOINT_OFFSET_SD_DEG.tolist(),
-            "joint_offset_seed": JOINT_OFFSET_SEED,
-            "joint_friction_deg": np.rad2deg(JOINT_FRICTION_RAD[:5]).tolist(),
-            "joint_friction_mean_deg": JOINT_FRICTION_DEG.tolist(),
-            "joint_friction_sd_deg": JOINT_FRICTION_SD_DEG.tolist(),
+            "joint_offsets_deg": JOINT_OFFSETS_DEG.tolist(),
+            "joint_friction_deg": JOINT_FRICTION_DEG.tolist(),
+            "gripper_model": SIM_GRIPPER_MODEL,
             "solver_iterations": solver_iterations,
             "solver_substeps": solver_substeps,
             "move_steps_per_waypoint": move_steps_per_waypoint,

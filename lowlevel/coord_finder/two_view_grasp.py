@@ -16,7 +16,9 @@ from calib_board_pose import (
     ray_plane_z0,
     square_file_rank,
 )
-from test_03_svm_servo import principal_axes, svm_segment_single
+# TEMP (2026-11-19): svm_segment_single isn't in git yet, so it's imported where it's used
+# (_segment_or_use, only when no mask is given) instead of here; put it back once it's pushed.
+from test_03_svm_servo import principal_axes
 
 
 def _square_centers(square_mm: float) -> dict[str, np.ndarray]:
@@ -346,6 +348,8 @@ def _segment_or_use(
     if mask is not None:
         axes = principal_axes(mask)
         return mask, axes
+    from test_03_svm_servo import svm_segment_single  # TEMP: see the import note at the top
+
     seg, axes, _meta = svm_segment_single(
         image,
         center_frac=0.28,
@@ -372,6 +376,7 @@ def grasp_from_views(
     side_mask: np.ndarray | None = None,
     rng: np.random.Generator | None = None,
     fuse_mode: str = "overhead_ray",
+    foot_filter: bool = True,
 ) -> dict:
     """Return the grasp in board millimetres.
 
@@ -384,6 +389,16 @@ def grasp_from_views(
         mask-centroid ray in 3D (current champion).
       - \"foot_vertical\": point on the pinch ray closest to the vertical
         through the cleaned foot (legacy A/B).
+
+    foot_filter=False skips _board_hits_near_foot, the second shadow step (the
+    silhouette step still runs). That step keeps only arm-camera pixels whose
+    ray lands on the board at the piece's foot, which holds for a camera
+    looking almost straight down. From an angle, rays through the top of the
+    piece land behind it and are dropped as shadow. Oliver's 2026-11-19 d4
+    gold click (wrist camera 22 deg off vertical, clean SAM mask) lost 4729 of
+    7512 pixels to it and the grasp moved 6.3 mm along the tripod's line of
+    sight; without it, 0.8 mm. Gold (SAM) masks have no shadow, so
+    click_to_3d_oliver turns it off for them.
     """
     if fuse_mode not in ("foot_vertical", "overhead_ray"):
         raise ValueError(f"Unknown fuse_mode: {fuse_mode!r}")
@@ -440,7 +455,8 @@ def grasp_from_views(
         return result
 
     cleaned = _rays_hit_silhouette(mask, T_board_arm, K_arm, full_side, T_board_side, K_side)
-    cleaned = _board_hits_near_foot(cleaned, T_board_arm, K_arm, T_board_side, K_side, full_side)
+    if foot_filter:  # see the docstring: drops real piece pixels when the arm camera is at an angle
+        cleaned = _board_hits_near_foot(cleaned, T_board_arm, K_arm, T_board_side, K_side, full_side)
     dropped = int(np.count_nonzero(mask) - np.count_nonzero(cleaned))
     cleaned_centroid = raw_centroid.copy()
     if np.count_nonzero(cleaned) >= 20:
@@ -542,6 +558,7 @@ def grasp_from_views(
             "side_used": True,
             "shadow_pixels_dropped": result["shadow_pixels_dropped"],
             "fuse_mode": fuse_mode,
+            "foot_filter": foot_filter,
             "trace": trace,
         }
     )

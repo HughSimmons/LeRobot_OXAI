@@ -336,6 +336,8 @@ def candidate_matches_active_rook(candidate: dict[str, Any]) -> bool:
         piece_config.get("piece_model") == sim.active_piece_config().get("piece_model")
         and piece_config.get("collision_model")
         == sim.active_piece_config().get("collision_model")
+        # Candidates saved before SIM_GRIPPER_MODEL existed used the legacy gripper.
+        and candidate.get("search", {}).get("gripper_model", "legacy") == sim.SIM_GRIPPER_MODEL
     )
 
 
@@ -614,6 +616,8 @@ def main() -> int:
         "move_steps_policy": move_steps_policy,
         "placement_lower_steps": args.placement_lower_steps,
         "edge_support_margin": EDGE_SUPPORT_MARGIN,
+        # Part of each candidate's database fingerprint, so legacy and realistic results stay separate.
+        "gripper_model": sim.SIM_GRIPPER_MODEL,
         "database_accept_final_square": args.database_accept_final_square,
         "builder_strategy_recovery": not args.disable_builder_recovery,
         "far_square_seed_policy": "native_chess_traj_location_file",

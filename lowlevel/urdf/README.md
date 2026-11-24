@@ -41,3 +41,13 @@ board thickness: 2mm
 camera base to tip length: 23mm
 
 camera diameter: 15mm
+
+## Sim-only gripper collision model
+
+`so101_with_mount_vhacd_gripper.urdf` is `so101_with_mount.urdf` with only the gripper body and
+moving jaw collision meshes swapped for V-HACD convex decompositions (`vhacd_gripper/*.obj`).
+PyBullet collides with each mesh's convex hull, which on the stock gripper puts a phantom
+fixed-jaw face ~13 mm from the real plastic. `multisim_chess_fast.py` loads it when
+`SIM_GRIPPER_MODEL=realistic`. Regenerate with (IKsim_mj env):
+
+    python lowlevel/urdf/build_vhacd_gripper_urdf.py

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -67,7 +68,7 @@ PICK_RETURN_S = 4.0
 # runs and --compensate only changes the commands sent to the real arm.
 EXACT_TRACKING_ENV = {
     name: "0 0 0 0 0"
-    for name in ("SIM_JOINT_OFFSETS_DEG", "SIM_JOINT_OFFSET_SD_DEG", "SIM_JOINT_FRICTION_DEG", "SIM_JOINT_FRICTION_SD_DEG")
+    for name in ("SIM_JOINT_OFFSETS_DEG", "SIM_JOINT_FRICTION_DEG")
 }
 # probe_xy_pose.py's --max-residual-mm / --max-tilt-deg defaults (its reachability test).
 MAX_IK_RESIDUAL_MM = 2.0
@@ -380,6 +381,24 @@ def move_to_click(
     return MoveResult(True, message, output_dir)
 
 
+def centre_error_mm(board_mm: list[float]) -> dict[str, Any]:
+    """A click's x / y offset from the nearest square's centre (board frame, mm; height ignored).
+
+    Off the board, the nearest edge square. For a piece centred on its square, the click's error.
+    The v scene view draws the same thing.
+    """
+    x, y = float(board_mm[0]), float(board_mm[1])
+    file_i = min(7, max(0, int(np.floor(x / SQUARE_MM))))
+    rank_i = min(7, max(0, int(np.floor(y / SQUARE_MM))))
+    dx, dy = x - (file_i + 0.5) * SQUARE_MM, y - (rank_i + 0.5) * SQUARE_MM
+    return {
+        "square": "abcdefgh"[file_i] + str(rank_i + 1),
+        "dx": round(dx, 3),
+        "dy": round(dy, 3),
+        "dist": round(float(np.hypot(dx, dy)), 3),
+    }
+
+
 def pick_piece(
     from_click: dict[str, Any], to_click: dict[str, Any], *, compensate: bool, baseline: bool, robot: bool, on_move=None
 ) -> MoveResult:
@@ -387,8 +406,9 @@ def pick_piece(
 
     The two x, y come from the route b is on (pick_targets): the ruler-measured board, or the
     camera-detected board (cv). Builds a lookup (build_general_xy_lookup.py, board frame: metres
-    from the ruler board centre), dry-runs it with run_real_so101_from_xy_lookup.py, then (with
-    robot) executes it. After the arm run, metadata.json records which route it used.
+    from the ruler board centre), then runs it with run_real_so101_from_xy_lookup.py: --execute
+    with robot (it plans and checks the commands before moving, so there is no separate dry run),
+    a dry run without. After the arm run, metadata.json records which route it used.
     """
     lowlevel = _ensure_lowlevel_on_path()
     if lowlevel is None:
@@ -412,7 +432,7 @@ def pick_piece(
 
     print("\n" + "=" * 72)
     print(f"PICK ({route}) {from_name} {np.round(from_xy, 4).tolist()} -> {to_square} centre {np.round(to_xy, 4).tolist()} (m from board centre)")
-    print(f"Step 1/3: build the lookup in the ideal sim (~35 s with --grid-radius {PICK_GRID_RADIUS}). Saving to {output_dir}")
+    print(f"Step 1/2: build the lookup in the ideal sim (~35 s with --grid-radius {PICK_GRID_RADIUS}). Saving to {output_dir}")
     print("=" * 72, flush=True)
     build = [
         sys.executable, str(lowlevel / "build_general_xy_lookup.py"),
@@ -430,17 +450,19 @@ def pick_piece(
         return MoveResult(False, f"pick refused: {why} (exit {code}, see terminal)")
     lookup_json = lookup_dir / f"{from_name}_to_{to_square}.json"
 
-    print("\nStep 2/3: run_real_so101 dry run (no arm).", flush=True)
-    dry = pick_piece_command(
-        lookup_json, lowlevel=lowlevel, output_dir=output_dir, compensate=compensate, baseline=baseline, execute=False
-    )
-    if run_probe(dry, lowlevel, sim_env) != 0:
-        return MoveResult(False, "pick refused: run_real_so101 dry run failed (see terminal)")
     if not robot:
+        # Without the arm, the dry run is all k can do. With it there is none: --execute builds
+        # and checks the same commands (and writes the same preview) before anything moves.
+        print("\nStep 2/2: run_real_so101 dry run (no --robot: the arm won't move).", flush=True)
+        dry = pick_piece_command(
+            lookup_json, lowlevel=lowlevel, output_dir=output_dir, compensate=compensate, baseline=baseline, execute=False
+        )
+        if run_probe(dry, lowlevel, sim_env) != 0:
+            return MoveResult(False, "pick refused: run_real_so101 dry run failed (see terminal)")
         return MoveResult(False, f"pick dry run ok ({route}), {from_name} -> {to_square} (no --robot: arm not moved)")
 
-    # p itself is the go-ahead: no Enter here and no yes/no before the start bridge (--yes).
-    print("\nStep 3/3: moving the arm now. Support it: connecting turns torque off for a moment.", flush=True)
+    # k itself is the go-ahead: no Enter here and no yes/no before the start bridge (--yes).
+    print("\nStep 2/2: moving the arm now. Support it: connecting turns torque off for a moment.", flush=True)
     close_arm()  # run_real opens the port itself
     run = pick_piece_command(
         lookup_json, lowlevel=lowlevel, output_dir=output_dir, compensate=compensate, baseline=baseline, execute=True
@@ -448,14 +470,21 @@ def pick_piece(
     if on_move is not None:
         on_move()  # the arm is about to move (the click tool starts its tripod video here)
     code = run_probe(run, lowlevel, sim_env)
+    preview_path = output_dir / "real_so101_trajectory_preview.json"
+    if not preview_path.is_file():
+        # run_real stopped before planning finished (it writes the preview before connecting),
+        # so the arm didn't move and there is no run to record.
+        print(f"\nPICK FAILED before the arm moved: run_real_so101 exited with code {code} and wrote no preview")
+        return MoveResult(False, f"pick failed before moving: run_real_so101 exit {code} (see terminal)")
 
     metadata_path = output_dir / "metadata.json"
     metadata = {}
     metadata["from_click"] = from_click
     metadata["to_click"] = to_click
+    metadata["from_click_centre_error_mm"] = centre_error_mm(from_click["board_mm"])
     metadata.update(targets.record())
 
-    preview = json.loads((output_dir / "real_so101_trajectory_preview.json").read_text(encoding="utf-8"))
+    preview = json.loads(preview_path.read_text(encoding="utf-8"))
 
     if baseline:
         metadata["compensation_type"] = "baseline"
@@ -469,10 +498,50 @@ def pick_piece(
         metadata["calib_offset"] = (0.0, 0.0, 0.0, 0.0, 0.0)
 
     metadata["board_centre_base_mm"] = BOARD_CENTRE_BASE_MM
+    # The sim gripper the lookup was planned with (SIM_GRIPPER_MODEL); replay with the same one.
+    # Lookups from before the setting existed have no entry and used the legacy gripper.
+    lookup = json.loads(lookup_json.read_text(encoding="utf-8"))
+    metadata["gripper_model"] = lookup["search"].get("gripper_model", "legacy")
 
     with open(metadata_path, "w+") as f:
         json.dump(metadata, f)
 
     message = f"pick ({route}) {from_name} -> {to_square} done; saved {output_dir.name}" if code == 0 else f"run_real_so101 exited with code {code} (see terminal)"
     print(f"\n{message}")
+    start_replay_plots(output_dir, lowlevel)
     return MoveResult(True, message, output_dir)
+
+
+# Plots made after every k run (plot_pybullet_replay.py --align values): over time, and by command.
+REPLAY_PLOT_ALIGNS = ("time", "index")
+
+
+def start_replay_plots(output_dir: Path, lowlevel: Path) -> subprocess.Popen | None:
+    """After a k run: replay it in PyBullet and plot sim vs hardware, in a background process.
+
+    Runs compare_hardware_to_pybullet.py (writes pybullet_replay.json), then plot_pybullet_replay.py
+    once per REPLAY_PLOT_ALIGNS (pybullet_replay_angles.png, pybullet_replay_angles_by_index.png).
+    Detached so the click tool's window, keys and tripod video don't wait for it (~1 min); its
+    output goes to <run>/replay_plots.log. Sim only: it never opens the arm's port.
+    """
+    if not (output_dir / "timeline_hardware.json").is_file() or not (output_dir / "timeline_sim.json").is_file():
+        print(f"replay plots skipped: no timelines in {output_dir.name}")
+        return None
+    here = Path(__file__).resolve().parent
+    steps = [[sys.executable, str(here / "compare_hardware_to_pybullet.py"), str(output_dir)]]
+    steps += [
+        [sys.executable, str(here / "plot_pybullet_replay.py"), str(output_dir), "--align", align]
+        for align in REPLAY_PLOT_ALIGNS
+    ]
+    script = " && ".join(" ".join(shlex.quote(part) for part in step) for step in steps)
+    env = {**os.environ, "MPLBACKEND": "Agg"}  # no plot window from a background process
+    lerobot_src = str(lowlevel / "lerobot" / "src")
+    env["PYTHONPATH"] = os.pathsep.join(p for p in (lerobot_src, env.get("PYTHONPATH")) if p)
+    log_path = output_dir / "replay_plots.log"
+    with open(log_path, "w", encoding="utf-8") as log:
+        process = subprocess.Popen(
+            ["bash", "-c", script], cwd=str(lowlevel), env=env,
+            stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True,
+        )
+    print(f"replay + plots running in the background -> {output_dir.name}/ (log: {log_path.name})")
+    return process

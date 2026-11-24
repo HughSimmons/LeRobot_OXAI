@@ -332,9 +332,10 @@ class Reading(NamedTuple):
     """One command of the main loop: the joints read after it and when each step happened.
 
     Times are time.perf_counter() seconds. Per loop: t_send -> send_action -> t_sent ->
-    (pickup pause, progress print) -> sleep(command_delay) -> t_read_start -> read -> t_read_end.
-    t_read_start is the start of the read attempt that succeeded; read_retries counts the
-    failed attempts before it.
+    (pickup pause, progress print) -> sleep until this command's read time -> t_read_start ->
+    read -> t_read_end. Command k's read time is the first t_send + (k + 1) * command_delay,
+    plus any pickup pause; when the loop is behind it, there is no sleep. t_read_start is the
+    start of the read attempt that succeeded; read_retries counts the failed attempts before it.
     """
 
     index: int
@@ -778,21 +779,33 @@ def execute_commands(
                 time.sleep(command_delay)
                 observation = read_observation(follower)
 
+        # Fixed schedule: command k is read at the first send + (k + 1) * command_delay (plus any
+        # pickup pause), so the write and read come out of each step's sleep instead of adding to
+        # it. After a slow write or read the loop skips the sleep until it is back on schedule.
+        deadline: float | None = None
+        #what deadline is outline a grid of the where the commands should be
         for index, joints in enumerate(commands_deg[start_index:], start=start_index + 1):
             action = observation.copy()
             action.update(action_from_joints(joints))
             t_send = time.perf_counter()
             follower.send_action(action)
             t_sent = time.perf_counter()
+            if deadline is None:
+                deadline = t_send
+            deadline += command_delay
             if pause_command_index is not None and index - 1 == pause_command_index:
                 print(f"Paused at pickup command {index}/{len(commands_deg)}.")
+                pause_start = time.perf_counter()
                 if pickup_pause_s > 0.0:
                     time.sleep(pickup_pause_s)
                 else:
                     input("Press Enter to continue trajectory...")
+                deadline += time.perf_counter() - pause_start  # the schedule waits with the arm
             if index % 50 == 0:
                 print(f"sent {index}/{len(commands_deg)} commands")
-            time.sleep(command_delay)
+            left = deadline - time.perf_counter()
+            if left > 0.0:  # behind schedule: no sleep, so the loop catches up
+                time.sleep(left)
             timing: dict[str, Any] = {}
             observation = read_observation(follower, timing=timing)
             if readings is not None:

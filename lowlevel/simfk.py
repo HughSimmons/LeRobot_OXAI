@@ -77,7 +77,7 @@ start = simxyz(start, [0.05,0,0])
 
 FILES = "abcdefgh"
 
-SQUARE_SIZE = 0.04   # 4 cm example
+SQUARE_SIZE = 0.04125  # 41.25 mm, as board_coordinates.DEFAULT_SQUARE_SIZE
 
 
 def chess_to_xy(square):

@@ -187,19 +187,26 @@ changing the code.
   and verify must use the *same* env vars, since the replay scores against
   whatever collision geometry the lookup was built with.
 
+  `SIM_GRIPPER_MODEL` picks how the sim gripper is shaped and driven, and must
+  also match between build and verify. `legacy` (default, used by every lookup
+  so far) collides with the convex hull of each gripper mesh, which puts a
+  phantom fixed-jaw face ~13 mm from the real one, and grips thanks to a
+  tuned moving-jaw friction of 2.0. `realistic` loads
+  `urdf/so101_with_mount_vhacd_gripper.urdf` (gripper split into convex parts
+  that follow the real jaws; regenerate with
+  `urdf/build_vhacd_gripper_urdf.py`) and closes the gripper like the real one:
+  until the piece stops it, at a torque near the real servo's. See the
+  comment above `SIM_GRIPPER_MODEL` in `multisim_chess_fast.py`.
+
   The simulation includes the real arm's joint calibration offsets x (pan,
   lift, elbow, wrist flex, wrist roll; URDF angle = motor angle + x): every
   commanded arm angle lands x away, as on a real arm whose trajectory doesn't
   correct for them. The defaults are `orange_follower_arm`'s, set as
-  `DEFAULT_JOINT_OFFSETS_DEG` (0, 0, -4.3, -5.2, 0) and
-  `DEFAULT_JOINT_OFFSET_SD_DEG` (0, 0, 0.7, 0.7, 0; 0.7 deg is about 2 mm at the
-  tip) in `multisim_chess_fast.py`. Each independent run draws its offsets from
-  a normal distribution with that mean and standard deviation, keeping one draw
-  across a `run_lookup_sequence.py` sequence; `SIM_JOINT_OFFSET_SEED` (default
-  0) makes the draws repeatable, and each result records the offsets it used.
-  Override them with `SIM_JOINT_OFFSETS_DEG` and `SIM_JOINT_OFFSET_SD_DEG`
-  (`"0 0 0 0 0"` for both gives exact tracking, as before). The same
-  build/verify rule applies.
+  `DEFAULT_JOINT_OFFSETS_DEG` (2.6, 2.0, -3.0, -4.6, 0) in
+  `multisim_chess_fast.py`. Every run uses exactly these values (there is no
+  random draw; until 2026-11-19 each run drew them from a normal distribution),
+  and each result records them. Override them with `SIM_JOINT_OFFSETS_DEG`
+  (`"0 0 0 0 0"` gives exact tracking). The same build/verify rule applies.
 
   It also includes joint friction, modelled as a **directional undershoot**:
   each arm joint stops short of its target by its friction h, on the side it's
@@ -218,18 +225,14 @@ changing the code.
     cancels.
   - **Defaults** in `multisim_chess_fast.py`: `DEFAULT_JOINT_FRICTION_DEG`
     (0.29, 0.84, 0.76, 0.47, 0.29 for pan, lift, elbow, wrist flex, wrist roll)
-    is the average over the angles measured, and
-    `DEFAULT_JOINT_FRICTION_SD_DEG` (0.05, 0.46, 0.48, 0.11, 0.03) is their
-    spread. Friction changes with pose on the joints gravity loads; pan and
-    wrist roll carry no gravity load and barely vary.
-  - **Uncertainty:** each independent run draws h from a normal distribution
-    with that mean and standard deviation (never below 0), from the same seed
-    as the offsets. Each result records the friction it used.
+    is the average over the angles measured. Friction changes with pose on
+    the joints gravity loads (spread 0.46-0.48 deg on lift and elbow); pan and
+    wrist roll carry no gravity load and barely vary. Every run uses exactly
+    these values (no random draw), and each result records them.
   - **Measured with LeRobot's servo I gain at 0.** A nonzero I gain keeps the
     servo pushing until it reaches its target, which should remove most of
     this; remeasure after changing it.
-  - Override with `SIM_JOINT_FRICTION_DEG` and `SIM_JOINT_FRICTION_SD_DEG`;
-    `"0 0 0 0 0"` for both turns friction off.
+  - Override with `SIM_JOINT_FRICTION_DEG`; `"0 0 0 0 0"` turns friction off.
   - **A better model** is in [`friction/`](friction/README.md): load-dependent
     friction plus gravity sag, fitted to these and later sweeps, about 0.2-0.6
     deg of held-out error against 2.4-3.9 deg for this fixed shift. It can also

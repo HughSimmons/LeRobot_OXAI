@@ -326,11 +326,15 @@ def append_post_place_tail(
     mark_segment_end(traj_metrics, "release_settle", jntslist)
     current = grip_open.copy()
 
-    # Retreat either by reversing the first lowering waypoint (near squares)
+    # Retreat either by retracing the lowering waypoints back up (near squares)
     # or by lifting away while holding the exact post-release wrist-roll value.
+    # Retrace in the same small steps as the lowering, not one jump to the top:
+    # the Catmull-Rom smoothing dips the arm down by ~7% of the next move before
+    # it starts, so a ~110 mm jump pushed the open jaws ~8 mm down onto the piece.
     mark_segment_start(traj_metrics, "retreat", jntslist)
     if location_file(to_square, board_origin=board_origin) not in far_rows:
-        for j in downjnts[::-1]:
+        # [-2::-1] skips the last lowering waypoint, which is the release pose itself.
+        for j in downjnts[-2::-1]:
             j = j.copy()
             j[5] = gripper_angle_open
             jntslist.append(j)
@@ -597,7 +601,7 @@ mesh_dir = str(paths.MESH_DIR)
 
 FILES = "abcdefgh"
 
-SQUARE_SIZE = 0.04   # 4 cm example
+SQUARE_SIZE = DEFAULT_SQUARE_SIZE  # 41.25 mm (board_coordinates.py)
 
 corner1 = [97.32,0.40,28.40,66.55,177.80,4.95]
 corner2 = [38.59,60.88,-58.55,100.48,178.15,4.95]
@@ -1449,7 +1453,7 @@ def pickupmove_traj(
 
     ### lower to board
     to_xyz = chess_to_xy(to_square, board_origin=board_origin)
-    target_xyz = to_xyz + np.array([0, 0, 0.02]) # wiggle room for drop
+    target_xyz = to_xyz + np.array([0, 0, 0.005]) # wiggle room for drop
     # target_xyz = to_xyz + np.array([0, 0, 0.0015]) #rook wiggle room for drop
     # target_xyz = to_xyz + np.array([0, 0, 0]) #wiggle room for drop
     start_xyz = kinematics.forward_kinematics(current)[:3,3]
@@ -1519,11 +1523,8 @@ def pickupmove_traj(
 
             current = intermediate_joints.copy()
 
-            if stepcnt == 0:
-                downjnts.append(intermediate_joints.copy())
-
-            # if stepcnt == 5:
-            #     downjnts.append(intermediate_joints.copy())
+            # Keep every lowering waypoint: the near-square retreat retraces them.
+            downjnts.append(intermediate_joints.copy())
 
             stepcnt+=1
 
