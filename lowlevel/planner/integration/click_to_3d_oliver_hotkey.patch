@@ -1,0 +1,65 @@
+diff --git a/lowlevel/click_to_3d_oliver/run_click_to_3d.py b/lowlevel/click_to_3d_oliver/run_click_to_3d.py
+index 542bb28..6e5b1fe 100644
+--- a/lowlevel/click_to_3d_oliver/run_click_to_3d.py
++++ b/lowlevel/click_to_3d_oliver/run_click_to_3d.py
+@@ -18,6 +18,8 @@ Keys:
+   o      compensation for a and k: OFF -> BASELINE (hand-measured offsets only, k only) -> ON
+   k      pick the piece at the click before last, place it on the last click's square centre,
+          at the positions from the route b is on (ruler or cv); the run's metadata records it
++  d      like k, but planned by the dls_nullspace planner (planner/click_bridge.py): ~0.2 s plan
++         instead of the ~35 s lookup build, empty board, planned from the arm's live pose
+   a      move the gripper to the last click (prompts in the terminal; --compensate, --above-mm)
+   b      base_mm (a's target, and both of k's points) from: the ruler-measured board centre /
+          the camera-detected board, cv (wrist camera c pose + kinematics + mount) (--base)
+@@ -1078,7 +1080,33 @@ class App:
+                 piece, square, compensate=compensate, baseline=baseline, robot=robot, on_move=on_move
+             ),
+         )
+-        
++
++    def plan_pick_at_click(self) -> None:
++        """d: k's two clicks, but planned by planner.click_bridge (dls_nullspace) and run in-process."""
++        if self.prev_result is None or self.last_result is None:
++            self.status = "click the piece, then its destination square, then d"
++            return
++        if self.mode not in ("live", "ready"):
++            self.status = "finish the current step before picking (d)"
++            return
++        try:
++            from click3d_shared import _ensure_lowlevel_on_path
++
++            _ensure_lowlevel_on_path()  # puts LeRobot_OXAI/lowlevel on sys.path, where planner/ lives
++            from planner.click_bridge import pick_piece_planned
++        except ImportError as exc:
++            self.status = f"d needs lowlevel/planner (find_piece branch) and its deps: {exc}"
++            print(self.status)
++            return
++        piece, square, robot = self.prev_result, self.last_result, self.args.robot
++        compensate, baseline = self.args.compensate, self.args.baseline
++        self.run_in_background(
++            "PLANNED_PICK",
++            lambda on_move: pick_piece_planned(
++                piece, square, compensate=compensate, baseline=baseline, robot=robot, on_move=on_move
++            ),
++        )
++
+ 
+ 
+     def launch_visualizer(self) -> None:
+@@ -1236,6 +1264,7 @@ class App:
+             f"f corner clicks: {'MANUAL' if self.manual_corners else 'snap to detected'}",
+             f"a move to click (compensate {'on' if self.args.compensate else 'off'}, +{self.args.above_mm:g} mm)",
+             "k pick: click before last -> last click's square",
++            "d planned pick: same clicks, dls_nullspace planner",
+             f"o compensation: {self.compensation_label()}",
+             f"b base_mm from: {self.base_source_label()}",
+             self.wrist_pose_label(),
+@@ -1412,6 +1441,8 @@ class App:
+             self.move_to_last_click()
+         elif key == ord("k"):
+             self.pick_piece_at_click()
++        elif key == ord("d"):
++            self.plan_pick_at_click()
+         elif key == ord("p"):
+             self.status = "pick is k now (and move is a); p runs the grasp inside gold-mask (g)"
+         elif key == ord("w"):
