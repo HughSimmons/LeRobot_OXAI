@@ -1,0 +1,18 @@
+{
+  "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/pair03_stationary_crop.png",
+  "source_relative": "pair03_stationary_crop.png",
+  "stem": "pair03_stationary_crop",
+  "model_id": "facebook/sam2.1-hiera-tiny",
+  "n_pieces": 1,
+  "points_xy": [],
+  "labels": [],
+  "score": null,
+  "ok": true,
+  "fail": null,
+  "pixels": 1464,
+  "image_hw": [
+    160,
+    99
+  ],
+  "saved_at": "2026-11-18T01:38:43.823545+00:00"
+}

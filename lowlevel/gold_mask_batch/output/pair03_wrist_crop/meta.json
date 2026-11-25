@@ -1,0 +1,18 @@
+{
+  "source": "/Users/zhg603/Documents/OXAI/lowlevel/gold_mask_batch/input/squares/pair03_wrist_crop.png",
+  "source_relative": "pair03_wrist_crop.png",
+  "stem": "pair03_wrist_crop",
+  "model_id": "facebook/sam2.1-hiera-tiny",
+  "n_pieces": 1,
+  "points_xy": [],
+  "labels": [],
+  "score": null,
+  "ok": true,
+  "fail": null,
+  "pixels": 5344,
+  "image_hw": [
+    248,
+    218
+  ],
+  "saved_at": "2026-11-18T01:38:49.482000+00:00"
+}
